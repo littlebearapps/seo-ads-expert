@@ -700,4 +700,50 @@ This document provides SEO page mapping analysis and recommendations for ${optio
     
     return Array.from(negatives);
   }
+
+  /**
+   * Writes text content to a file
+   * Used for Google Ads Scripts and other text-based outputs
+   */
+  async writeTextFile(
+    content: string, 
+    options: WriterOptions & { filename: string }
+  ): Promise<string> {
+    const outputDir = join(options.outputPath, options.productName, options.date);
+    const filePath = join(outputDir, options.filename);
+
+    // Ensure directory exists
+    if (!existsSync(outputDir)) {
+      mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Write content with consistent line endings
+    const normalizedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    writeFileSync(filePath, normalizedContent, 'utf8');
+
+    logger.info(`✅ Text file written: ${filePath} (${normalizedContent.length} bytes)`);
+    return filePath;
+  }
+
+  /**
+   * Writes JSON data to a file with deterministic formatting
+   */
+  async writeJsonFile(
+    data: any,
+    options: WriterOptions & { filename: string }
+  ): Promise<string> {
+    const outputDir = join(options.outputPath, options.productName, options.date);
+    const filePath = join(outputDir, options.filename);
+
+    // Ensure directory exists
+    if (!existsSync(outputDir)) {
+      mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Use deterministic JSON formatting
+    writeJsonFile(filePath, data);
+
+    logger.info(`✅ JSON file written: ${filePath}`);
+    return filePath;
+  }
 }

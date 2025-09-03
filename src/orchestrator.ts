@@ -10,6 +10,10 @@ import { DataPrecedenceEngine, KeywordSources } from './utils/precedence.js';
 import { KeywordScoringEngine } from './scoring.js';
 import { KeywordClusteringEngine } from './clustering.js';
 import { OutputWriterEngine } from './writers.js';
+import { GoogleAdsScriptGenerator } from './writers/ads-script.js';
+import { UrlHealthChecker } from './validators/url-health.js';
+import { generatePlanDiff } from './utils/diff.js';
+import { validateProductClaims, ProductClaimsValidation } from './validators/claims.js';
 
 // Import connectors
 import { KwpCsvConnector } from './connectors/kwp-csv.js';
@@ -49,6 +53,8 @@ export class SEOAdsOrchestrator {
   private scoringEngine: KeywordScoringEngine;
   private clusteringEngine: KeywordClusteringEngine;
   private writerEngine: OutputWriterEngine;
+  private adsScriptGenerator: GoogleAdsScriptGenerator;
+  private urlHealthChecker: UrlHealthChecker;
 
   // Connectors
   private kwpConnector: KwpCsvConnector;
@@ -63,6 +69,13 @@ export class SEOAdsOrchestrator {
     this.scoringEngine = new KeywordScoringEngine();
     this.clusteringEngine = new KeywordClusteringEngine();
     this.writerEngine = new OutputWriterEngine();
+    this.adsScriptGenerator = new GoogleAdsScriptGenerator();
+    this.urlHealthChecker = new UrlHealthChecker({
+      timeout: 5000,
+      checkRobotsTxt: true,
+      checkPerformance: true,
+      requiredMarkets: ['AU', 'US', 'GB']
+    });
 
     // Initialize connectors
     this.kwpConnector = new KwpCsvConnector();
@@ -359,6 +372,81 @@ export class SEOAdsOrchestrator {
       const negatives = await this.writerEngine.writeNegativesText(productConfig, clusters, writerOptions);
       outputPaths.push(negatives);
 
+      // Run claims validation on all clusters
+      console.log('🛡️ Running use-case level claims validation...');
+      let claimsValidation: ProductClaimsValidation | undefined;
+      try {
+        claimsValidation = await validateProductClaims(clusteringResult.clusters, options.product);
+        const failedClusters = claimsValidation.summary.clusters_failed;
+        const warningClusters = claimsValidation.summary.clusters_with_warnings;
+        
+        console.log(`✅ Claims validation: ${claimsValidation.summary.clusters_passed}/${claimsValidation.summary.total_clusters} passed, ${warningClusters} warnings, ${failedClusters} failed`);
+        
+        if (failedClusters > 0) {
+          console.log(`⚠️ ${failedClusters} clusters have high-impact claim violations that should be fixed before launch`);
+        }
+        if (warningClusters > 0) {
+          console.log(`💡 ${warningClusters} clusters have claim warnings - review for better compliance`);
+        }
+      } catch (error) {
+        logger.warn('Claims validation failed:', error);
+      }
+
+      // Run URL health checks on all landing pages
+      console.log('🔍 Running URL health checks on landing pages...');
+      const landingPageUrls = [...new Set(clusteringResult.clusters.map((cluster: any) => cluster.landingPage).filter(Boolean))];
+      const urlHealthResults = [];
+      
+      for (const url of landingPageUrls) {
+        try {
+          const healthResult = await this.urlHealthChecker.checkUrlHealth(url);
+          urlHealthResults.push(healthResult);
+          
+          if (healthResult.status === 'fail') {
+            logger.warn(`❌ URL health check failed for ${url}: ${healthResult.errors.join(', ')}`);
+          } else if (healthResult.status === 'warning') {
+            logger.warn(`⚠️ URL health warnings for ${url}: ${healthResult.warnings.join(', ')}`);
+          }
+        } catch (error) {
+          logger.error(`❌ Failed to check URL health for ${url}:`, error);
+        }
+      }
+
+      // Generate URL health report
+      const urlHealthSummary = this.urlHealthChecker.generateHealthSummary(urlHealthResults);
+      console.log(`✅ URL health checks: ${urlHealthSummary.passedUrls}/${urlHealthSummary.totalUrls} passed, ${urlHealthSummary.failedUrls} failed`);
+
+      // Generate Google Ads Script (only if URL health passes)
+      if (urlHealthSummary.failedUrls === 0) {
+        console.log('📜 Generating Google Ads Script...');
+        const scriptOptions = {
+          outputPath: writerOptions.outputPath,
+          productName: writerOptions.productName,
+          date: writerOptions.date,
+          markets: options.markets,
+          dryRun: true,
+          allowHighBudget: false,
+          skipHealthCheck: false
+        };
+        
+        const scriptContent = await this.adsScriptGenerator.generateAdsScript(
+          clusters,
+          productConfig,
+          urlHealthResults,
+          scriptOptions
+        );
+
+        const scriptPath = await this.writerEngine.writeTextFile(scriptContent, {
+          ...writerOptions,
+          filename: 'google-ads-script.js'
+        });
+        outputPaths.push(scriptPath);
+        console.log(`✅ Google Ads Script generated: ${scriptPath}`);
+      } else {
+        logger.error(`❌ Skipping Google Ads Script generation: ${urlHealthSummary.failedUrls} URL health check failures`);
+        console.log('🚫 Fix URL health issues before generating Google Ads Script');
+      }
+
       // Generate comprehensive summary
       const summary = this.generatePlanSummary(
         { keywords, scoringStats: { totalKeywords: keywords.length, averageScore: 0, topKeywords: [], intentDistribution: { highest: 0, high: 0, medium: 0, baseline: 0 }, sourceDistribution: { kwp: 0, gsc: 0, estimated: 0 } }, warnings: [] },
@@ -377,6 +465,35 @@ export class SEOAdsOrchestrator {
         summaryJson: ''
       }, writerOptions);
       outputPaths.push(summaryJson);
+
+      // Generate semantic plan diff for evolution tracking
+      console.log('📊 Generating plan evolution diff...');
+      const planPath = join(writerOptions.outputPath, writerOptions.productName, writerOptions.date);
+      try {
+        const diffSummary = await generatePlanDiff(planPath, writerOptions.productName, writerOptions.date);
+        console.log(diffSummary);
+        
+        // Add diff.json to output paths
+        const diffJsonPath = join(planPath, 'diff.json');
+        outputPaths.push(diffJsonPath);
+        
+        logger.info('✅ Plan diff generated successfully');
+      } catch (error) {
+        logger.warn('⚠️ Plan diff generation failed (likely first run):', error);
+        console.log('💡 Run plan generation again after changes to see evolution tracking');
+      }
+
+      // Generate claims validation report
+      if (claimsValidation) {
+        console.log('📋 Generating claims validation report...');
+        const claimsPath = await this.writerEngine.writeJsonFile(claimsValidation, {
+          ...writerOptions,
+          filename: 'claims-validation.json'
+        });
+        outputPaths.push(claimsPath);
+        
+        logger.info('✅ Claims validation report generated');
+      }
 
       logger.info(`✅ All outputs generated: ${outputPaths.length} files`);
 
