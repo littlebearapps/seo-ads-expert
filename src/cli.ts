@@ -107,10 +107,10 @@ program
       
       console.log(`\n📊 ${options.product} - ${options.date}\n`);
       console.log(`Markets: ${plan.markets.join(', ')}`);
-      console.log(`Keywords: ${plan.keywordCount}`);
-      console.log(`Ad Groups: ${plan.adGroupCount}`);
-      console.log(`SERP Calls: ${plan.serpCalls}`);
-      console.log(`Cache Hit Rate: ${plan.cacheHitRate}%`);
+      console.log(`Keywords: ${plan.total_keywords}`);
+      console.log(`Ad Groups: ${plan.total_ad_groups}`);
+      console.log(`SERP Calls: ${plan.serp_calls_used}`);
+      console.log(`Cache Hit Rate: ${plan.cache_hit_rate}%`);
       console.log(`\nFiles generated:`);
       console.log(`- ${plan.outputPath}/keywords.csv`);
       console.log(`- ${plan.outputPath}/ads.json`);
