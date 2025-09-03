@@ -38,24 +38,39 @@ export class SearchConsoleConnector {
     try {
       const env = validateEnvironment();
       
-      if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-        logger.warn('⚠️  Google Search Console credentials not configured - GSC data will be unavailable');
-        return;
-      }
-
       // Parse sites from environment
       if (env.SEARCH_CONSOLE_SITES) {
         this.sites = env.SEARCH_CONSOLE_SITES.split('|').map(s => s.trim());
       }
 
-      const auth = new google.auth.GoogleAuth({
-        credentials: env.GOOGLE_PROJECT_ID ? {
-          client_email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          private_key: env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
-          project_id: env.GOOGLE_PROJECT_ID,
-        } : undefined,
-        scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
-      });
+      let auth: google.auth.GoogleAuth;
+
+      // Option 1: Use JSON key file if GOOGLE_APPLICATION_CREDENTIALS is set
+      if (env.GOOGLE_APPLICATION_CREDENTIALS) {
+        logger.info('🔑 Using Google Cloud JSON key file authentication');
+        auth = new google.auth.GoogleAuth({
+          keyFilename: env.GOOGLE_APPLICATION_CREDENTIALS,
+          scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+        });
+      }
+      // Option 2: Use individual credentials
+      else if (env.GOOGLE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+        logger.info('🔑 Using individual Google Cloud credentials');
+        auth = new google.auth.GoogleAuth({
+          credentials: {
+            client_email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            private_key: env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            project_id: env.GOOGLE_PROJECT_ID || '',
+          },
+          scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+        });
+      }
+      // No credentials configured
+      else {
+        logger.warn('⚠️  Google Search Console credentials not configured - GSC data will be unavailable');
+        logger.info('💡 Set GOOGLE_APPLICATION_CREDENTIALS or individual credential environment variables');
+        return;
+      }
 
       this.searchConsole = google.searchconsole({
         version: 'v1',

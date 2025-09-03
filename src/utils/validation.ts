@@ -11,6 +11,7 @@ const logger = pino({
 
 export const EnvironmentSchema = z.object({
   // Google Search Console API
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(), // JSON key file path
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().email().optional(),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   GOOGLE_PROJECT_ID: z.string().optional(),
@@ -59,7 +60,11 @@ export function validateEnvironment(): Environment {
     // Warn about optional dependencies
     const missingOptional: string[] = [];
     
-    if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    // Check if either JSON key file or individual credentials are provided
+    const hasJsonKey = env.GOOGLE_APPLICATION_CREDENTIALS && env.GOOGLE_APPLICATION_CREDENTIALS !== 'path/to/your/service-account-key.json';
+    const hasIndividualCreds = env.GOOGLE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+    
+    if (!hasJsonKey && !hasIndividualCreds) {
       missingOptional.push('Google Search Console credentials (organic performance data will be unavailable)');
     }
     

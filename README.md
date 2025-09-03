@@ -75,6 +75,10 @@ npm run show -- --product convertmyfile --date 2025-09-03
 ### Core Documentation
 - [Implementation Plan](docs/seo-ads-expert-implementation-plan.md) - Complete technical roadmap
 - [GPT-5 Feedback](docs/gpt-feedback-1.md) - Expert review and optimizations
+- [RapidAPI Setup Guide](docs/RAPIDAPI_SETUP.md) - **⚠️ IMPORTANT: API subscription setup**
+- [API Reference](docs/API_REFERENCE.md) - Complete CLI command reference
+- [Architecture](docs/ARCHITECTURE.md) - System design and components
+- [User Guide](docs/USER_GUIDE.md) - Comprehensive usage documentation
 
 ### Key Features
 - **Data Precedence System**: KWP CSV > GSC proxy > RapidAPI estimated
