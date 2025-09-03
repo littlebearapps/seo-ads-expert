@@ -128,18 +128,21 @@ export class RapidApiKeywordConnector {
   }
 
   private async getKeywordSuggestions(seedQuery: string, market: string): Promise<RapidApiKeywordResponse> {
+    // Using the 'keysuggest' endpoint from the API documentation
     const options = {
       method: 'GET',
-      url: `${this.baseUrl}/keywords/related`,
+      url: `${this.baseUrl}/keysuggest/`,
       params: {
         keyword: seedQuery,
-        country: market.toLowerCase(),
-        language: this.getLanguageForMarket(market),
-        limit: '25' // Reasonable limit per seed
+        location: market.toUpperCase(), // API expects uppercase country codes like 'US'
+        lang: this.getLanguageForMarket(market),
+        mode: 'all', // Get all related keywords
+        intent: 'transactional', // Focus on transactional intent for Chrome extensions
+        return_intent: 'true' // Include intent information
       },
       headers: {
         'X-RapidAPI-Key': this.apiKey,
-        'X-RapidAPI-Host': this.host
+        'X-RapidAPI-Host': 'google-keyword-insight1.p.rapidapi.com'
       },
       timeout: 10000 // 10 second timeout
     };
@@ -149,8 +152,22 @@ export class RapidApiKeywordConnector {
       
       const response: AxiosResponse = await axios.request(options);
       
+      // Google Keyword Insight API returns array directly or wrapped in data
+      const keywordData = Array.isArray(response.data) ? response.data : (response.data.data || response.data.keywords || []);
+      
+      // Transform to our expected format
+      const transformedResponse = {
+        keywords: keywordData.map((item: any) => ({
+          keyword: item.keyword || item.text || item.query || '',
+          search_volume: item.search_volume || item.volume || item.avg_monthly_searches || 0,
+          competition: item.competition || item.competition_level || 'unknown',
+          suggested_bid: item.cpc || item.suggested_bid || item.cost_per_click || 0,
+          intent: item.intent || undefined
+        }))
+      };
+      
       // Validate and transform response
-      const validatedResponse = RapidApiKeywordResponseSchema.parse(response.data);
+      const validatedResponse = RapidApiKeywordResponseSchema.parse(transformedResponse);
       
       logger.debug(`📥 Received ${validatedResponse.keywords.length} suggestions for: ${seedQuery}`);
       

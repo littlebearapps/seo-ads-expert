@@ -304,7 +304,7 @@ export class SEOAdsOrchestrator {
         }
 
         // Aggregate competitor data
-        serpResult.competitors.forEach((domain, count) => {
+        serpResult.competitors.forEach((count, domain) => {
           const currentCount = competitorMap.get(domain) || 0;
           competitorMap.set(domain, currentCount + count);
         });

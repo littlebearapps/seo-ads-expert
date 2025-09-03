@@ -33,7 +33,7 @@ export class RapidApiSerpConnector {
   private apiKey: string = '';
   private host: string = '';
   private isAvailable = false;
-  private baseUrl = 'https://contextualwebsearch-websearch-v1.p.rapidapi.com';
+  private baseUrl = 'https://real-time-web-search.p.rapidapi.com';
   private callCount = 0;
   private maxCallsPerRun = 30;
 
@@ -150,20 +150,18 @@ export class RapidApiSerpConnector {
   }
 
   private async getSerpData(keyword: string, market: string): Promise<SerpResult> {
+    // Using the 'search' (Light) endpoint for fast results
     const options = {
       method: 'GET',
-      url: `${this.baseUrl}/api/Search/WebSearchAPI`,
+      url: `${this.baseUrl}/search`,
       params: {
-        q: keyword,
-        pageNumber: '1',
-        pageSize: '10',
-        autoCorrect: 'true',
-        safeSearch: 'false',
+        q: keyword, // API expects 'q' not 'query'
+        limit: '10', // Get top 10 results
         ...this.getMarketParams(market)
       },
       headers: {
         'X-RapidAPI-Key': this.apiKey,
-        'X-RapidAPI-Host': this.host
+        'X-RapidAPI-Host': 'real-time-web-search.p.rapidapi.com'
       },
       timeout: 15000 // 15 second timeout
     };
@@ -173,11 +171,13 @@ export class RapidApiSerpConnector {
       
       const response: AxiosResponse = await axios.request(options);
       
-      // Validate and transform response
-      const validatedResponse = RapidApiSerpResponseSchema.parse(response.data);
+      // Real-Time Web Search API response structure
+      if (response.data.status !== 'OK') {
+        throw new Error(`API returned error: ${response.data.error?.message || 'Unknown error'}`);
+      }
       
       // Convert to our SerpResult format
-      const serpResult = this.convertToSerpResult(keyword, market, validatedResponse);
+      const serpResult = this.convertRealTimeSearchResult(keyword, market, response.data.data);
       
       logger.debug(`📥 SERP data for ${keyword}: ${serpResult.organic_results.length} organic results`);
       
@@ -203,7 +203,54 @@ export class RapidApiSerpConnector {
     }
   }
 
-  private convertToSerpResult(keyword: string, market: string, apiResponse: RapidApiSerpResponse): SerpResult {
+  private convertRealTimeSearchResult(keyword: string, market: string, apiData: any): SerpResult {
+    // Extract organic results from Real-Time Web Search API response
+    const organicResults = (apiData.organic_results || []).map((result: any) => {
+      try {
+        const url = new URL(result.url);
+        return {
+          title: result.title,
+          url: result.url,
+          domain: url.hostname.replace('www.', ''),
+          snippet: result.snippet || undefined
+        };
+      } catch {
+        return {
+          title: result.title,
+          url: result.url,
+          domain: result.url,
+          snippet: result.snippet || undefined
+        };
+      }
+    });
+
+    // Extract competitors (unique domains)
+    const competitors = Array.from(new Set(organicResults.map((r: any) => r.domain)));
+
+    // Detect SERP features from the response
+    const features: SerpFeatures = {
+      ai_overview: apiData.ai_overview ? true : false,
+      people_also_ask: apiData.people_also_ask ? true : false,
+      featured_snippet: apiData.featured_snippet ? true : false,
+      video_results: false, // Not provided in basic response
+      shopping_results: false, // Not provided in basic response
+      local_pack: false, // Not provided in basic response
+      knowledge_panel: apiData.knowledge_panel ? true : false
+    };
+
+    const serpResult = SerpResultSchema.parse({
+      query: keyword,
+      market: market,
+      organic_results: organicResults,
+      features: features,
+      competitors: competitors
+    });
+
+    return serpResult;
+  }
+
+  // Keep old method for reference but rename it
+  private convertToSerpResult_OLD(keyword: string, market: string, apiResponse: RapidApiSerpResponse): SerpResult {
     // Extract organic results
     const organicResults = apiResponse.web_results.map(result => {
       const url = new URL(result.url);

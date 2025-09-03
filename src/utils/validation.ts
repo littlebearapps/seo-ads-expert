@@ -19,7 +19,7 @@ export const EnvironmentSchema = z.object({
   
   // RapidAPI Configuration
   RAPIDAPI_KEY: z.string().min(10, 'RapidAPI key is required'),
-  RAPIDAPI_HOST_SERP: z.string().default('contextualwebsearch-websearch-v1.p.rapidapi.com'),
+  RAPIDAPI_HOST_SERP: z.string().default('real-time-web-search.p.rapidapi.com'),
   RAPIDAPI_HOST_KEYWORDS: z.string().default('google-keyword-insight1.p.rapidapi.com'),
   
   // Caching & Rate Limiting
