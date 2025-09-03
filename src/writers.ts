@@ -5,6 +5,16 @@ import pino from 'pino';
 import { KeywordData, AdGroup, PlanSummary } from './connectors/types.js';
 import { KeywordCluster } from './clustering.js';
 import { format } from 'date-fns';
+import { 
+  fixDecimals, 
+  fixObjectDecimals, 
+  sortKeywords, 
+  sortCampaignHierarchy,
+  formatJsonDeterministic,
+  writeJsonFile,
+  writeMarkdownFile,
+  formatMarkdownDeterministic 
+} from './utils/deterministic.js';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -44,15 +54,18 @@ export class OutputWriterEngine {
 
     logger.info(`📊 Writing ${keywords.length} keywords to CSV: ${csvPath}`);
 
-    // Prepare CSV data with enhanced columns
-    const csvData = keywords.map(keyword => ({
+    // Sort keywords deterministically: score desc → alphabetically → market
+    const sortedKeywords = sortKeywords([...keywords]);
+    
+    // Prepare CSV data with enhanced columns and fixed decimals
+    const csvData = sortedKeywords.map(keyword => ({
       keyword: keyword.keyword,
       cluster: keyword.cluster || '',
       volume: keyword.volume || '',
-      cpc: keyword.cpc ? `$${keyword.cpc.toFixed(2)}` : '',
-      competition: keyword.competition ? keyword.competition.toFixed(2) : '',
-      intent_score: keyword.intent_score.toFixed(2),
-      final_score: keyword.final_score.toFixed(3),
+      cpc: keyword.cpc ? `$${fixDecimals(keyword.cpc)}` : '',
+      competition: keyword.competition ? fixDecimals(keyword.competition) : '',
+      intent_score: fixDecimals(keyword.intent_score),
+      final_score: fixDecimals(keyword.final_score, 3),
       data_source: keyword.data_source.toUpperCase(),
       recommended_match_type: keyword.recommended_match_type,
       markets: keyword.markets.join(';'),
@@ -119,17 +132,20 @@ export class OutputWriterEngine {
     }
 
     const adsData = {
+      version: "1.1.0",
       product: options.productName,
       date: options.date,
-      markets: options.markets,
+      markets: options.markets.sort(), // Sort for deterministic output
       total_ad_groups: adGroups.length,
       generated_at: new Date().toISOString(),
       ad_groups: adGroups
     };
 
+    // Apply deterministic formatting (fix decimals, sort arrays)
+    const processedAdsData = sortCampaignHierarchy(fixObjectDecimals(adsData));
+
     try {
-      const jsonOutput = JSON.stringify(adsData, null, 2);
-      writeFileSync(jsonPath, jsonOutput, 'utf8');
+      writeJsonFile(jsonPath, processedAdsData);
       
       logger.info(`✅ Ads JSON written successfully: ${jsonPath}`);
       logger.info(`📊 Generated ${adGroups.length} ad groups from clusters`);
@@ -168,7 +184,7 @@ export class OutputWriterEngine {
     markdown += this.generatePageBriefs(clusters, productConfig);
 
     try {
-      writeFileSync(markdownPath, markdown, 'utf8');
+      writeMarkdownFile(markdownPath, markdown);
       logger.info(`✅ SEO pages markdown written successfully: ${markdownPath}`);
       return markdownPath;
     } catch (error) {
@@ -236,7 +252,7 @@ export class OutputWriterEngine {
     }
 
     try {
-      writeFileSync(markdownPath, markdown, 'utf8');
+      writeMarkdownFile(markdownPath, markdown);
       logger.info(`✅ Competitors markdown written successfully: ${markdownPath}`);
       return markdownPath;
     } catch (error) {
@@ -363,8 +379,9 @@ export class OutputWriterEngine {
     };
 
     try {
-      const jsonOutput = JSON.stringify(summaryData, null, 2);
-      writeFileSync(jsonPath, jsonOutput, 'utf8');
+      // Apply deterministic formatting to summary data
+      const processedSummaryData = fixObjectDecimals(summaryData);
+      writeJsonFile(jsonPath, processedSummaryData);
       
       logger.info(`✅ Summary JSON written successfully: ${jsonPath}`);
       return jsonPath;
@@ -556,7 +573,10 @@ This document provides SEO page mapping analysis and recommendations for ${optio
       markdown += `|---------|----------|--------|--------------|\n`;
       
       mappedClusters.forEach(cluster => {
-        markdown += `| ${cluster.name} | ${cluster.keywords.length} | ${cluster.totalVolume.toLocaleString()} | ${cluster.landingPage} |\n`;
+        const volumeStr = typeof cluster.totalVolume === 'number' ? 
+          Math.round(cluster.totalVolume).toLocaleString() : 
+          cluster.totalVolume.toString();
+        markdown += `| ${cluster.name} | ${cluster.keywords.length} | ${volumeStr} | ${cluster.landingPage} |\n`;
       });
     }
     
@@ -574,9 +594,12 @@ This document provides SEO page mapping analysis and recommendations for ${optio
     markdown += `⚠️ **${unmappedClusters.length} high-potential clusters need landing pages:**\n\n`;
     
     unmappedClusters.forEach((cluster, index) => {
+      const volumeStr = typeof cluster.totalVolume === 'number' ? 
+        Math.round(cluster.totalVolume).toLocaleString() : 
+        cluster.totalVolume.toString();
       markdown += `### ${index + 1}. ${cluster.name}\n`;
       markdown += `- **Keywords:** ${cluster.keywords.length}\n`;
-      markdown += `- **Volume:** ${cluster.totalVolume.toLocaleString()}\n`;
+      markdown += `- **Volume:** ${volumeStr}\n`;
       markdown += `- **Top Keywords:** ${cluster.primaryKeywords.slice(0, 3).map(k => k.keyword).join(', ')}\n`;
       markdown += `- **Suggested URL:** \`${this.generateSuggestedUrl(cluster)}\`\n\n`;
     });

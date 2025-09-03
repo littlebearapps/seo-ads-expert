@@ -1,0 +1,108 @@
+{
+  "ad_groups": [
+    {
+      "descriptions": [
+        "Convert PDF to JPG locally. No uploads, privacy-first PDF conversion.",
+        "One-click PDF conversion. Fast, secure Chrome extension for PDFs."
+      ],
+      "headlines": [
+        "Convert PDF Files Instantly",
+        "Free PDF Converter Tool",
+        "PDF to JPG Chrome Extension"
+      ],
+      "keywords_exact": [
+        "pdf to jpg chrome extension"
+      ],
+      "keywords_phrase": [
+        "pdf converter chrome",
+        "pdf to image"
+      ],
+      "landing_page": "/convertmyfile/pdf-to-jpg",
+      "name": "PDF Conversion Tools",
+      "negatives": [
+        "android",
+        "firefox",
+        "mobile",
+        "safari"
+      ],
+      "performance_score": "7.89",
+      "sitelinks": [
+        "Download",
+        "Features",
+        "PDF Tools",
+        "Privacy"
+      ],
+      "volume_estimate": "890.12"
+    },
+    {
+      "descriptions": [
+        "Convert WebP to PNG locally in your browser. Privacy-first, no uploads required.",
+        "One-click WebP conversion. Fast, free, and secure Chrome extension."
+      ],
+      "headlines": [
+        "Convert WebP Files Instantly",
+        "Free WebP Converter - No Upload",
+        "WebP to PNG Chrome Extension"
+      ],
+      "keywords_exact": [
+        "webp to png chrome extension"
+      ],
+      "keywords_phrase": [
+        "convert webp files",
+        "webp png converter"
+      ],
+      "landing_page": "/convertmyfile/webp-to-png",
+      "name": "WebP PNG Conversion",
+      "negatives": [
+        "android",
+        "firefox",
+        "ios",
+        "mobile",
+        "safari"
+      ],
+      "performance_score": "8.73",
+      "sitelinks": [
+        "Download",
+        "Features",
+        "Formats",
+        "Privacy"
+      ],
+      "volume_estimate": "1250.45"
+    }
+  ],
+  "callouts": [
+    "Free Tier",
+    "No Login Required",
+    "Privacy-First"
+  ],
+  "generated_at": "2025-09-03T10:30:00.000Z",
+  "markets": [
+    "AU",
+    "GB",
+    "US"
+  ],
+  "product": "convertmyfile",
+  "shared_negatives": [
+    "android",
+    "api",
+    "course",
+    "iphone",
+    "jobs",
+    "tutorial"
+  ],
+  "structured_snippets": {
+    "Features": [
+      "HEIC→JPG",
+      "Image Compression",
+      "PDF↔JPG",
+      "WebP→PNG"
+    ]
+  },
+  "summary": {
+    "avg_performance_score": "8.31",
+    "total_ad_groups": "2.00",
+    "total_keywords": "6.00",
+    "total_volume_estimate": "2140.57"
+  },
+  "version": "1.1.0"
+}

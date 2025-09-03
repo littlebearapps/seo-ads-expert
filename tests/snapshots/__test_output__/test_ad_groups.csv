@@ -1,0 +1,2 @@
+Campaign,Ad Group,Status,Max CPC,Target CPA,Target ROAS,Final URL,Final Mobile URL,Tracking Template,Custom Parameters,Ad Group Labels
+ConvertMyFile AU,WebP Conversion,Enabled,2.50,,,https://littlebearapps.com/convertmyfile/webp-to-png?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}-{creative}&utm_term={keyword}&matchtype={matchtype},,,,

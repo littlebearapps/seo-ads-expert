@@ -1,0 +1,2 @@
+Campaign,Campaign Type,Status,Budget,Budget Type,Bid Strategy Type,Target CPA,Target ROAS,Networks,Languages,Location,Location Bid Modifier,Excluded Location,Device,Device Bid Modifier,Ad Schedule,Ad Schedule Bid Modifier,Start Date,End Date,Campaign Labels
+ConvertMyFile AU,Search,Enabled,10.00,Daily,Manual CPC,,,Google Search,English,Australia,,,,-1.00,,,,,LBA_SEO_ADS_EXPERT_2025-09-03
