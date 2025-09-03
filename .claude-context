@@ -1,0 +1,106 @@
+# Claude Code Session Context
+
+## 📍 Project Stage
+
+**Current Phase**: Phase 1 - Project Setup & Dependencies  
+**Progress**: 0% complete  
+**Last Session**: 2025-09-03  
+**Session Goal**: Initialize SEO & Google Ads Expert Tool infrastructure
+
+## ✅ Completed This Session
+
+- [x] GitHub repository created (littlebearapps/seo-ads-expert)
+- [x] Git worktrees configured (main/dev/test branches)
+- [x] Documentation files created (README.md, CLAUDE.md, .claude-context)
+- [x] Implementation plan finalized with GPT-5 optimizations
+
+## 🔄 Active Tasks
+
+### In Progress
+- [ ] **Task 1.1**: Create project directory structure
+  - Status: 0% complete
+  - Blocker: None
+  - Next: Initialize TypeScript + Node.js project structure
+
+- [ ] **Task 1.2**: Initialize TypeScript + dependencies
+  - Status: Starting
+  - Files: package.json, tsconfig.json, .gitignore
+
+### Queued
+- [ ] Task 1.3: Set up CLI structure with Commander.js
+- [ ] Task 2.1: Configure RapidAPI subscriptions
+- [ ] Task 2.2: Set up Google Search Console service account
+
+## 📚 Key References
+
+**Project Docs**:
+- Current: `docs/seo-ads-expert-implementation-plan.md`
+- Next: Phase 1 implementation tasks
+
+**External APIs**:
+- RapidAPI Real-Time Web Search: https://rapidapi.com/contextualwebsearch/api/web-search
+- Google Search Console API: https://developers.google.com/webmaster-tools/search-console-api
+- Google Ads API: https://developers.google.com/google-ads/api
+
+**LBA Resources**:
+- Templates: `../docs/templates/`
+- API References: `../docs/api-references/`
+- Planning Process: `../docs/lba-planning-process-v2.md`
+
+## 🔖 Session Continuity
+
+### Last Session Summary
+Created complete repository infrastructure for SEO & Google Ads Expert Tool with documentation, implementation plan, and git worktrees configured for multi-branch development.
+
+### Current Working Directory
+```
+seo-ads-expert/
+├── docs/seo-ads-expert-implementation-plan.md
+├── README.md
+├── CLAUDE.md
+└── .claude-context
+```
+
+### Environment State
+- Branch: `main`
+- Node version: Not yet configured
+- APIs needed: RapidAPI subscriptions, Google Search Console
+- Repository: littlebearapps/seo-ads-expert (public)
+
+## ⏭️ Next Actions
+
+### Immediate (This Session)
+1. Initialize Node.js project with package.json and TypeScript configuration
+2. Create directory structure (src/, inputs/kwp_csv/, cache/, plans/)
+3. Install core dependencies (axios, zod, commander, pino, etc.)
+
+### Next Session Priority
+1. Set up RapidAPI subscriptions for SERP data
+2. Configure Google Search Console service account
+3. Begin connector implementations (kwp-csv.ts, rapid-serp.ts)
+
+## ⚠️ Important Context
+
+### Known Issues
+- Google Ads API approval delays: Mitigated by CSV-first approach
+- RapidAPI quota management: ≤30 calls per run with 24h caching
+
+### Decisions Made
+- CSV-First Strategy: Ship immediately with manual exports vs waiting for API approval
+- Data Precedence System: KWP CSV > GSC proxy > RapidAPI estimated
+- Node.js CLI Tool: Phase 1 approach before MCP server conversion
+
+### Questions for Review
+- [ ] Google Ads account setup in Expert Mode required
+- [ ] RapidAPI subscription tier selection for SERP data
+
+## 💭 Session Notes
+
+This tool represents a 360x efficiency gain (3-hour manual process → 30-second automation) for Little Bear Apps extension marketing. The CSV-first approach allows immediate shipping while APIs get approved. Focus on quality data precedence and quota management from day one.
+
+---
+
+**Token Count**: ~400 (Optimized for continuity)  
+**Session Started**: 2025-09-03  
+**Session Updated**: 2025-09-03  
+**Next Review**: 2025-09-05 (Phase 1 completion target)
