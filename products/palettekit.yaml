@@ -1,0 +1,98 @@
+product: PaletteKit
+summary: >
+  Advanced color picker Chrome extension with intelligent page scanning, favorites,
+  and professional export formats. Built for designers and developers.
+
+value_props:
+  - "Advanced color picker with EyeDropper API"
+  - "Intelligent page color scanning"
+  - "Smart favorites system"
+  - "Multiple export formats (JSON, CSS, etc)"
+  - "Professional color libraries"
+  - "No registration required"
+
+seed_queries:
+  - "color picker chrome extension"
+  - "eyedropper chrome extension"
+  - "color palette chrome"
+  - "color scanner chrome extension"
+  - "page color extraction"
+  - "designer color picker"
+  - "color export chrome"
+  - "color favorites chrome"
+  - "website color palette"
+  - "color analysis chrome"
+  - "css color picker"
+  - "hex color picker chrome"
+  - "rgb color picker extension"
+
+target_pages:
+  - url: "https://littlebearapps.com/extensions/chrome/palettekit"
+    purpose: "main"
+  - url: "https://littlebearapps.com/palettekit/color-picker"
+    purpose: "feature"
+  - url: "https://littlebearapps.com/palettekit/page-scanner"
+    purpose: "feature"
+  - url: "https://littlebearapps.com/palettekit/export-formats"
+    purpose: "feature"
+  - url: "https://littlebearapps.com/palettekit/color-libraries"
+    purpose: "feature"
+
+markets: ["AU", "US", "GB"]
+
+brand_rules:
+  pinned_headline: "Chrome Extension"
+  banned_words:
+    - "AI"
+    - "subscription required"
+    - "premium only"
+    - "login required"
+  claims_validation:
+    eyedropper_api: true      # Uses native EyeDropper API
+    page_scanning: true       # Scans webpage colors
+    export_formats: true      # Multiple export options
+    free_tier: true          # Free version available
+    no_registration: true    # Works without signup
+
+market_localization:
+  AU:
+    gl: "au"
+    hl: "en-AU"
+  US:
+    gl: "us"
+    hl: "en"
+  GB:
+    gl: "gb"
+    hl: "en-GB"
+
+pre_seeded_negatives:
+  - "android"
+  - "iphone"
+  - "ios"
+  - "safari"
+  - "firefox"
+  - "edge"
+  - "mobile"
+  - "app"
+  - "software"
+  - "photoshop"
+  - "illustrator"
+  - "sketch"
+  - "figma"
+  - "adobe"
+  - "tutorial"
+  - "course"
+  - "jobs"
+  - "training"
+  - "certification"
+  - "api"
+  - "download"
+  - "install"
+  - "mac"
+  - "windows"
+  - "linux"
+  - "premium"
+  - "paid"
+  - "subscription"
+  - "sign up"
+  - "account"

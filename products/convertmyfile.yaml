@@ -1,0 +1,99 @@
+product: ConvertMyFile
+summary: >
+  Free, privacy-first Chrome extension to convert files (WebP→PNG, HEIC→JPG, PDF↔JPG)
+  locally in the browser. No uploads required.
+
+value_props:
+  - "Private: runs locally"
+  - "Fast 1-click converts" 
+  - "Free tier, no login"
+  - "No file uploads to servers"
+  - "Supports 20+ file formats"
+  - "Batch conversion support"
+
+seed_queries:
+  - "file converter chrome extension"
+  - "webp to png chrome"
+  - "heic to jpg chrome"
+  - "pdf to jpg chrome"
+  - "compress pdf chrome extension"
+  - "image converter chrome"
+  - "convert files locally browser"
+  - "privacy file conversion"
+  - "batch file converter chrome"
+  - "free file converter extension"
+  - "webp converter chrome extension"
+  - "heic converter chrome extension"
+  - "pdf converter chrome extension"
+
+target_pages:
+  - url: "https://littlebearapps.com/extensions/chrome/convertmyfile"
+    purpose: "main"
+  - url: "https://littlebearapps.com/convertmyfile/webp-to-png"
+    purpose: "use-case"
+  - url: "https://littlebearapps.com/convertmyfile/heic-to-jpg"
+    purpose: "use-case"
+  - url: "https://littlebearapps.com/convertmyfile/pdf-to-jpg"
+    purpose: "use-case"
+  - url: "https://littlebearapps.com/convertmyfile/compress-pdf"
+    purpose: "use-case"
+  - url: "https://littlebearapps.com/convertmyfile/privacy"
+    purpose: "feature"
+
+markets: ["AU", "US", "GB"]
+
+brand_rules:
+  pinned_headline: "Chrome Extension"
+  banned_words: 
+    - "AI"
+    - "cloud-only"
+    - "login required"
+    - "subscription"
+  claims_validation:
+    local_processing: true  # Only claim if no server uploads
+    privacy_first: true     # Only if no external tracking
+    free_tier: true         # Free version available
+    no_uploads: true        # Files stay local
+    batch_support: true     # Multiple files at once
+
+market_localization:
+  AU:
+    gl: "au"
+    hl: "en-AU"
+  US:
+    gl: "us" 
+    hl: "en"
+  GB:
+    gl: "gb"
+    hl: "en-GB"
+
+pre_seeded_negatives:
+  - "android"
+  - "iphone"
+  - "ios"
+  - "safari"
+  - "online"
+  - "api"
+  - "tutorial"
+  - "jobs"
+  - "course"
+  - "firefox"
+  - "edge"
+  - "mobile"
+  - "app"
+  - "software"
+  - "download"
+  - "install"
+  - "mac"
+  - "windows"
+  - "linux"
+  - "photoshop"
+  - "gimp"
+  - "adobe"
+  - "premium"
+  - "paid"
+  - "subscription"
+  - "sign up"
+  - "account"
+  - "registration"
+  - "email"

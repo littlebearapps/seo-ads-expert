@@ -39,9 +39,11 @@ Thumbs.db
 *.swo
 *~
 
-# Project specific
-inputs/
-plans/
+# Project specific - ignore generated content but keep structure
+inputs/kwp_csv/*/*.csv
+plans/*/*/
+!inputs/kwp_csv/*/.gitkeep
+!plans/*/.gitkeep
 
 # Git worktrees (prevent tools from recursing into them)
 .worktrees/

@@ -1,0 +1,100 @@
+product: NoteBridge
+summary: >
+  Smart note-taking Chrome extension that connects your browser research with
+  external note apps. Seamless integration with Obsidian, Notion, and more.
+
+value_props:
+  - "Connect browser to note apps"
+  - "One-click research capture"
+  - "Multiple app integrations"
+  - "Smart content extraction"
+  - "Privacy-focused design"
+  - "Free tier available"
+
+seed_queries:
+  - "note taking chrome extension"
+  - "obsidian chrome extension"
+  - "notion chrome extension"
+  - "research capture chrome"
+  - "web clipper chrome"
+  - "bookmark organizer chrome"
+  - "note bridge chrome"
+  - "browser note sync"
+  - "research workflow chrome"
+  - "note app integration"
+  - "web research chrome"
+  - "content capture chrome"
+  - "smart bookmarks chrome"
+
+target_pages:
+  - url: "https://littlebearapps.com/extensions/chrome/notebridge"
+    purpose: "main"
+  - url: "https://littlebearapps.com/notebridge/obsidian"
+    purpose: "use-case"
+  - url: "https://littlebearapps.com/notebridge/notion"
+    purpose: "use-case"
+  - url: "https://littlebearapps.com/notebridge/research-workflow"
+    purpose: "feature"
+  - url: "https://littlebearapps.com/notebridge/integrations"
+    purpose: "feature"
+
+markets: ["AU", "US", "GB"]
+
+brand_rules:
+  pinned_headline: "Chrome Extension"
+  banned_words:
+    - "AI-powered"
+    - "cloud-only"
+    - "subscription required"
+    - "premium only"
+  claims_validation:
+    app_integrations: true    # Connects to external apps
+    research_capture: true    # Captures web content
+    privacy_focused: true     # Respects user privacy
+    free_tier: true          # Free version available
+    multiple_apps: true      # Works with various note apps
+
+market_localization:
+  AU:
+    gl: "au"
+    hl: "en-AU"
+  US:
+    gl: "us"
+    hl: "en"
+  GB:
+    gl: "gb"
+    hl: "en-GB"
+
+pre_seeded_negatives:
+  - "android"
+  - "iphone"
+  - "ios"
+  - "safari"
+  - "firefox"
+  - "edge"
+  - "mobile"
+  - "app"
+  - "software"
+  - "evernote"
+  - "onenote"
+  - "google docs"
+  - "microsoft"
+  - "tutorial"
+  - "course"
+  - "jobs"
+  - "training"
+  - "api"
+  - "download"
+  - "install"
+  - "mac"
+  - "windows"
+  - "linux"
+  - "premium"
+  - "paid"
+  - "subscription"
+  - "sign up"
+  - "account"
+  - "registration"
+  - "sync"
+  - "backup"
+  - "cloud storage"

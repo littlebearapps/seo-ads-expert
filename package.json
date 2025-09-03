@@ -1,0 +1,51 @@
+{
+  "name": "seo-ads-expert",
+  "version": "1.0.0",
+  "description": "AI-powered SEO & Google Ads planning tool for Chrome extensions",
+  "main": "dist/cli.js",
+  "type": "module",
+  "bin": {
+    "seo-ads-expert": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsx src/cli.ts",
+    "dev": "tsx watch src/cli.ts",
+    "plan": "tsx src/cli.ts plan",
+    "plans": "tsx src/cli.ts list",
+    "show": "tsx src/cli.ts show",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "seo",
+    "google-ads",
+    "keyword-research",
+    "chrome-extensions",
+    "marketing-automation"
+  ],
+  "author": "Little Bear Apps",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "commander": "^11.1.0",
+    "csv-parse": "^5.5.2",
+    "csv-stringify": "^6.4.4",
+    "date-fns": "^2.30.0",
+    "dotenv": "^17.2.2",
+    "googleapis": "^129.0.0",
+    "js-yaml": "^4.1.0",
+    "pino": "^8.17.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.10.5",
+    "pino-pretty": "^13.1.1",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
