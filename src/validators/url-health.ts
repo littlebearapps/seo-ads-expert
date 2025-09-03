@@ -632,3 +632,185 @@ export function getBlockingReasons(healthResult: UrlHealthResult): string[] {
 export function getQualityWarnings(healthResult: UrlHealthResult): string[] {
   return healthResult.warnings;
 }
+
+// ============================================================================
+// ENHANCED ERROR HANDLING FOR TASK 9 (Production-Grade)
+// ============================================================================
+
+/**
+ * Enhanced URL health checker with retry logic and progress indicators
+ */
+export class EnhancedUrlHealthChecker extends UrlHealthChecker {
+  private readonly maxRetries: number = 3;
+  private readonly timeoutMs: number = 30000; // 30 seconds
+  private readonly backoffMultiplier: number = 2;
+  
+  /**
+   * Check URLs with enhanced error handling and progress indicators
+   */
+  async checkUrlsWithRetry(urls: Array<{ url: string; name?: string }>, options: {
+    showProgress?: boolean;
+    maxRetries?: number;
+    timeoutMs?: number;
+  } = {}): Promise<{ results: UrlHealthResult[]; summary: { healthy: number; failed: number; total: number } }> {
+    const maxRetries = options.maxRetries || this.maxRetries;
+    const timeoutMs = options.timeoutMs || this.timeoutMs;
+    const showProgress = options.showProgress !== false;
+    
+    if (showProgress) {
+      console.log(`\n⚡ Phase 3: URL Health Checks (${urls.length} URLs)`);
+    }
+    
+    const results: UrlHealthResult[] = [];
+    let completed = 0;
+    
+    for (const urlInfo of urls) {
+      if (showProgress) {
+        process.stdout.write(`  🔍 [${completed + 1}/${urls.length}] ${urlInfo.name || urlInfo.url.substring(0, 50)}... `);
+      }
+      
+      try {
+        const result = await this.checkUrlWithRetry(urlInfo.url, maxRetries, timeoutMs);
+        results.push(result);
+        
+        if (showProgress) {
+          const statusIcon = result.status === 'pass' ? '✅' : 
+                            result.status === 'warning' ? '⚠️' : '❌';
+          console.log(statusIcon);
+        }
+        
+      } catch (error) {
+        logger.warn(`Failed to check ${urlInfo.url} after ${maxRetries} retries:`, error);
+        
+        // Create a failure result
+        results.push({
+          url: urlInfo.url,
+          status: 'fail',
+          checks: {} as any,
+          metadata: {} as any,
+          errors: [error instanceof Error ? error.message : 'Unknown error'],
+          warnings: []
+        });
+        
+        if (showProgress) {
+          console.log('❌');
+        }
+      }
+      
+      completed++;
+    }
+    
+    const summary = {
+      healthy: results.filter(r => r.status === 'pass').length,
+      failed: results.filter(r => r.status === 'fail').length,
+      total: results.length
+    };
+    
+    if (showProgress) {
+      console.log(`  ✅ Health checks completed: ${summary.healthy}/${summary.total} URLs healthy`);
+      if (summary.failed > 0) {
+        console.log(`  ⚠️  ${summary.failed} URLs failed health checks`);
+      }
+    }
+    
+    return { results, summary };
+  }
+  
+  /**
+   * Check single URL with exponential backoff retry logic
+   */
+  private async checkUrlWithRetry(url: string, maxRetries: number, timeoutMs: number): Promise<UrlHealthResult> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Create timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
+        });
+        
+        // Race between health check and timeout
+        const result = await Promise.race([
+          this.checkUrlHealth(url),
+          timeoutPromise
+        ]);
+        
+        // Success on first attempt or retry
+        if (attempt > 1) {
+          logger.debug(`✅ URL check succeeded on attempt ${attempt}: ${url}`);
+        }
+        
+        return result;
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const backoffMs = 1000 * Math.pow(this.backoffMultiplier, attempt - 1);
+          logger.debug(`⏱️  URL check attempt ${attempt} failed, retrying in ${backoffMs}ms: ${url}`);
+          
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        } else {
+          logger.warn(`❌ URL check failed after ${maxRetries} attempts: ${url} - ${lastError.message}`);
+        }
+      }
+    }
+    
+    // All retries failed
+    throw lastError || new Error('Unknown error in URL health check');
+  }
+  
+  /**
+   * Quota-aware SERP call tracking and warnings
+   */
+  trackSerpCall(callsUsed: number, maxCalls: number): void {
+    const remaining = maxCalls - callsUsed;
+    const percentageUsed = (callsUsed / maxCalls) * 100;
+    
+    if (percentageUsed >= 90) {
+      console.log(`\n🚨 SERP Quota Alert: ${callsUsed}/${maxCalls} calls used (${Math.round(percentageUsed)}%)`);
+      console.log('💡 Consider reducing --max-serp-calls for future runs');
+    } else if (percentageUsed >= 75) {
+      console.log(`\n⚠️  SERP Quota Warning: ${callsUsed}/${maxCalls} calls used (${Math.round(percentageUsed)}%)`);
+    } else if (remaining <= 5) {
+      console.log(`\n📊 SERP Quota: ${remaining} calls remaining`);
+    }
+  }
+}
+
+/**
+ * Partial failure resilience - continue with degraded data
+ */
+export function handlePartialFailure<T>(
+  results: Array<{ success: boolean; data: T | null; error?: Error }>,
+  operation: string
+): { succeeded: T[]; failureCount: number; warnings: string[] } {
+  const succeeded = results.filter(r => r.success && r.data).map(r => r.data!);
+  const failed = results.filter(r => !r.success);
+  
+  const warnings: string[] = [];
+  
+  if (failed.length > 0) {
+    warnings.push(`${operation}: ${failed.length}/${results.length} operations failed`);
+    
+    if (succeeded.length === 0) {
+      throw new Error(`${operation}: All operations failed, cannot continue`);
+    }
+    
+    // Log individual failures for debugging
+    failed.forEach((failure, index) => {
+      if (failure.error) {
+        logger.debug(`${operation} failure ${index + 1}: ${failure.error.message}`);
+      }
+    });
+    
+    console.log(`\n⚠️  ${operation}: Continuing with ${succeeded.length}/${results.length} successful results`);
+  }
+  
+  return {
+    succeeded,
+    failureCount: failed.length,
+    warnings
+  };
+}

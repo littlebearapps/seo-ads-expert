@@ -28,35 +28,186 @@ program
   .option('-m, --markets <markets>', 'Target markets (comma-separated)', 'AU,US,GB')
   .option('--max-keywords <number>', 'Maximum keywords to analyze', '200')
   .option('--max-serp-calls <number>', 'Maximum SERP API calls', '30')
+  .option('--format <format>', 'Output format: all (default), ads-editor (CSV only)', 'all')
+  .option('--export <export>', 'Export additional data: utm-template', '')
+  .option('--validate-only', 'Run validation checks only (no plan generation)')
+  .option('--skip-health-check', 'Skip URL health checks (development/emergency)')
+  .option('--diff-only', 'Generate diff against previous run only')
+  .option('--dry-run', 'Show what would be generated without execution')
   .action(async (options) => {
-    console.log('🚀 SEO & Ads Expert - Plan Generation\n');
+    const startTime = Date.now();
     
     try {
-      // Validate environment and product
-      validateEnvironment();
+      // Enhanced startup logging
+      console.log('🚀 SEO & Ads Expert - Plan Generation');
+      if (options.dryRun) console.log('🧪 DRY RUN MODE - No files will be generated');
+      console.log('');
       
+      // Enhanced validation with progress indicators
+      console.log('⚡ Phase 1: Validation & Setup');
+      process.stdout.write('  🔍 Environment validation... ');
+      validateEnvironment();
+      console.log('✅');
+      
+      process.stdout.write('  🏷️  Product validation... ');
       if (!validateProductExists(options.product)) {
+        console.log('❌');
+        console.error(`\n🚨 Product '${options.product}' not found`);
+        console.error('💡 Available products: convertmyfile, palettekit, notebridge');
         process.exit(1);
       }
+      console.log('✅');
       
-      console.log(`📋 Product: ${options.product}`);
-      console.log(`🌍 Markets: ${options.markets}`);
-      console.log(`🎯 Max Keywords: ${options.maxKeywords}`);
-      console.log(`📞 Max SERP Calls: ${options.maxSerpCalls}\n`);
+      // Display configuration
+      console.log('\n📋 Configuration:');
+      console.log(`   Product: ${options.product}`);
+      console.log(`   Markets: ${options.markets}`);
+      console.log(`   Max Keywords: ${options.maxKeywords}`);
+      console.log(`   Max SERP Calls: ${options.maxSerpCalls}`);
+      console.log(`   Format: ${options.format}`);
+      if (options.export) console.log(`   Export: ${options.export}`);
+      if (options.validateOnly) console.log('   Mode: Validation Only');
+      if (options.skipHealthCheck) console.log('   ⚠️  URL Health Checks: DISABLED');
+      if (options.diffOnly) console.log('   Mode: Diff Only');
       
-      const { generatePlan } = await import('./orchestrator.js');
-      await generatePlan({
+      // Handle special modes
+      if (options.validateOnly) {
+        console.log('\n⚡ Running validation checks only...');
+        const { runValidationChecks } = await import('./orchestrator.js');
+        const validationResult = await runValidationChecks({
+          product: options.product,
+          markets: options.markets.split(','),
+          skipHealthCheck: options.skipHealthCheck
+        });
+        
+        if (validationResult.success) {
+          console.log('\n🎉 All validations passed!');
+          console.log(`✅ Schema validation: ${validationResult.schema.valid ? 'PASS' : 'FAIL'}`);
+          console.log(`✅ URL health checks: ${validationResult.health.healthy}/${validationResult.health.total} URLs healthy`);
+          console.log(`✅ Claims validation: ${validationResult.claims.valid ? 'PASS' : 'FAIL'}`);
+        } else {
+          console.error('\n❌ Validation failures detected:');
+          if (!validationResult.schema.valid) {
+            console.error(`🚨 Schema issues: ${validationResult.schema.errors.join(', ')}`);
+          }
+          if (validationResult.health.failed > 0) {
+            console.error(`🚨 Failed URLs: ${validationResult.health.failed} URLs are unreachable`);
+          }
+          if (!validationResult.claims.valid) {
+            console.error(`🚨 Claims issues: ${validationResult.claims.errors.join(', ')}`);
+          }
+          process.exit(1);
+        }
+        return;
+      }
+      
+      if (options.diffOnly) {
+        console.log('\n⚡ Generating diff against previous run...');
+        const { generateDiffOnly } = await import('./orchestrator.js');
+        const diffResult = await generateDiffOnly({
+          product: options.product,
+          markets: options.markets.split(',')
+        });
+        
+        if (diffResult.changes.length === 0) {
+          console.log('\n✨ No changes detected since last run');
+        } else {
+          console.log(`\n📊 Found ${diffResult.changes.length} changes:`);
+          diffResult.changes.forEach(change => {
+            console.log(`  ${change.type}: ${change.description}`);
+          });
+          console.log(`\n📄 Diff saved: ${diffResult.outputPath}`);
+        }
+        return;
+      }
+      
+      // Export UTM template if requested
+      if (options.export === 'utm-template') {
+        console.log('\n⚡ Generating UTM template...');
+        const { generateUtmTemplate } = await import('./orchestrator.js');
+        const utmTemplate = await generateUtmTemplate(options.product);
+        console.log('\n📋 UTM Template (copy-paste ready):');
+        console.log(`${utmTemplate}`);
+        console.log('\n💡 Add this suffix to all campaign URLs');
+      }
+      
+      // Main plan generation with enhanced progress tracking
+      console.log('\n⚡ Phase 2: Plan Generation');
+      const planOptions = {
         product: options.product,
         markets: options.markets.split(','),
         maxKeywords: parseInt(options.maxKeywords),
         maxSerpCalls: parseInt(options.maxSerpCalls),
-      });
+        format: options.format,
+        skipHealthCheck: options.skipHealthCheck,
+        dryRun: options.dryRun
+      };
       
-      console.log('\n🎉 Plan generation completed successfully!');
-      console.log(`📊 View results: npx tsx src/cli.ts show --product ${options.product} --date ${new Date().toISOString().split('T')[0]}`);
+      const { generatePlan } = await import('./orchestrator.js');
+      const result = await generatePlan(planOptions);
+      
+      // Enhanced completion reporting
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      console.log(`\n🎉 Plan generation completed in ${duration}s!`);
+      
+      if (!options.dryRun) {
+        console.log('\n📊 Generation Summary:');
+        console.log(`   Keywords analyzed: ${result.keywordCount || 'N/A'}`);
+        console.log(`   Ad groups created: ${result.adGroupCount || 'N/A'}`);
+        console.log(`   SERP calls used: ${result.serpCalls || 0}/${options.maxSerpCalls}`);
+        console.log(`   Cache hit rate: ${result.cacheHitRate || 0}%`);
+        
+        if (result.warnings && result.warnings.length > 0) {
+          console.log('\n⚠️  Warnings:');
+          result.warnings.forEach(warning => console.log(`   ${warning}`));
+        }
+        
+        console.log('\n📁 Files generated:');
+        if (options.format === 'all' || options.format === 'ads-editor') {
+          console.log(`   📊 ${result.outputPath}/keywords.csv`);
+        }
+        if (options.format === 'all') {
+          console.log(`   📝 ${result.outputPath}/ads.json`);
+          console.log(`   📄 ${result.outputPath}/seo_pages.md`);
+          console.log(`   🏢 ${result.outputPath}/competitors.md`);
+          console.log(`   🚫 ${result.outputPath}/negatives.txt`);
+          console.log(`   📋 ${result.outputPath}/summary.json`);
+          console.log(`   🔍 ${result.outputPath}/diff.json`);
+        }
+        
+        console.log(`\n💡 View details: npx tsx src/cli.ts show --product ${options.product} --date ${new Date().toISOString().split('T')[0]}`);
+      } else {
+        console.log('\n🧪 DRY RUN - This is what would have been generated:');
+        console.log(`   📊 ${result.plannedFiles?.join('\n   📊 ') || 'Standard output files'}`);
+      }
       
     } catch (error) {
-      console.error('\n❌ Plan generation failed:', error instanceof Error ? error.message : error);
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      console.error(`\n❌ Plan generation failed after ${duration}s`);
+      
+      if (error instanceof Error) {
+        console.error(`\n🚨 Error: ${error.message}`);
+        
+        // Enhanced error messages with remediation steps
+        if (error.message.includes('validation')) {
+          console.error('💡 Try running with --validate-only to see detailed validation errors');
+        } else if (error.message.includes('health check')) {
+          console.error('💡 Try running with --skip-health-check to bypass URL validation');
+        } else if (error.message.includes('SERP') || error.message.includes('API')) {
+          console.error('💡 Check API connections with: npx tsx src/cli.ts test');
+          console.error('💡 Try reducing --max-serp-calls to avoid rate limits');
+        } else if (error.message.includes('timeout')) {
+          console.error('💡 The operation timed out. Try reducing --max-keywords or --max-serp-calls');
+        } else if (error.message.includes('quota')) {
+          console.error('💡 API quota exceeded. Wait before trying again or reduce limits');
+        }
+        
+        // Log full stack trace for debugging
+        logger.debug('Full error stack:', error.stack);
+      } else {
+        console.error(`🚨 Unknown error: ${error}`);
+      }
+      
       process.exit(1);
     }
   });

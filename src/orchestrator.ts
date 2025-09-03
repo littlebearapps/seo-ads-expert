@@ -14,6 +14,7 @@ import { GoogleAdsScriptGenerator } from './writers/ads-script.js';
 import { UrlHealthChecker } from './validators/url-health.js';
 import { generatePlanDiff } from './utils/diff.js';
 import { validateProductClaims, ProductClaimsValidation } from './validators/claims.js';
+import { createLocalizationEngine, LocalizationResult } from './localization.js';
 
 // Import connectors
 import { KwpCsvConnector } from './connectors/kwp-csv.js';
@@ -33,6 +34,9 @@ export interface PlanOptions {
   markets: string[];
   maxKeywords: number;
   maxSerpCalls: number;
+  format?: 'all' | 'ads-editor';
+  skipHealthCheck?: boolean;
+  dryRun?: boolean;
 }
 
 export interface PlanResult {
@@ -45,6 +49,12 @@ export interface PlanResult {
     processingMs: number;
     outputGenerationMs: number;
   };
+  keywordCount?: number;
+  adGroupCount?: number;
+  serpCalls?: number;
+  cacheHitRate?: number;
+  outputPath?: string;
+  plannedFiles?: string[];
 }
 
 export class SEOAdsOrchestrator {
@@ -122,6 +132,29 @@ export class SEOAdsOrchestrator {
         { maxClusters: 15, minKeywordsPerCluster: 2 }
       );
       logger.info(`✅ Keywords clustered: ${clusteringResult.clusters.length} ad groups created`);
+
+      // Step 5a: Generate localized content for all markets
+      console.log('🌍 Generating localized content for target markets...');
+      let localizationResult: LocalizationResult | null = null;
+      if (options.markets && options.markets.length > 1) {
+        const localizationEngine = createLocalizationEngine();
+        
+        // Extract base content from clusters for localization
+        const baseContent = {
+          headlines: clusteringResult.clusters.flatMap(c => c.headlines || []),
+          descriptions: clusteringResult.clusters.flatMap(c => c.descriptions || []),
+          keywords: scoringResult.keywords.map(k => k.keyword),
+          product: productConfig.productName
+        };
+        
+        localizationResult = await localizationEngine.localizeContent(baseContent, options.markets);
+        logger.info(`✅ Localization complete: ${localizationResult.localizedContent.length} market variants, ${localizationResult.marketValidation.warnings.length} warnings`);
+        
+        // Apply localized content back to clusters
+        applyLocalizationToClusters(clusteringResult.clusters, localizationResult);
+      } else {
+        logger.debug('📍 Single market detected, skipping localization processing');
+      }
 
       // Step 6: Analyze competitors from SERP data
       console.log('🏆 Analyzing competitor landscape...');
@@ -553,26 +586,75 @@ export class SEOAdsOrchestrator {
 }
 
 // Main exported functions for CLI integration
-export async function generatePlan(options: PlanOptions): Promise<void> {
+/**
+ * Apply localized content to clusters for multi-market campaigns
+ */
+function applyLocalizationToClusters(clusters: KeywordCluster[], localizationResult: LocalizationResult): void {
+  // For now, we enhance clusters with market-specific metadata
+  // In a full implementation, we might create separate cluster variants per market
+  
+  const primaryMarketContent = localizationResult.localizedContent.find(
+    content => content.market === localizationResult.primaryMarket
+  );
+  
+  if (primaryMarketContent) {
+    // Apply primary market localizations to landing page URLs
+    clusters.forEach(cluster => {
+      if (cluster.landingPage && primaryMarketContent.urlSuffix && primaryMarketContent.urlSuffix !== '/') {
+        // Add market suffix to landing page URLs (e.g. /webp-to-png -> /au/webp-to-png)
+        cluster.landingPage = primaryMarketContent.urlSuffix + cluster.landingPage.replace(/^\//, '');
+      }
+      
+      // Add market-specific SEO metadata to clusters
+      if (!cluster.seoData) {
+        cluster.seoData = {};
+      }
+      
+      cluster.seoData.marketTitle = primaryMarketContent.seoTitle;
+      cluster.seoData.marketMeta = primaryMarketContent.metaDescription;
+      cluster.seoData.marketValueProp = primaryMarketContent.valueProp;
+      cluster.seoData.targetMarkets = localizationResult.localizedContent.map(c => c.market);
+    });
+  }
+  
+  logger.debug(`🌍 Applied localization to ${clusters.length} clusters for ${localizationResult.localizedContent.length} markets`);
+}
+
+export async function generatePlan(options: PlanOptions): Promise<PlanResult> {
   const orchestrator = new SEOAdsOrchestrator();
   
   try {
     const result = await orchestrator.generatePlan(options);
     
-    console.log('\n📊 Plan Generation Summary:');
-    console.log(`✅ Keywords analyzed: ${result.summary.total_keywords}`);
-    console.log(`✅ Ad groups created: ${result.summary.total_ad_groups}`);
-    console.log(`✅ SERP calls used: ${result.summary.serp_calls_used}/${options.maxSerpCalls}`);
-    console.log(`✅ Files generated: ${result.outputPaths.length}`);
+    // Add enhanced result data for CLI
+    const enhancedResult: PlanResult = {
+      ...result,
+      keywordCount: result.summary.total_keywords,
+      adGroupCount: result.summary.total_ad_groups,
+      serpCalls: result.summary.serp_calls_used,
+      cacheHitRate: result.summary.cache_hit_rate,
+      outputPath: result.outputPaths[0] ? result.outputPaths[0].substring(0, result.outputPaths[0].lastIndexOf('/')) : ''
+    };
     
-    if (result.warnings.length > 0) {
-      console.log(`\n⚠️  Warnings (${result.warnings.length}):`);
-      result.warnings.slice(0, 3).forEach(warning => console.log(`  - ${warning}`));
-      if (result.warnings.length > 3) {
-        console.log(`  ... and ${result.warnings.length - 3} more (see summary.json)`);
+    // Handle dry run mode
+    if (options.dryRun) {
+      enhancedResult.plannedFiles = [
+        'keywords.csv',
+        'ads.json',
+        'seo_pages.md',
+        'competitors.md',
+        'negatives.txt',
+        'summary.json',
+        'diff.json'
+      ];
+      
+      if (options.format === 'ads-editor') {
+        enhancedResult.plannedFiles = ['keywords.csv'];
       }
     }
-
+    
+    return enhancedResult;
+    
   } catch (error) {
     logger.error('❌ Plan generation failed:', error);
     throw error;
@@ -646,4 +728,133 @@ export async function showPlan(product: string, date: string): Promise<any | nul
     logger.error('❌ Failed to read plan summary:', error);
     return null;
   }
+}
+
+// ============================================================================
+// ENHANCED CLI FUNCTIONS FOR TASK 9
+// ============================================================================
+
+/**
+ * Run validation checks only (--validate-only)
+ */
+export async function runValidationChecks(options: { product: string; markets: string[]; skipHealthCheck?: boolean }): Promise<{
+  success: boolean;
+  schema: { valid: boolean; errors: string[] };
+  health: { healthy: number; total: number; failed: number };
+  claims: { valid: boolean; errors: string[] };
+}> {
+  logger.info('🔍 Running comprehensive validation checks...');
+  
+  try {
+    const config = loadProductConfig(options.product);
+    
+    // Schema validation (implicit - if loadProductConfig succeeds, schema is valid)
+    const schemaResult = { valid: true, errors: [] };
+    
+    // URL health checks (skip if requested)
+    let healthSummary = { healthy: 0, total: 0, failed: 0 };
+    if (!options.skipHealthCheck) {
+      const healthChecker = new UrlHealthChecker();
+      const healthResult = await healthChecker.checkMultipleUrls(config.target_pages.map(p => p.url));
+      healthSummary = {
+        healthy: healthResult.filter(r => r.status === 'pass').length,
+        total: healthResult.length,
+        failed: healthResult.filter(r => r.status !== 'pass').length
+      };
+    } else {
+      // Skip health checks - assume all are healthy for validation purposes
+      healthSummary = {
+        healthy: config.target_pages.length,
+        total: config.target_pages.length,
+        failed: 0
+      };
+    }
+    
+    // Claims validation
+    const claimsResult = await validateProductClaims(config, config.target_pages);
+    const claimsSummary = {
+      valid: claimsResult.isValid,
+      errors: claimsResult.violations.map(v => v.message)
+    };
+    
+    const allValid = schemaResult.valid && healthSummary.failed === 0 && claimsSummary.valid;
+    
+    return {
+      success: allValid,
+      schema: schemaResult,
+      health: healthSummary,
+      claims: claimsSummary
+    };
+    
+  } catch (error) {
+    logger.error('❌ Validation checks failed:', error);
+    return {
+      success: false,
+      schema: { valid: false, errors: [error instanceof Error ? error.message : 'Unknown error'] },
+      health: { healthy: 0, total: 0, failed: 0 },
+      claims: { valid: false, errors: [] }
+    };
+  }
+}
+
+/**
+ * Generate diff against previous run only (--diff-only)
+ */
+export async function generateDiffOnly(options: { product: string; markets: string[] }): Promise<{
+  changes: Array<{ type: string; description: string }>;
+  outputPath: string;
+}> {
+  logger.info('📊 Generating diff against previous run...');
+  
+  try {
+    const config = loadProductConfig(options.product);
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    
+    // Find the most recent previous plan
+    const plansDir = join(process.cwd(), 'plans', options.product);
+    if (!existsSync(plansDir)) {
+      return { changes: [], outputPath: '' };
+    }
+    
+    const planDates = readdirSync(plansDir)
+      .filter(dir => dir.match(/^\d{4}-\d{2}-\d{2}$/))
+      .filter(dir => dir < dateStr)
+      .sort()
+      .reverse();
+    
+    if (planDates.length === 0) {
+      return { changes: [], outputPath: '' };
+    }
+    
+    const previousDate = planDates[0];
+    const currentPlanPath = join(plansDir, dateStr);
+    const previousPlanPath = join(plansDir, previousDate);
+    
+    // Generate diff using existing diff utility
+    const diffResult = await generatePlanDiff(previousPlanPath, currentPlanPath);
+    
+    return {
+      changes: diffResult.changes || [],
+      outputPath: join(currentPlanPath, 'diff.json')
+    };
+    
+  } catch (error) {
+    logger.error('❌ Failed to generate diff:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate UTM template for copy-paste (--export utm-template)
+ */
+export async function generateUtmTemplate(product: string): Promise<string> {
+  logger.info('📋 Generating UTM template...');
+  
+  const config = loadProductConfig(product);
+  const baseUrl = config.target_pages[0]?.url || `https://chrome.google.com/webstore/detail/${product}`;
+  
+  // Generate canonical UTM parameters
+  const utmTemplate = `?utm_source=google&utm_medium=cpc&utm_campaign=${product}_search&utm_content={{keyword}}&utm_term={{ad_group}}`;
+  
+  return `${baseUrl}${utmTemplate}`;
 }

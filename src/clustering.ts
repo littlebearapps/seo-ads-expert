@@ -17,6 +17,14 @@ export interface KeywordCluster {
   averageScore: number;              // Average final score
   intentLevel: 'highest' | 'high' | 'medium' | 'baseline';
   useCase: string;                   // Detected use case (webp conversion, color picking, etc.)
+  headlines?: string[];              // Generated marketing headlines
+  descriptions?: string[];           // Generated marketing descriptions
+  seoData?: {                        // Market-specific SEO data
+    marketTitle?: string;
+    marketMeta?: string;
+    marketValueProp?: string;
+    targetMarkets?: string[];
+  };
 }
 
 export interface ClusteringResult {

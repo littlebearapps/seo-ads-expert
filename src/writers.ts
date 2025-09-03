@@ -625,7 +625,7 @@ This document provides SEO page mapping analysis and recommendations for ${optio
 
   private generateLandingPageBrief(cluster: KeywordCluster, productConfig: any): string {
     const suggestedUrl = this.generateSuggestedUrl(cluster);
-    const title = `${cluster.name} | ${productConfig.product}`;
+    const title = cluster.seoData?.marketTitle || `${cluster.name} | ${productConfig.product}`;
     const h1 = cluster.name;
     
     let brief = `### ${cluster.name} Landing Page Brief\n\n`;
@@ -633,7 +633,19 @@ This document provides SEO page mapping analysis and recommendations for ${optio
     brief += `**Title:** ${title}\n`;
     brief += `**H1:** ${h1}\n\n`;
     
-    brief += `**Meta Description:** ${this.generateMetaDescription(cluster, productConfig)}\n\n`;
+    // Use localized meta description if available
+    const metaDescription = cluster.seoData?.marketMeta || this.generateMetaDescription(cluster, productConfig);
+    brief += `**Meta Description:** ${metaDescription}\n\n`;
+    
+    // Add localized value proposition if available
+    if (cluster.seoData?.marketValueProp) {
+      brief += `**Market Value Proposition:** ${cluster.seoData.marketValueProp}\n\n`;
+    }
+    
+    // Show target markets if multi-market
+    if (cluster.seoData?.targetMarkets && cluster.seoData.targetMarkets.length > 1) {
+      brief += `**Target Markets:** ${cluster.seoData.targetMarkets.join(', ')}\n\n`;
+    }
     
     brief += `**Content Outline:**\n`;
     brief += `1. Hero section with primary value proposition\n`;

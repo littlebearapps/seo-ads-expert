@@ -382,6 +382,9 @@ export class RapidApiSerpConnector {
 
     const params = marketParams[market.toUpperCase()] || marketParams['US'];
     
+    // Enhanced logging for market-specific SERP calls
+    logger.debug(`🌍 Market targeting: ${market.toUpperCase()} (gl=${params.gl}, hl=${params.hl})`);
+    
     return {
       gl: params.gl,
       hl: params.hl
