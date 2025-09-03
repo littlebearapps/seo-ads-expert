@@ -30,8 +30,8 @@ export interface SerpAnalysisResult {
 }
 
 export class RapidApiSerpConnector {
-  private apiKey: string;
-  private host: string;
+  private apiKey: string = '';
+  private host: string = '';
   private isAvailable = false;
   private baseUrl = 'https://contextualwebsearch-websearch-v1.p.rapidapi.com';
   private callCount = 0;
@@ -350,7 +350,7 @@ export class RapidApiSerpConnector {
       logger.debug('🔬 Testing RapidAPI SERP connection...');
       
       // Simple test query
-      const testResult = await this.getSerpData('test query', 'US');
+      await this.getSerpData('test query', 'US');
       
       logger.info('✅ RapidAPI SERP connection test successful');
       return true;

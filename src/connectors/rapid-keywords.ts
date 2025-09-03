@@ -22,8 +22,8 @@ export interface KeywordExpansionResult {
 }
 
 export class RapidApiKeywordConnector {
-  private apiKey: string;
-  private host: string;
+  private apiKey: string = '';
+  private host: string = '';
   private isAvailable = false;
   private baseUrl = 'https://google-keyword-insight1.p.rapidapi.com';
 
@@ -245,7 +245,7 @@ export class RapidApiKeywordConnector {
       logger.debug('🔬 Testing RapidAPI keyword connection...');
       
       // Simple test query
-      const testResult = await this.getKeywordSuggestions('test', 'US');
+      await this.getKeywordSuggestions('test', 'US');
       
       logger.info('✅ RapidAPI keyword connection test successful');
       return true;

@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import pino from 'pino';
-import { KeywordData, KeywordDataSchema, SearchConsoleResponse, SearchConsoleResponseSchema } from './types.js';
+import { KeywordData, KeywordDataSchema, SearchConsoleResponseSchema } from './types.js';
 import { validateEnvironment } from '../utils/validation.js';
 
 const logger = pino({
@@ -49,11 +49,11 @@ export class SearchConsoleConnector {
       }
 
       const auth = new google.auth.GoogleAuth({
-        credentials: {
+        credentials: env.GOOGLE_PROJECT_ID ? {
           client_email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
           private_key: env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
           project_id: env.GOOGLE_PROJECT_ID,
-        },
+        } : undefined,
         scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
       });
 
