@@ -31,10 +31,13 @@ export class SearchConsoleConnector {
   private sites: string[] = [];
 
   constructor() {
-    this.initializeClient();
+    // Async initialization - will be called in the background
+    this.initializeClient().catch(error => {
+      logger.error('Failed to initialize Search Console client:', error);
+    });
   }
 
-  private initializeClient(): void {
+  private async initializeClient(): Promise<void> {
     try {
       const env = validateEnvironment();
       
@@ -45,7 +48,37 @@ export class SearchConsoleConnector {
 
       let auth: google.auth.GoogleAuth;
 
-      // Option 1: Use JSON key file if GOOGLE_APPLICATION_CREDENTIALS is set
+      // Priority 1: Application Default Credentials (most secure for local dev)
+      // This will use credentials from `gcloud auth application-default login`
+      const hasExplicitCredentials = env.GOOGLE_APPLICATION_CREDENTIALS || 
+                                    (env.GOOGLE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
+      
+      if (!hasExplicitCredentials) {
+        try {
+          logger.info('🔑 Attempting to use Application Default Credentials (ADC)');
+          auth = new google.auth.GoogleAuth({
+            scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+          });
+          
+          // Test if ADC is available
+          await auth.getClient();
+          
+          this.searchConsole = google.searchconsole({
+            version: 'v1',
+            auth: auth,
+          });
+
+          this.isAuthenticated = true;
+          logger.info('✅ Search Console client initialized with Application Default Credentials');
+          logger.info('   (Using gcloud auth from: ~/.config/gcloud/application_default_credentials.json)');
+          logger.debug('🔗 Configured sites:', this.sites);
+          return;
+        } catch (adcError) {
+          logger.debug('ADC not available, trying other methods...');
+        }
+      }
+
+      // Priority 2: JSON key file (for production/CI)
       if (env.GOOGLE_APPLICATION_CREDENTIALS) {
         logger.info('🔑 Using Google Cloud JSON key file authentication');
         auth = new google.auth.GoogleAuth({
@@ -53,7 +86,7 @@ export class SearchConsoleConnector {
           scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
         });
       }
-      // Option 2: Use individual credentials
+      // Priority 3: Individual credentials (backward compatibility)
       else if (env.GOOGLE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
         logger.info('🔑 Using individual Google Cloud credentials');
         auth = new google.auth.GoogleAuth({
@@ -68,7 +101,9 @@ export class SearchConsoleConnector {
       // No credentials configured
       else {
         logger.warn('⚠️  Google Search Console credentials not configured - GSC data will be unavailable');
-        logger.info('💡 Set GOOGLE_APPLICATION_CREDENTIALS or individual credential environment variables');
+        logger.info('💡 Option 1: Run `gcloud auth application-default login` (recommended)');
+        logger.info('💡 Option 2: Set GOOGLE_APPLICATION_CREDENTIALS to JSON key file path');
+        logger.info('💡 Option 3: Set GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY');
         return;
       }
 
