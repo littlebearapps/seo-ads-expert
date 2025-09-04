@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:httpbin.org)",
+      "WebFetch(domain:example.com)",
+      "WebFetch(domain:www.anthropic.com)"
+    ]
+  }
+}

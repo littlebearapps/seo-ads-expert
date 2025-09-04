@@ -1,6 +1,6 @@
 import pino from 'pino';
 import { format } from 'date-fns';
-import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, statSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 // Import all the components
@@ -385,6 +385,24 @@ export class SEOAdsOrchestrator {
     };
 
     try {
+      // Check if we should only generate Ads Editor CSV files
+      if (options.format === 'ads-editor') {
+        console.log('📊 Generating Ads Editor CSV files only...');
+        const { generateAdsEditorCsvs } = await import('./writers/ads-editor-csv.js');
+        const fullOutputPath = join(writerOptions.outputPath, writerOptions.productName, writerOptions.date);
+        mkdirSync(fullOutputPath, { recursive: true });
+        
+        const csvPaths = await generateAdsEditorCsvs({
+          product: options.product,
+          clusters: clusters,
+          productConfig: productConfig,
+          outputPath: fullOutputPath,
+          markets: options.markets
+        });
+        
+        return csvPaths;
+      }
+      
       // Generate keywords CSV
       const keywordsCsv = await this.writerEngine.writeKeywordsCsv(keywords, writerOptions);
       outputPaths.push(keywordsCsv);

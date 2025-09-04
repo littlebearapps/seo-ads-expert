@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "BSAcf7QCl47R_RvwpkkKxiVP14jxup2"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-3e87730a-a532-4e17-a612-4b396decc717"
+      ]
+    },
+    "mult-fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@lmcc-dev/mult-fetch-mcp-server"
+      ],
+      "env": {
+        "MCP_LANG": "en"
+      }
+    }
+  }
+}
