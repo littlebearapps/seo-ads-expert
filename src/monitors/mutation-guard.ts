@@ -15,30 +15,30 @@ export const GuardrailConfigSchema = z.object({
     campaignMax: z.number().default(50), // A$50 per campaign
     accountMax: z.number().default(100), // A$100 total account
     enforcementLevel: z.enum(['soft', 'hard']).default('hard')
-  }),
+  }).default({}),
   deviceTargeting: z.object({
     allowedDevices: z.array(z.enum(['DESKTOP', 'MOBILE', 'TABLET'])).default(['DESKTOP']),
     enforceRestrictions: z.boolean().default(true)
-  }),
+  }).default({}),
   landingPageValidation: z.object({
     checkFor404: z.boolean().default(true),
     checkSSL: z.boolean().default(true),
     checkMobileFriendly: z.boolean().default(true),
     checkLoadTime: z.boolean().default(true),
     maxLoadTimeMs: z.number().default(3000)
-  }),
+  }).default({}),
   bidLimits: z.object({
     maxCpcMicros: z.string().default('5000000'), // $5 max CPC
     maxCpmMicros: z.string().default('10000000'), // $10 max CPM
     enforceMaxBids: z.boolean().default(true)
-  }),
+  }).default({}),
   negativeKeywords: z.object({
     enforceSharedLists: z.boolean().default(true),
     blockProhibitedTerms: z.boolean().default(true),
     prohibitedTerms: z.array(z.string()).default([
       'free', 'crack', 'hack', 'illegal', 'torrent'
     ])
-  })
+  }).default({})
 });
 
 export type GuardrailConfig = z.infer<typeof GuardrailConfigSchema>;
@@ -179,15 +179,21 @@ export class LandingPageValidator {
 
 // Main mutation guard class
 export class MutationGuard extends PerformanceMonitor {
-  private config: GuardrailConfig;
+  private guardrailConfig: GuardrailConfig;
   private budgetEnforcer: BudgetEnforcer;
   private landingPageValidator: LandingPageValidator;
   private mutationHistory: Mutation[] = [];
 
   constructor(config?: Partial<GuardrailConfig>) {
-    super();
-    this.config = GuardrailConfigSchema.parse(config || {});
-    this.budgetEnforcer = new BudgetEnforcer(this.config.budgetLimits);
+    super({
+      circuitBreakerConfig: {
+        failureThreshold: 3,
+        timeoutMs: 15000,
+        resetTimeoutMs: 30000
+      }
+    });
+    this.guardrailConfig = GuardrailConfigSchema.parse(config || {});
+    this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
     this.landingPageValidator = new LandingPageValidator();
   }
 
@@ -207,7 +213,7 @@ export class MutationGuard extends PerformanceMonitor {
 
     try {
       // Use circuit breaker for validation
-      return await this.executeWithCircuitBreaker(async () => {
+      return await this.executeWithCircuitBreaker('mutation_validation', async () => {
         // 1. Budget validation
         await this.validateBudget(mutation, result);
         
@@ -236,7 +242,7 @@ export class MutationGuard extends PerformanceMonitor {
             violations: criticalViolations,
             mutation 
           });
-        } else if (errorViolations.length > 0 && this.config.budgetLimits.enforcementLevel === 'hard') {
+        } else if (errorViolations.length > 0 && this.guardrailConfig.budgetLimits.enforcementLevel === 'hard') {
           result.passed = false;
           logger.warn('Guardrail violations detected in hard enforcement mode', {
             violations: errorViolations,
@@ -250,12 +256,16 @@ export class MutationGuard extends PerformanceMonitor {
         return result;
       });
     } catch (error) {
-      logger.error('Error validating mutation:', error);
+      logger.error('Error validating mutation:', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        mutation
+      });
       result.passed = false;
       result.violations.push({
         type: 'system_error',
         severity: 'critical',
-        message: 'Failed to validate mutation due to system error'
+        message: `Failed to validate mutation due to system error: ${error instanceof Error ? error.message : String(error)}`
       });
       return result;
     }
@@ -294,7 +304,7 @@ export class MutationGuard extends PerformanceMonitor {
    * Validate landing pages
    */
   private async validateLandingPages(mutation: Mutation, result: GuardrailResult): Promise<void> {
-    if (!this.config.landingPageValidation.checkFor404) {
+    if (!this.guardrailConfig.landingPageValidation.checkFor404) {
       return;
     }
 
@@ -326,7 +336,7 @@ export class MutationGuard extends PerformanceMonitor {
    * Validate device targeting
    */
   private validateDeviceTargeting(mutation: Mutation, result: GuardrailResult): void {
-    if (!this.config.deviceTargeting.enforceRestrictions) {
+    if (!this.guardrailConfig.deviceTargeting.enforceRestrictions) {
       return;
     }
 
@@ -335,7 +345,7 @@ export class MutationGuard extends PerformanceMonitor {
       return;
     }
 
-    const allowedDevices = this.config.deviceTargeting.allowedDevices;
+    const allowedDevices = this.guardrailConfig.deviceTargeting.allowedDevices;
     const targetedDevices = deviceSettings.targetedDevices || [];
     
     const disallowedDevices = targetedDevices.filter(
@@ -362,12 +372,12 @@ export class MutationGuard extends PerformanceMonitor {
    * Validate bid limits
    */
   private validateBidLimits(mutation: Mutation, result: GuardrailResult): void {
-    if (!this.config.bidLimits.enforceMaxBids) {
+    if (!this.guardrailConfig.bidLimits.enforceMaxBids) {
       return;
     }
 
-    const maxCpc = BigInt(this.config.bidLimits.maxCpcMicros);
-    const maxCpm = BigInt(this.config.bidLimits.maxCpmMicros);
+    const maxCpc = BigInt(this.guardrailConfig.bidLimits.maxCpcMicros);
+    const maxCpm = BigInt(this.guardrailConfig.bidLimits.maxCpmMicros);
 
     // Check CPC bid
     const cpcBid = mutation.changes.cpcBidMicros as string;
@@ -377,10 +387,10 @@ export class MutationGuard extends PerformanceMonitor {
         severity: 'error',
         message: `CPC bid exceeds maximum: $${Number(BigInt(cpcBid) / 1000000n).toFixed(2)} > $${Number(maxCpc / 1000000n).toFixed(2)}`,
         field: 'cpcBidMicros',
-        suggestedValue: this.config.bidLimits.maxCpcMicros
+        suggestedValue: this.guardrailConfig.bidLimits.maxCpcMicros
       });
 
-      result.modifications!.cpcBidMicros = this.config.bidLimits.maxCpcMicros;
+      result.modifications!.cpcBidMicros = this.guardrailConfig.bidLimits.maxCpcMicros;
     }
 
     // Check CPM bid
@@ -391,10 +401,10 @@ export class MutationGuard extends PerformanceMonitor {
         severity: 'error',
         message: `CPM bid exceeds maximum: $${Number(BigInt(cpmBid) / 1000000n).toFixed(2)} > $${Number(maxCpm / 1000000n).toFixed(2)}`,
         field: 'cpmBidMicros',
-        suggestedValue: this.config.bidLimits.maxCpmMicros
+        suggestedValue: this.guardrailConfig.bidLimits.maxCpmMicros
       });
 
-      result.modifications!.cpmBidMicros = this.config.bidLimits.maxCpmMicros;
+      result.modifications!.cpmBidMicros = this.guardrailConfig.bidLimits.maxCpmMicros;
     }
   }
 
@@ -402,7 +412,7 @@ export class MutationGuard extends PerformanceMonitor {
    * Validate negative keywords
    */
   private validateNegativeKeywords(mutation: Mutation, result: GuardrailResult): void {
-    if (!this.config.negativeKeywords.blockProhibitedTerms) {
+    if (!this.guardrailConfig.negativeKeywords.blockProhibitedTerms) {
       return;
     }
 
@@ -412,7 +422,7 @@ export class MutationGuard extends PerformanceMonitor {
       if (!keywordText) return;
 
       const keywordLower = keywordText.toLowerCase();
-      const prohibitedTerms = this.config.negativeKeywords.prohibitedTerms;
+      const prohibitedTerms = this.guardrailConfig.negativeKeywords.prohibitedTerms;
 
       for (const term of prohibitedTerms) {
         if (keywordLower.includes(term.toLowerCase())) {
@@ -429,7 +439,7 @@ export class MutationGuard extends PerformanceMonitor {
     // Check negative keyword list enforcement
     if (mutation.resource === 'campaign' && 
         mutation.type === 'CREATE' && 
-        this.config.negativeKeywords.enforceSharedLists) {
+        this.guardrailConfig.negativeKeywords.enforceSharedLists) {
       const hasNegativeList = mutation.changes.sharedNegativeListIds && 
                              (mutation.changes.sharedNegativeListIds as string[]).length > 0;
       
@@ -526,7 +536,7 @@ export class MutationGuard extends PerformanceMonitor {
    * Update configuration
    */
   updateConfig(config: Partial<GuardrailConfig>): void {
-    this.config = GuardrailConfigSchema.parse({ ...this.config, ...config });
-    this.budgetEnforcer = new BudgetEnforcer(this.config.budgetLimits);
+    this.guardrailConfig = GuardrailConfigSchema.parse({ ...this.guardrailConfig, ...config });
+    this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
   }
 }

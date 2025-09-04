@@ -6,7 +6,6 @@ import { MutationApplier, MutationBuilder } from '../src/writers/mutation-applie
 
 // Mock dependencies
 vi.mock('../src/utils/cache.js');
-vi.mock('../src/monitors/performance.js');
 vi.mock('../src/connectors/google-ads-api.js');
 
 describe('Safe Write Operations & Guardrails (Task 2)', () => {
@@ -24,18 +23,23 @@ describe('Safe Write Operations & Guardrails (Task 2)', () => {
     describe('Budget Validation', () => {
       it('should validate budget limits', async () => {
         const mutation = {
-          type: 'UPDATE_BUDGET',
-          budget: 15000, // Exceeds default limit of 10,000
-          campaignId: 'campaign-1',
-          customerId: '123-456-7890'
+          type: 'UPDATE_BUDGET' as const,
+          resource: 'campaign' as const,
+          entityId: 'campaign-1',
+          customerId: '123-456-7890',
+          changes: {
+            budgetMicros: '15000000' // $15, exceeds default limit of $10
+          },
+          estimatedCost: 15
         };
 
         const result = await guard.validateMutation(mutation);
 
         expect(result.passed).toBe(false);
-        expect(result.severity).toBe('CRITICAL');
-        expect(result.message).toContain('budget');
-        expect(result.message).toContain('exceeds');
+        expect(result.violations).toHaveLength(1);
+        expect(result.violations[0].severity).toBe('error');
+        expect(result.violations[0].message).toContain('budget');
+        expect(result.violations[0].message).toContain('exceeded');
       });
 
       it('should allow budgets within limits', async () => {

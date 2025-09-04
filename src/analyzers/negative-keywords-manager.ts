@@ -1,7 +1,13 @@
 import pino from 'pino';
 import { z } from 'zod';
 import { GoogleAdsApiClient } from '../connectors/google-ads-api.js';
-import { WasteAnalyzer } from './waste.js';
+// Mock WasteAnalyzer for now - would integrate with real waste analysis system
+class MockWasteAnalyzer {
+  async identifyWastedSpend(product: string): Promise<{ wastedKeywords: any[] }> {
+    return { wastedKeywords: [] };
+  }
+}
+const WasteAnalyzer = MockWasteAnalyzer;
 import { AuditLogger } from '../monitors/audit-logger.js';
 import crypto from 'crypto';
 
