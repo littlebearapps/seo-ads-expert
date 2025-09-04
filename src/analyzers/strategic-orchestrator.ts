@@ -5,6 +5,8 @@ import { SerpWatchMonitor } from '../monitors/serp-watch';
 import { OpportunityAnalyzer, type OpportunitySource, type OpportunityMatrix } from './opportunity';
 import { ContentCalendarGenerator, type ContentCalendar } from '../generators/content-calendar';
 import { InternalLinkingEngine, type InternalLinkingStrategy } from '../generators/internal-links';
+import { AdVariantsGenerator, type AdVariantsStrategy } from '../generators/ad-variants';
+import { CompetitiveIntelligenceScanner, type CompetitiveIntelligence } from './competitive-intelligence';
 import { PerformanceMonitor, type PerformanceMetrics } from '../monitors/performance';
 import { z } from 'zod';
 
@@ -158,6 +160,41 @@ export const StrategicIntelligenceSchema = z.object({
     })
   }).optional(),
   
+  ad_variants_strategy: z.object({
+    total_variants: z.number(),
+    total_tests: z.number(),
+    testing_priorities: z.array(z.string()),
+    expected_improvement: z.object({
+      ctr_lift: z.number(),
+      conversion_lift: z.number(),
+      cost_efficiency: z.number()
+    }),
+    implementation: z.object({
+      rollout_phases: z.array(z.object({
+        phase: z.string(),
+        variants: z.array(z.string()),
+        budget_allocation: z.number(),
+        timeline: z.string()
+      })),
+      success_criteria: z.array(z.string())
+    })
+  }).optional(),
+  
+  competitive_intelligence: z.object({
+    competitors_tracked: z.number(),
+    keyword_gaps_found: z.number(),
+    content_gaps_found: z.number(),
+    biggest_threats: z.array(z.string()),
+    biggest_opportunities: z.array(z.string()),
+    recommended_focus_areas: z.array(z.string()),
+    success_probability: z.number(),
+    immediate_actions: z.array(z.object({
+      action: z.string(),
+      impact: z.string(),
+      timeline: z.string()
+    }))
+  }).optional(),
+  
   performance_metrics: z.object({
     session_id: z.string(),
     runtime_ms: z.number(),
@@ -181,6 +218,8 @@ export class StrategicOrchestrator {
   private opportunityAnalyzer: OpportunityAnalyzer;
   private contentCalendarGenerator: ContentCalendarGenerator;
   private internalLinkingEngine: InternalLinkingEngine;
+  private adVariantsGenerator: AdVariantsGenerator;
+  private competitiveScanner: CompetitiveIntelligenceScanner;
   private performanceMonitor: PerformanceMonitor;
   
   constructor(private config: StrategicConfig) {
@@ -249,6 +288,15 @@ export class StrategicOrchestrator {
       authorityBoostThreshold: 0.8,
       productFocusWeight: 1.5
     });
+    
+    // Initialize ad variants generator  
+    this.adVariantsGenerator = new AdVariantsGenerator(config.product_name || 'convert-my-file');
+    
+    // Initialize competitive intelligence scanner
+    this.competitiveScanner = new CompetitiveIntelligenceScanner(
+      config.product_name || 'convert-my-file',
+      'littlebearapps.com'
+    );
     
     // Initialize performance monitor
     this.performanceMonitor = new PerformanceMonitor({
@@ -597,10 +645,10 @@ export class StrategicOrchestrator {
     }));
   }
   
-  private synthesizeIntelligence(
+  private async synthesizeIntelligence(
     opportunities: UnifiedOpportunity[], 
     matrix: OpportunityMatrix
-  ): StrategicIntelligence {
+  ): Promise<StrategicIntelligence> {
     // Calculate executive summary
     const totalOpportunities = opportunities.length;
     const wasteOpps = opportunities.filter(o => o.source_type === 'waste_reduction');
@@ -681,9 +729,17 @@ export class StrategicOrchestrator {
     // Generate content strategy using base intelligence
     const contentStrategy = await this.generateContentStrategy(baseIntelligence);
     
+    // Generate ad variants strategy using base intelligence
+    const adVariantsStrategy = await this.generateAdVariantsStrategy(baseIntelligence);
+    
+    // Generate competitive intelligence using base intelligence
+    const competitiveIntelligence = await this.generateCompetitiveIntelligence(baseIntelligence);
+    
     return {
       ...baseIntelligence,
-      content_strategy: contentStrategy
+      content_strategy: contentStrategy,
+      ad_variants_strategy: adVariantsStrategy,
+      competitive_intelligence: competitiveIntelligence
     };
   }
   
@@ -747,6 +803,79 @@ export class StrategicOrchestrator {
       };
     } catch (error) {
       console.warn('Content strategy generation failed, skipping:', error);
+      return undefined;
+    }
+  }
+  
+  private async generateAdVariantsStrategy(intelligence: StrategicIntelligence) {
+    try {
+      // Generate ad variants strategy based on opportunities
+      const adVariantsStrategy = await this.adVariantsGenerator.generateAdVariantsStrategy(intelligence);
+      
+      return {
+        total_variants: adVariantsStrategy.metadata.total_variants,
+        total_tests: adVariantsStrategy.metadata.total_tests,
+        testing_priorities: adVariantsStrategy.optimization_insights.testing_priorities,
+        expected_improvement: adVariantsStrategy.optimization_insights.expected_improvement,
+        implementation: {
+          rollout_phases: adVariantsStrategy.implementation.rollout_phases,
+          success_criteria: adVariantsStrategy.implementation.success_criteria
+        }
+      };
+    } catch (error) {
+      console.warn('Ad variants strategy generation failed, skipping:', error);
+      return undefined;
+    }
+  }
+  
+  private async generateCompetitiveIntelligence(intelligence: StrategicIntelligence) {
+    try {
+      // Mock SERP data for competitive analysis
+      const mockSerpData = intelligence.opportunities.slice(0, 20).map(opp => ({
+        keyword: opp.keyword,
+        search_volume: opp.monthly_search_volume,
+        results: [
+          { position: 1, url: 'https://competitor1.com/page', domain: 'competitor1.com', 
+            title: 'Competitor 1 Content', description: 'Leading solution for...' },
+          { position: 2, url: 'https://competitor2.com/page', domain: 'competitor2.com',
+            title: 'Competitor 2 Content', description: 'Premium tool for...' },
+          { position: 3, url: 'https://littlebearapps.com/page', domain: 'littlebearapps.com',
+            title: 'Our Content', description: 'Free Chrome extension for...' },
+          { position: 4, url: 'https://competitor3.com/page', domain: 'competitor3.com',
+            title: 'Competitor 3 Content', description: 'Alternative solution...' },
+          { position: 5, url: 'https://competitor4.com/page', domain: 'competitor4.com',
+            title: 'Competitor 4 Content', description: 'Professional tool...' }
+        ],
+        ads: Math.random() > 0.5 ? [
+          { position: 1, domain: 'competitor1.com', headline: 'Best Converter Tool',
+            description: 'Try our premium converter...' },
+          { position: 2, domain: 'competitor2.com', headline: 'Fast Conversion',
+            description: 'Convert files instantly...' }
+        ] : undefined
+      }));
+      
+      // Scan competitive landscape
+      const competitiveData = await this.competitiveScanner.scanCompetitiveLandscape(
+        mockSerpData,
+        intelligence
+      );
+      
+      return {
+        competitors_tracked: competitiveData.metadata.competitors_tracked,
+        keyword_gaps_found: competitiveData.keyword_gaps.length,
+        content_gaps_found: competitiveData.content_gaps.length,
+        biggest_threats: competitiveData.insights_summary.biggest_threats,
+        biggest_opportunities: competitiveData.insights_summary.biggest_opportunities,
+        recommended_focus_areas: competitiveData.insights_summary.recommended_focus_areas,
+        success_probability: competitiveData.insights_summary.success_probability,
+        immediate_actions: competitiveData.action_plan.immediate_actions.slice(0, 5).map(a => ({
+          action: a.action,
+          impact: a.impact,
+          timeline: a.timeline
+        }))
+      };
+    } catch (error) {
+      console.warn('Competitive intelligence generation failed, skipping:', error);
       return undefined;
     }
   }
