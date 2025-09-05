@@ -68,6 +68,15 @@ export class BudgetEnforcer {
       warnings: []
     };
 
+    // Check for negative values
+    if (amount < 0) {
+      result.allowed = false;
+      result.reason = `Invalid budget amount: negative values not allowed ($${amount.toFixed(2)})`;
+      result.severity = 'error';
+      result.suggestedAmount = 0;
+      return result;
+    }
+
     // Check daily limit
     if (result.proposedSpend > this.limits.dailyMax) {
       result.allowed = false;
