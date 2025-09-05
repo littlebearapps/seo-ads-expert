@@ -679,4 +679,93 @@ export class MutationApplier {
     // This would use a diff library in production
     return `BEFORE:\n${beforeStr}\n\nAFTER:\n${afterStr}`;
   }
+
+  /**
+   * Recover from a save point
+   * Restores the system state to a previously saved point
+   */
+  async recoverFromSavePoint(savePointId: string): Promise<{
+    success: boolean;
+    recoveredMutations: number;
+    errors: string[];
+  }> {
+    const result = {
+      success: true,
+      recoveredMutations: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      // Find the save point in rollback stack
+      const savePoint = this.rollbackStack.find(r => r.id === savePointId);
+      
+      if (!savePoint) {
+        result.success = false;
+        result.errors.push(`Save point ${savePointId} not found`);
+        return result;
+      }
+
+      logger.info(`Recovering from save point: ${savePointId}`, {
+        mutationCount: savePoint.mutations.length,
+        timestamp: savePoint.timestamp
+      });
+
+      // Apply rollback mutations to restore state
+      const rollbackResult = await this.rollback(savePoint.mutations);
+      
+      if (rollbackResult.success) {
+        result.recoveredMutations = savePoint.mutations.length;
+        
+        // Remove this and all newer save points from the stack
+        const savePointIndex = this.rollbackStack.findIndex(r => r.id === savePointId);
+        this.rollbackStack = this.rollbackStack.slice(0, savePointIndex);
+        
+        logger.info(`Successfully recovered from save point ${savePointId}`);
+      } else {
+        result.success = false;
+        result.errors.push(...rollbackResult.failed.map(f => 
+          `Failed to recover mutation: ${f.mutation.resource} - ${f.error}`
+        ));
+      }
+    } catch (error) {
+      result.success = false;
+      result.errors.push(`Recovery error: ${error}`);
+      logger.error(`Failed to recover from save point ${savePointId}:`, error);
+    }
+
+    return result;
+  }
+
+  /**
+   * Create a save point
+   * Marks the current state for potential recovery
+   */
+  createSavePoint(description?: string): string {
+    const savePointId = `savepoint-${Date.now()}`;
+    
+    // Store current state as empty mutations (no rollback needed to reach current state)
+    this.rollbackStack.push({
+      id: savePointId,
+      mutations: [],
+      timestamp: new Date().toISOString()
+    });
+
+    logger.info(`Created save point: ${savePointId}`, { description });
+    return savePointId;
+  }
+
+  /**
+   * List available save points
+   */
+  listSavePoints(): Array<{
+    id: string;
+    timestamp: string;
+    mutationCount: number;
+  }> {
+    return this.rollbackStack.map(sp => ({
+      id: sp.id,
+      timestamp: sp.timestamp,
+      mutationCount: sp.mutations.length
+    }));
+  }
 }

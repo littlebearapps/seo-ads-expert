@@ -652,4 +652,210 @@ export class GoogleAdsApiClient {
   getCustomerIds(): string[] {
     return this.customerIds;
   }
+
+  /**
+   * Validate mutations before applying them to the API
+   * Checks for schema validity, business rules, and potential conflicts
+   */
+  async validateMutations(mutations: any[]): Promise<{
+    valid: boolean;
+    errors: Array<{ mutation: any; error: string }>;
+    warnings: Array<{ mutation: any; warning: string }>;
+  }> {
+    const result = {
+      valid: true,
+      errors: [] as Array<{ mutation: any; error: string }>,
+      warnings: [] as Array<{ mutation: any; warning: string }>
+    };
+
+    for (const mutation of mutations) {
+      try {
+        // Validate mutation structure
+        if (!mutation.type || !mutation.resource || !mutation.changes) {
+          result.errors.push({
+            mutation,
+            error: 'Missing required fields: type, resource, or changes'
+          });
+          result.valid = false;
+          continue;
+        }
+
+        // Validate resource type
+        const validResources = ['campaign', 'adGroup', 'keyword', 'ad', 'budget'];
+        if (!validResources.includes(mutation.resource)) {
+          result.errors.push({
+            mutation,
+            error: `Invalid resource type: ${mutation.resource}`
+          });
+          result.valid = false;
+        }
+
+        // Validate mutation type
+        const validTypes = ['CREATE', 'UPDATE', 'REMOVE', 'UPDATE_BUDGET'];
+        if (!validTypes.includes(mutation.type)) {
+          result.errors.push({
+            mutation,
+            error: `Invalid mutation type: ${mutation.type}`
+          });
+          result.valid = false;
+        }
+
+        // Validate specific fields based on resource
+        if (mutation.resource === 'campaign') {
+          if (mutation.type === 'CREATE' && !mutation.changes.name) {
+            result.errors.push({
+              mutation,
+              error: 'Campaign creation requires a name'
+            });
+            result.valid = false;
+          }
+          if (mutation.changes.budgetMicros) {
+            const budget = parseInt(mutation.changes.budgetMicros);
+            if (isNaN(budget) || budget < 0) {
+              result.errors.push({
+                mutation,
+                error: 'Invalid budget value'
+              });
+              result.valid = false;
+            }
+            if (budget > 1000000000) { // $1000 in micros
+              result.warnings.push({
+                mutation,
+                warning: 'Budget exceeds $1000 daily limit'
+              });
+            }
+          }
+        }
+
+        if (mutation.resource === 'keyword') {
+          if (mutation.changes.text && mutation.changes.text.length > 80) {
+            result.errors.push({
+              mutation,
+              error: 'Keyword text exceeds 80 character limit'
+            });
+            result.valid = false;
+          }
+          if (mutation.changes.matchType && 
+              !['EXACT', 'PHRASE', 'BROAD'].includes(mutation.changes.matchType)) {
+            result.errors.push({
+              mutation,
+              error: 'Invalid keyword match type'
+            });
+            result.valid = false;
+          }
+        }
+
+        if (mutation.resource === 'ad') {
+          // Validate headlines
+          if (mutation.changes.headlines) {
+            for (const headline of mutation.changes.headlines) {
+              if (headline.text.length > 30) {
+                result.errors.push({
+                  mutation,
+                  error: `Headline exceeds 30 character limit: "${headline.text}"`
+                });
+                result.valid = false;
+              }
+            }
+            if (mutation.changes.headlines.length < 3) {
+              result.warnings.push({
+                mutation,
+                warning: 'Responsive search ads should have at least 3 headlines'
+              });
+            }
+          }
+          // Validate descriptions
+          if (mutation.changes.descriptions) {
+            for (const desc of mutation.changes.descriptions) {
+              if (desc.text.length > 90) {
+                result.errors.push({
+                  mutation,
+                  error: `Description exceeds 90 character limit: "${desc.text}"`
+                });
+                result.valid = false;
+              }
+            }
+            if (mutation.changes.descriptions.length < 2) {
+              result.warnings.push({
+                mutation,
+                warning: 'Responsive search ads should have at least 2 descriptions'
+              });
+            }
+          }
+        }
+
+        // Check for duplicate operations
+        const duplicates = mutations.filter(m => 
+          m !== mutation &&
+          m.resource === mutation.resource &&
+          m.entityId === mutation.entityId &&
+          m.type === mutation.type
+        );
+        if (duplicates.length > 0) {
+          result.warnings.push({
+            mutation,
+            warning: 'Duplicate operation detected for the same entity'
+          });
+        }
+
+      } catch (error) {
+        result.errors.push({
+          mutation,
+          error: `Validation error: ${error}`
+        });
+        result.valid = false;
+      }
+    }
+
+    logger.info(`Validated ${mutations.length} mutations: ${result.valid ? 'VALID' : 'INVALID'}`);
+    if (!result.valid) {
+      logger.warn(`Found ${result.errors.length} errors and ${result.warnings.length} warnings`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Add a custom validation rule for mutations
+   * Allows extending validation logic with business-specific rules
+   */
+  private customRules: Array<{
+    name: string;
+    resource: string;
+    validator: (mutation: any) => { valid: boolean; message?: string };
+  }> = [];
+
+  addCustomRule(
+    name: string,
+    resource: string,
+    validator: (mutation: any) => { valid: boolean; message?: string }
+  ): void {
+    this.customRules.push({ name, resource, validator });
+    logger.info(`Added custom validation rule: ${name} for ${resource}`);
+  }
+
+  /**
+   * Apply custom rules during validation
+   */
+  private applyCustomRules(mutation: any): { valid: boolean; messages: string[] } {
+    const messages: string[] = [];
+    let valid = true;
+
+    for (const rule of this.customRules) {
+      if (rule.resource === mutation.resource || rule.resource === '*') {
+        try {
+          const result = rule.validator(mutation);
+          if (!result.valid) {
+            valid = false;
+            messages.push(`[${rule.name}] ${result.message || 'Validation failed'}`);
+          }
+        } catch (error) {
+          logger.error(`Error applying custom rule ${rule.name}:`, error);
+          messages.push(`[${rule.name}] Error: ${error}`);
+        }
+      }
+    }
+
+    return { valid, messages };
+  }
 }

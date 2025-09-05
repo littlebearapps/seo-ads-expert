@@ -539,4 +539,78 @@ export class MutationGuard extends PerformanceMonitor {
     this.guardrailConfig = GuardrailConfigSchema.parse({ ...this.guardrailConfig, ...config });
     this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
   }
+
+  /**
+   * Set daily budget limit
+   * Updates the daily maximum budget for mutation operations
+   */
+  setDailyBudget(amount: number): void {
+    if (amount < 0) {
+      throw new Error('Daily budget cannot be negative');
+    }
+    
+    this.guardrailConfig.budgetLimits.dailyMax = amount;
+    this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
+    
+    logger.info(`Daily budget limit updated to $${amount.toFixed(2)}`);
+  }
+
+  /**
+   * Set campaign budget limit
+   * Updates the maximum budget per campaign
+   */
+  setCampaignBudget(amount: number): void {
+    if (amount < 0) {
+      throw new Error('Campaign budget cannot be negative');
+    }
+    
+    this.guardrailConfig.budgetLimits.campaignMax = amount;
+    this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
+    
+    logger.info(`Campaign budget limit updated to $${amount.toFixed(2)}`);
+  }
+
+  /**
+   * Set account budget limit
+   * Updates the maximum total budget for the account
+   */
+  setAccountBudget(amount: number): void {
+    if (amount < 0) {
+      throw new Error('Account budget cannot be negative');
+    }
+    
+    this.guardrailConfig.budgetLimits.accountMax = amount;
+    this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
+    
+    logger.info(`Account budget limit updated to $${amount.toFixed(2)}`);
+  }
+
+  /**
+   * Get current budget limits
+   * Returns the current budget configuration
+   */
+  getBudgetLimits(): {
+    daily: number;
+    campaign: number;
+    account: number;
+    enforcementLevel: 'soft' | 'hard';
+  } {
+    return {
+      daily: this.guardrailConfig.budgetLimits.dailyMax,
+      campaign: this.guardrailConfig.budgetLimits.campaignMax,
+      account: this.guardrailConfig.budgetLimits.accountMax,
+      enforcementLevel: this.guardrailConfig.budgetLimits.enforcementLevel
+    };
+  }
+
+  /**
+   * Set enforcement level
+   * Controls whether budget violations are warnings or errors
+   */
+  setEnforcementLevel(level: 'soft' | 'hard'): void {
+    this.guardrailConfig.budgetLimits.enforcementLevel = level;
+    this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
+    
+    logger.info(`Budget enforcement level set to: ${level}`);
+  }
 }
