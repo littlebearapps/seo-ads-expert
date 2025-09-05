@@ -605,6 +605,10 @@ api
 
 program.addCommand(api);
 
+// Add experiment commands
+import { setupExperimentCommands } from './cli-experiments.js';
+setupExperimentCommands(program);
+
 // Add connection test command
 program
   .command('test')

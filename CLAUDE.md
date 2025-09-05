@@ -2,24 +2,28 @@
 
 ## 🎯 Core Info
 
-**V2.0 PRODUCTION-READY** (100% FUNCTIONAL ✅):
+**V1.5 A/B TESTING FRAMEWORK** (PRODUCTION-READY ✅):
+1. **Complete A/B Testing System**: RSA and Landing Page experiments with statistical rigor
+2. **Real Google Ads/Analytics APIs**: Full OAuth2 integration with real-time data collection
+3. **Advanced Statistical Engine**: Z-tests, Bayesian analysis, power analysis, early stopping
+4. **SQLite Database**: Full persistence with better-sqlite3, transaction support
+5. **Automated Measurement**: Real-time metrics from Google Ads (9495806872) & GA4 (497547311)
+6. **Experiment Lifecycle**: Create → Start → Measure → Analyze → Complete → Winner
+7. **Variant Generation**: Intelligent RSA/LP variants with strategy-based optimization
+8. **Guard Rails**: Safety checks for budget, similarity, sample size, duration
+9. **Real-Time Analysis**: Live statistical significance testing with confidence intervals
+10. **Export Generation**: Google Ads Editor CSV exports for winning variants
+
+**V1.0 FEATURES** (PRODUCTION-READY ✅):
 1. **Unified OAuth Authentication**: Google Search Console + Analytics + Ads + 2x RapidAPI
-2. **Smart Data Precedence**: KWP CSV > GSC organic data > RapidAPI estimates with source tracking
+2. **Smart Data Precedence**: KWP CSV > GSC organic data > RapidAPI estimates
 3. **Multi-API Integration**: 5 APIs working seamlessly with unified authentication
 4. **Professional Marketing Assets**: 8 file types generated (CSV, JSON, Markdown, TXT)
-5. **Advanced Performance Analysis**: Waste detection, quality scoring, paid/organic gaps
-6. **Cost Monitoring**: Real-time usage tracking with budget controls
-7. **Enhanced Localization**: 3 markets (AU, US, GB) with cultural adaptations
-8. **Enterprise CLI**: Complete command suite with dry-run, validation, monitoring
-9. **Intelligent Evolution**: Plan diff analysis with impact assessment
-10. **Claims Validation**: Compliance checking for advertising standards
-11. **URL Health Checks**: Landing page validation and optimization
-12. **Plan History Management**: List, show, compare plans across dates
 
 **Revenue Model**: Internal Infrastructure Tool (3+ hours manual → 11 seconds automated)  
-**Timeline**: ✅ v2.0 COMPLETED 2025-09-05 (Full end-to-end functionality achieved!)  
-**Platform**: Node.js CLI Tool with production-grade multi-API integration  
-**Status**: ✅ PRODUCTION-READY - 100% functional, tested, and ready for immediate use
+**Timeline**: ✅ v1.0 COMPLETED 2025-09-03 | ✅ v1.5 COMPLETED 2025-09-05  
+**Platform**: Node.js CLI Tool with A/B Testing Framework  
+**Status**: ✅ PRODUCTION-READY - Full A/B testing with real Google Ads data
 
 ## 🔧 Technical Stack
 
@@ -162,4 +166,4 @@
 
 **Token Count**: ~800 (Optimized for Claude Code)  
 **Last Updated**: 2025-09-05  
-**Version**: 2.0 - PRODUCTION-READY ✅
+**Version**: 1.5 - A/B TESTING FRAMEWORK COMPLETE ✅

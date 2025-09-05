@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-testable="title">Product Landing Page</title>
+    <meta name="description" content="Convert your files easily with our Chrome extension" data-testable="description">
+    
+    <!-- CSS and other head elements -->
+    <link rel="stylesheet" href="/css/landing.css">
+
+<script>
+// A/B Test Variant Tracking for exp_lp_palettekit_20250905_xjjo
+(function() {
+  const variantData = {
+    experimentId: 'exp_lp_palettekit_20250905_xjjo',
+    variantId: 'control',
+    variantName: 'Control (Current)',
+    isControl: true,
+    weight: 0.5
+  };
+
+  // Store variant data for use by other scripts
+  window.abTestVariant = variantData;
+
+  // Track page view with variant info
+  if (typeof gtag !== 'undefined') {
+    gtag('event', 'ab_test_page_view', {
+      experiment_id: variantData.experimentId,
+      variant_id: variantData.variantId,
+      variant_name: variantData.variantName,
+      is_control: variantData.isControl
+    });
+  }
+
+  // Plausible tracking
+  if (typeof plausible !== 'undefined') {
+    plausible('AB Test Page View', {
+      props: {
+        experiment: variantData.experimentId,
+        variant: variantData.variantId,
+        is_control: variantData.isControl
+      }
+    });
+  }
+})();
+</script>
+<meta name="ab-experiment" content="exp_lp_palettekit_20250905_xjjo" data-variant="control" data-variant-name="Control (Current)" data-is-control="true">
+</head>
+<body>
+    <header data-testable="header">
+        <nav>
+            <div class="logo">
+                <h1 data-testable="logo-text">ConvertMyFile</h1>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" data-testable="hero-section">
+            <div class="container">
+                <h1 data-testable="hero-headline">Convert Files Instantly in Your Browser</h1>
+                <p data-testable="hero-subheadline">The fastest Chrome extension for file conversion</p>
+                <div class="cta-buttons">
+                    <a href="#" class="btn-primary" data-testable="primary-cta">Add to Chrome - Free</a>
+                    <a href="#" class="btn-secondary" data-testable="secondary-cta">Watch Demo</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" data-testable="features-section">
+            <div class="container">
+                <h2 data-testable="features-headline">Why Choose ConvertMyFile?</h2>
+                <div class="feature-grid">
+                    <div class="feature-card" data-testable="feature-1">
+                        <h3>Lightning Fast</h3>
+                        <p>Convert files in seconds, not minutes</p>
+                    </div>
+                    <div class="feature-card" data-testable="feature-2">
+                        <h3>100% Secure</h3>
+                        <p>All conversions happen locally in your browser</p>
+                    </div>
+                    <div class="feature-card" data-testable="feature-3">
+                        <h3>No Limits</h3>
+                        <p>Convert unlimited files for free</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="social-proof" data-testable="social-proof-section">
+            <div class="container">
+                <h2 data-testable="social-proof-headline">Trusted by 50,000+ Users</h2>
+                <div class="testimonials" data-testable="testimonials">
+                    <blockquote>
+                        <p>"This extension saved me hours of work!"</p>
+                        <cite>- Sarah M., Designer</cite>
+                    </blockquote>
+                </div>
+            </div>
+        </section>
+
+        <section class="faq" data-testable="faq-section">
+            <div class="container">
+                <h2 data-testable="faq-headline">Frequently Asked Questions</h2>
+                <div class="faq-list" data-testable="faq-list">
+                    <div class="faq-item">
+                        <h3>Is it really free?</h3>
+                        <p>Yes, completely free with no hidden costs.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3>What file types are supported?</h3>
+                        <p>We support over 50 file formats including PDF, DOCX, images, and more.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="final-cta" data-testable="final-cta-section">
+            <div class="container">
+                <h2 data-testable="final-cta-headline">Ready to Get Started?</h2>
+                <p data-testable="final-cta-text">Join thousands of users who convert files effortlessly</p>
+                <a href="#" class="btn-primary large" data-testable="final-cta-button">Add to Chrome Now</a>
+            </div>
+        </section>
+    </main>
+
+    <footer data-testable="footer">
+        <div class="container">
+            <p>&copy; 2024 ConvertMyFile. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/landing.js"></script>
+</body>
+</html>

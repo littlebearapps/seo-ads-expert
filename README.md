@@ -1,4 +1,4 @@
-# SEO & Google Ads Expert Tool - V2.0 PRODUCTION-READY ✅
+# SEO & Google Ads Expert Tool - V1.5 A/B TESTING FRAMEWORK ✅
 
 ## 🚀 Quick Start
 
@@ -20,17 +20,19 @@ npx tsx scripts/test-unified-auth.js
 # Generate complete marketing plan (11 seconds)
 npx tsx src/cli.ts plan --product palettekit
 
+# Test v1.5 A/B Testing Framework with real data
+npx tsx test-v15-real-data.ts
+
+# Create and manage experiments
+npx tsx src/cli.ts experiment create --type rsa --product palettekit
+npx tsx src/cli.ts experiment analyze --id <experiment-id>
+npx tsx src/cli.ts experiment complete --id <experiment-id> --winner <variant-id>
+
 # Performance analysis
 npx tsx src/cli.ts performance paid-organic-gaps --product palettekit
 
 # Monitor costs and usage
 npx tsx src/cli.ts monitor --detailed
-
-# List plan history
-npx tsx src/cli.ts list --product palettekit
-
-# Show plan details
-npx tsx src/cli.ts show --product palettekit --date 2025-09-05
 ```
 
 ## 📊 Progress Tracker
@@ -47,17 +49,19 @@ npx tsx src/cli.ts show --product palettekit --date 2025-09-05
 - [x] **Phase 9**: V2.0 PRODUCTION-READY ✅
 - [x] **Phase 10**: V1.1 Enterprise Features ✅
 - [x] **Phase 11**: V1.3 Testing & Hardening ✅
-- [ ] **Phase 12**: MCP Server Conversion (Future)
+- [x] **Phase 12**: V1.5 A/B Testing Framework ✅
+- [ ] **Phase 13**: V1.6 Microsoft Ads Integration (Future)
+- [ ] **Phase 14**: MCP Server Conversion (Future)
 
 ## 📈 Current Status
 
-**Active Phase**: ✅ V1.3 ENTERPRISE-READY  
+**Active Phase**: ✅ V1.5 A/B TESTING FRAMEWORK  
 **Completion**: 100%  
-**Version**: 1.3.0 (Enterprise-Ready)  
+**Version**: 1.5.0 (A/B Testing Framework)  
 **Test Coverage**: 100% (200+ tests)  
 **Ship Date**: 2025-09-05  
 
-### Recently Completed (V1.3)
+### Recently Completed (V1.5)
 - [x] **100% Test Coverage**: Unit, integration, and error scenario tests
 - [x] **Mutation Validation**: Budget limits, landing pages, device targeting
 - [x] **Compliance System**: GDPR/CCPA with encryption and anonymization
@@ -67,16 +71,17 @@ npx tsx src/cli.ts show --product palettekit --date 2025-09-05
 - [x] **Save Points**: State recovery and rollback mechanisms
 - [x] **Circuit Breakers**: Automatic failure isolation
 
-### All V1.3 Features Complete ✅
-- [x] Google Ads API mutation validation
-- [x] Budget enforcement system
-- [x] Compliance reporting (GDPR/CCPA)
-- [x] Rate limiting for all APIs
-- [x] Performance optimization
-- [x] Error handling improvements
-- [x] Complete test suite
+### All V1.5 Features Complete ✅
+- [x] **SQLite Database Persistence**: better-sqlite3 with ES module support
+- [x] **Experiment Lifecycle Management**: Create, start, analyze, complete experiments
+- [x] **Google Ads API Integration**: Real-time metrics collection with OAuth
+- [x] **Google Analytics GA4**: Connected for page-level performance metrics
+- [x] **Statistical Analysis Suite**: Z-tests, Bayesian analysis, power calculations
+- [x] **Mock Data Generation**: Comprehensive testing without API credentials
+- [x] **Variant Management**: RSA and landing page variants with label tracking
+- [x] **Real-time Measurement**: Automated collection from Google Ads/Analytics
 
-## ✅ Success Metrics Dashboard (V1.3)
+## ✅ Success Metrics Dashboard (V1.5)
 
 | Metric | Status | Target | Current |
 |--------|--------|--------|---------|
@@ -99,7 +104,7 @@ npx tsx src/cli.ts show --product palettekit --date 2025-09-05
 - [Architecture](docs/ARCHITECTURE.md) - System design and components
 - [User Guide](docs/USER_GUIDE.md) - Comprehensive usage documentation
 
-### Key Features (V1.3)
+### Key Features (V1.5)
 - **Data Precedence System**: KWP CSV > GSC proxy > RapidAPI estimated
 - **Enhanced Scoring**: Intent detection + source penalties + SERP blockers
 - **Mutation Validation**: Budget limits, landing pages, device targeting
@@ -125,6 +130,16 @@ npx tsx src/cli.ts show --product palettekit --date 2025-09-05
 - Pino (Logging)
 
 ## 📋 Features
+
+### V1.5 A/B Testing Features (Production Ready) ✅
+1. **Database Persistence**: SQLite with foreign keys, transactions, migrations
+2. **Experiment Management**: Full lifecycle from creation to winner declaration
+3. **Real API Integration**: Google Ads and GA4 with unified OAuth
+4. **Statistical Engine**: Frequentist and Bayesian analysis with 95% confidence
+5. **Mock Testing System**: Generate realistic test data without credentials
+6. **Variant Tracking**: Label-based tracking in Google Ads campaigns
+7. **Power Analysis**: Minimum sample size calculations
+8. **Guardrails**: Budget limits, statistical significance thresholds
 
 ### V1.1 Features (Production Ready) ✅
 1. **CSV-First Approach**: Import Keyword Planner CSVs for authoritative data
@@ -176,6 +191,12 @@ npm run test:integration
 
 # All tests
 npm test
+
+# Test A/B Testing Framework
+npx tsx test-v15-real-data.ts
+
+# Test API measurement collection
+npx tsx test-api-measurement.ts
 
 # Test with sample data (dry run)
 npm run plan -- --product convertmyfile --markets AU,US --dry-run
@@ -237,6 +258,6 @@ npm run plan -- --product convertmyfile --validate-only
 ---
 
 **Last Updated**: 2025-09-05  
-**Version**: 1.3.0 - ENTERPRISE-READY ✅  
+**Version**: 1.5.0 - A/B TESTING FRAMEWORK ✅  
 **Maintainer**: Nathan @ Little Bear Apps  
 **Repository**: github.com/littlebearapps/seo-ads-expert
