@@ -1,0 +1,83 @@
+{
+  "analysisDate": "2025-09-05T10:23:19.930Z",
+  "dateRange": {
+    "start": "2022-12-10",
+    "end": "2025-09-05"
+  },
+  "searchTermsAnalyzed": 15,
+  "ngramsIdentified": 22,
+  "totalWaste": 2257,
+  "negativesProposed": 22,
+  "topWastedTerms": [
+    {
+      "ngram": "convert pdf",
+      "wasteAmount": 234,
+      "reason": "zero_conversions",
+      "impressions": 4100,
+      "clicks": 156
+    },
+    {
+      "ngram": "pdf free",
+      "wasteAmount": 234,
+      "reason": "zero_conversions",
+      "impressions": 4100,
+      "clicks": 156
+    },
+    {
+      "ngram": "free online",
+      "wasteAmount": 234,
+      "reason": "zero_conversions",
+      "impressions": 4100,
+      "clicks": 156
+    },
+    {
+      "ngram": "convert pdf free",
+      "wasteAmount": 234,
+      "reason": "zero_conversions",
+      "impressions": 4100,
+      "clicks": 156
+    },
+    {
+      "ngram": "pdf free online",
+      "wasteAmount": 234,
+      "reason": "zero_conversions",
+      "impressions": 4100,
+      "clicks": 156
+    },
+    {
+      "ngram": "convert pdf free online",
+      "wasteAmount": 234,
+      "reason": "zero_conversions",
+      "impressions": 4100,
+      "clicks": 156
+    },
+    {
+      "ngram": "free webp",
+      "wasteAmount": 187.5,
+      "reason": "zero_conversions",
+      "impressions": 3200,
+      "clicks": 125
+    },
+    {
+      "ngram": "free webp converter",
+      "wasteAmount": 187.5,
+      "reason": "zero_conversions",
+      "impressions": 3200,
+      "clicks": 125
+    },
+    {
+      "ngram": "pdf converter",
+      "wasteAmount": 63,
+      "reason": "zero_conversions",
+      "impressions": 1800,
+      "clicks": 42
+    },
+    {
+      "ngram": "converter tutorial",
+      "wasteAmount": 63,
+      "reason": "zero_conversions",
+      "impressions": 1800,
+      "clicks": 42
+    }
+  ]
+}

@@ -192,7 +192,7 @@ export class PerformancePredictor {
     await this.cache.set(
       `prediction-${changes.product}-${Date.now()}`,
       prediction,
-      3600 // 1 hour
+      3600000 // 1 hour in milliseconds
     );
 
     return prediction;

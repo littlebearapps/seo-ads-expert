@@ -3,6 +3,9 @@ import { Command } from 'commander';
 import pino from 'pino';
 import { validateEnvironment } from './utils/validation.js';
 import { validateProductExists } from './utils/product-loader.js';
+import { costMonitor } from './utils/cost-monitor.js';
+import { googleAPIManager } from './utils/google-api-manager.js';
+import path from 'path';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -422,6 +425,185 @@ performance
   });
 
 program.addCommand(performance);
+
+// Add budget monitoring command
+program
+  .command('monitor')
+  .description('Monitor API usage and costs')
+  .option('--detailed', 'Show detailed service breakdown')
+  .action(async (options) => {
+    console.log('💰 SEO Ads Expert - Cost Monitor\n');
+    
+    try {
+      const summary = await costMonitor.getUsageSummary();
+      
+      console.log('📊 Today\'s Usage:');
+      console.log(`   Cost: $${summary.today.totalCost.toFixed(4)} / $${summary.limits.dailyCost} (${((summary.today.totalCost / summary.limits.dailyCost) * 100).toFixed(1)}%)`);
+      console.log(`   Calls: ${summary.today.totalCalls} / ${summary.limits.dailyCalls} (${((summary.today.totalCalls / summary.limits.dailyCalls) * 100).toFixed(1)}%)`);
+      
+      console.log('\n📈 This Month:');
+      console.log(`   Cost: $${summary.month.toFixed(2)} / $${summary.limits.monthlyCost} (${((summary.month / summary.limits.monthlyCost) * 100).toFixed(1)}%)`);
+      
+      if (options.detailed || Object.keys(summary.today.services).length > 0) {
+        console.log('\n🔧 By Service:');
+        Object.entries(summary.today.services).forEach(([service, usage]) => {
+          console.log(`   ${service}: $${usage.cost.toFixed(4)} (${usage.calls} calls)`);
+        });
+      }
+      
+      if (summary.alerts.length > 0) {
+        console.log('\n⚠️  Alerts:');
+        summary.alerts.forEach(alert => console.log(`   • ${alert}`));
+      } else {
+        console.log('\n✅ All usage within limits');
+      }
+      
+      console.log('\n💡 Usage Tips:');
+      console.log('• Set lower limits in .env to reduce costs');
+      console.log('• Use caching to avoid repeated API calls');
+      console.log('• Monitor weekly with: npx tsx src/cli.ts monitor');
+      
+    } catch (error) {
+      console.error('❌ Error monitoring costs:', error instanceof Error ? error.message : error);
+    }
+  });
+
+// Add Google API management commands
+const api = new Command('api')
+  .description('Google API management and configuration');
+
+api
+  .command('check')
+  .description('Check Google API setup and status')
+  .option('--detailed', 'Show detailed quota information')
+  .action(async (options) => {
+    console.log('🔍 Checking Google APIs Setup...\n');
+    
+    try {
+      const initialized = await googleAPIManager.initializeAuth();
+      if (!initialized) {
+        console.error('❌ Failed to initialize authentication');
+        console.error('💡 Make sure to set up credentials first:');
+        console.error('   1. Set GOOGLE_CLOUD_PROJECT_ID in .env');
+        console.error('   2. Run: node scripts/generate-google-ads-token.js');
+        console.error('   3. Or ensure GOOGLE_APPLICATION_CREDENTIALS points to service account key');
+        process.exit(1);
+      }
+
+      console.log('✅ Authentication successful\n');
+
+      // Check project info
+      const projectInfo = await googleAPIManager.checkProjectInfo();
+      console.log('📋 Project Information:');
+      console.log(`   Project ID: ${projectInfo.projectId}`);
+      console.log(`   Project Name: ${projectInfo.projectName}`);
+      console.log(`   Billing: ${projectInfo.billingEnabled ? '✅ Enabled' : '❌ Disabled'}`);
+      
+      // Check API statuses
+      console.log('\n🔌 API Status:');
+      const apiStatuses = await googleAPIManager.checkAPIStatuses();
+      
+      for (const api of apiStatuses) {
+        console.log(`\n   ${api.service}:`);
+        console.log(`     Status: ${api.enabled ? '✅ Enabled' : '❌ Disabled'}`);
+        console.log(`     Auth: ${api.credentials}`);
+        
+        if (api.error) {
+          console.log(`     Error: ❌ ${api.error}`);
+        }
+        
+        if (options.detailed && api.hasQuota && api.quotaDetails) {
+          console.log('     Quotas:');
+          api.quotaDetails.forEach((quota: any) => {
+            console.log(`       • ${quota.name}`);
+          });
+        }
+      }
+
+      // Generate recommendations
+      const disabledAPIs = apiStatuses.filter(api => !api.enabled);
+      if (disabledAPIs.length > 0) {
+        console.log('\n💡 Next Steps:');
+        console.log(`   ${disabledAPIs.length} APIs need to be enabled:`);
+        disabledAPIs.forEach(api => console.log(`   • ${api.service}`));
+        console.log('\n   Run: npx tsx src/cli.ts api enable');
+      } else {
+        console.log('\n🎉 All required APIs are enabled!');
+      }
+
+    } catch (error) {
+      console.error('❌ Error checking APIs:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+api
+  .command('enable')
+  .description('Enable required Google APIs')
+  .action(async () => {
+    console.log('🔧 Enabling Google APIs...\n');
+    
+    try {
+      const initialized = await googleAPIManager.initializeAuth();
+      if (!initialized) {
+        console.error('❌ Authentication failed');
+        process.exit(1);
+      }
+
+      const apisToEnable = [
+        'googleads.googleapis.com',
+        'analyticsdata.googleapis.com',
+        'searchconsole.googleapis.com'
+      ];
+
+      const results = await googleAPIManager.enableAPIs(apisToEnable);
+      
+      console.log('📊 Results:');
+      Object.entries(results).forEach(([api, success]) => {
+        console.log(`   ${api}: ${success ? '✅ Enabled' : '❌ Failed'}`);
+      });
+
+      const successCount = Object.values(results).filter(Boolean).length;
+      if (successCount === apisToEnable.length) {
+        console.log('\n🎉 All APIs enabled successfully!');
+        console.log('💡 Wait 1-2 minutes for changes to propagate, then run: npx tsx src/cli.ts api check');
+      } else {
+        console.log('\n⚠️  Some APIs failed to enable. Check permissions and try again.');
+      }
+
+    } catch (error) {
+      console.error('❌ Error enabling APIs:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+api
+  .command('report')
+  .description('Generate comprehensive API setup report')
+  .action(async () => {
+    console.log('📋 Generating API Setup Report...\n');
+    
+    try {
+      const initialized = await googleAPIManager.initializeAuth();
+      if (!initialized) {
+        console.error('❌ Authentication failed - report will be limited');
+      }
+
+      const report = await googleAPIManager.generateAPIReport();
+      console.log(report);
+      
+      // Save report to file
+      const reportPath = path.join(process.cwd(), 'docs', 'api-setup-report.md');
+      await import('fs').then(fs => fs.promises.writeFile(reportPath, report));
+      console.log(`\n💾 Report saved to: ${reportPath}`);
+
+    } catch (error) {
+      console.error('❌ Error generating report:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+program.addCommand(api);
 
 // Add connection test command
 program

@@ -225,9 +225,10 @@ export class StrategicOrchestrator {
   constructor(private config: StrategicConfig) {
     // Initialize all analyzers with configuration
     this.searchTermsAnalyzer = new SearchTermsAnalyzer({
-      wasteThreshold: config.analysis_config.waste_threshold,
-      minConversions: 1,
-      minSpend: 10
+      minCostThreshold: config.analysis_config.waste_threshold,
+      minImpressionsThreshold: 1000,
+      lowCtrThreshold: 0.005,
+      confidenceThreshold: 0.8
     });
     
     this.paidOrganicAnalyzer = new PaidOrganicAnalyzer({
@@ -238,7 +239,6 @@ export class StrategicOrchestrator {
     });
     
     this.serpDriftAnalyzer = new SerpDriftAnalyzer({
-      dataDir: 'cache/serp-snapshots',
       alertThresholds: {
         volatility: config.analysis_config.serp_volatility_threshold,
         competitorMovement: 3,
@@ -247,7 +247,6 @@ export class StrategicOrchestrator {
     });
     
     this.serpMonitor = new SerpWatchMonitor({
-      cacheDir: 'cache/serp-snapshots',
       enabledFeatures: ['ads', 'organic', 'featured_snippets', 'knowledge_panel', 'shopping'],
       markets: config.business_context.target_markets
     });
@@ -629,6 +628,9 @@ export class StrategicOrchestrator {
       type: 'manual' as const,
       query: opp.query,
       market: opp.market,
+      serp_features: [],
+      top_competitors: [],
+      content_gaps: [],
       
       search_volume: this.estimateSearchVolume(opp),
       commercial_intent_score: this.estimateCommercialIntent(opp),

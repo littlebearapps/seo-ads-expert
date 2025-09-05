@@ -1,0 +1,62 @@
+[
+  {
+    "adGroup": "Ad Group 2002",
+    "campaign": "Campaign 1001",
+    "avgQualityScore": 4,
+    "priorityScore": 140,
+    "issues": {
+      "adRelevance": 0,
+      "landingPageExperience": 0,
+      "expectedCtr": 0
+    },
+    "recommendations": []
+  },
+  {
+    "adGroup": "Ad Group 2003",
+    "campaign": "Campaign 1001",
+    "avgQualityScore": 6,
+    "priorityScore": 73,
+    "issues": {
+      "adRelevance": 0,
+      "landingPageExperience": 0,
+      "expectedCtr": 0
+    },
+    "recommendations": []
+  },
+  {
+    "adGroup": "Ad Group 2004",
+    "campaign": "Campaign 1002",
+    "avgQualityScore": 6.3,
+    "priorityScore": 53,
+    "issues": {
+      "adRelevance": 0,
+      "landingPageExperience": 0,
+      "expectedCtr": 0
+    },
+    "recommendations": []
+  },
+  {
+    "adGroup": "Ad Group 2001",
+    "campaign": "Campaign 1001",
+    "avgQualityScore": 7,
+    "priorityScore": 47,
+    "issues": {
+      "adRelevance": 0,
+      "landingPageExperience": 0,
+      "expectedCtr": 0
+    },
+    "recommendations": []
+  },
+  {
+    "adGroup": "Ad Group 2005",
+    "campaign": "Campaign 1003",
+    "avgQualityScore": 7.3,
+    "priorityScore": 43,
+    "issues": {
+      "adRelevance": 0,
+      "landingPageExperience": 0,
+      "expectedCtr": 0
+    },
+    "recommendations": []
+  }
+]

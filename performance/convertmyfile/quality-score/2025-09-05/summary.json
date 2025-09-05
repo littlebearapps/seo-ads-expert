@@ -1,0 +1,20 @@
+{
+  "analysisDate": "2025-09-05T10:23:26.278Z",
+  "product": "convertmyfile",
+  "adGroupsAnalyzed": 5,
+  "lowQualityScoreGroups": 3,
+  "totalRecommendations": 0,
+  "topIssues": {
+    "adRelevance": 0,
+    "landingPageExperience": 0,
+    "expectedCtr": 0
+  },
+  "averageQualityScore": 6.12,
+  "criticalAdGroups": [
+    {
+      "name": "Ad Group 2002",
+      "score": 4,
+      "priority": 140
+    }
+  ]
+}

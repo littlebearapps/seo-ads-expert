@@ -346,8 +346,10 @@ export class LocalizationEngine {
         }
       }
       
-      // Add generic market terms
-      localizedKeywords.push(`${product.toLowerCase()} ${market.toLowerCase()}`);
+      // Add generic market terms (with null safety)
+      if (product && typeof product === 'string') {
+        localizedKeywords.push(`${product.toLowerCase()} ${market.toLowerCase()}`);
+      }
       localizedKeywords.push(`chrome extension ${market.toLowerCase()}`);
     }
 
@@ -381,9 +383,9 @@ export class LocalizationEngine {
     const marketName = marketNames[market] || market;
 
     return {
-      title: `${product} - Chrome Extension for ${marketName}`,
-      metaDescription: `Professional ${product} Chrome extension for ${marketName}. Fast, secure, and easy to use. ${config.culturalNotes.split('.')[0]}.`,
-      valueProp: `The #1 ${product} solution for ${marketName} - ${config.culturalNotes.split('.')[0].toLowerCase()}`
+      title: `${product || 'Extension'} - Chrome Extension for ${marketName}`,
+      metaDescription: `Professional ${product || 'Chrome extension'} Chrome extension for ${marketName}. Fast, secure, and easy to use. ${config.culturalNotes.split('.')[0]}.`,
+      valueProp: `The #1 ${product || 'Chrome extension'} solution for ${marketName} - ${config.culturalNotes.split('.')[0].toLowerCase()}`
     };
   }
 

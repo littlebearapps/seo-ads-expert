@@ -1,0 +1,334 @@
+{
+  "version": "1.4",
+  "generatedAt": "2025-09-05T10:23:19.929Z",
+  "totalNegatives": 22,
+  "estimatedSavings": 2257,
+  "negativeKeywords": {
+    "sharedSets": [
+      {
+        "keyword": {
+          "text": "pdf free",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 156 clicks ($234.00 waste)",
+          "wasteAmount": 234,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "free online",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 156 clicks ($234.00 waste)",
+          "wasteAmount": 234,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "convert pdf free",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 156 clicks ($234.00 waste)",
+          "wasteAmount": 234,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "pdf free online",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 156 clicks ($234.00 waste)",
+          "wasteAmount": 234,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "convert pdf free online",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 156 clicks ($234.00 waste)",
+          "wasteAmount": 234,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "free webp",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 125 clicks ($187.50 waste)",
+          "wasteAmount": 187.5,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "free webp converter",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 125 clicks ($187.50 waste)",
+          "wasteAmount": 187.5,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "converter tutorial",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 42 clicks ($63.00 waste)",
+          "wasteAmount": 63,
+          "confidence": 0.7999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "pdf converter tutorial",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 42 clicks ($63.00 waste)",
+          "wasteAmount": 63,
+          "confidence": 0.7999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "converter jobs",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 22 clicks ($33.00 waste)",
+          "wasteAmount": 33,
+          "confidence": 0.6,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      },
+      {
+        "keyword": {
+          "text": "online converter jobs",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 22 clicks ($33.00 waste)",
+          "wasteAmount": 33,
+          "confidence": 0.6,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "sharedSetName": "Non-Intent Terms"
+      }
+    ],
+    "campaignNegatives": [
+      {
+        "keyword": {
+          "text": "firefox png",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 15 clicks ($30.00 waste)",
+          "wasteAmount": 30,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID"
+      },
+      {
+        "keyword": {
+          "text": "firefox png converter",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 15 clicks ($30.00 waste)",
+          "wasteAmount": 30,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID"
+      },
+      {
+        "keyword": {
+          "text": "safari file",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 8 clicks ($20.00 waste)",
+          "wasteAmount": 20,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID"
+      },
+      {
+        "keyword": {
+          "text": "safari file converter",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 8 clicks ($20.00 waste)",
+          "wasteAmount": 20,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID"
+      }
+    ],
+    "adGroupNegatives": [
+      {
+        "keyword": {
+          "text": "convert pdf",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 156 clicks ($234.00 waste)",
+          "wasteAmount": 234,
+          "confidence": 0.9999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      },
+      {
+        "keyword": {
+          "text": "pdf converter",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 42 clicks ($63.00 waste)",
+          "wasteAmount": 63,
+          "confidence": 0.7999999999999999,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      },
+      {
+        "keyword": {
+          "text": "online converter",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 22 clicks ($33.00 waste)",
+          "wasteAmount": 33,
+          "confidence": 0.6,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      },
+      {
+        "keyword": {
+          "text": "png converter",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 15 clicks ($30.00 waste)",
+          "wasteAmount": 30,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      },
+      {
+        "keyword": {
+          "text": "zamzar vs",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 8 clicks ($20.00 waste)",
+          "wasteAmount": 20,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      },
+      {
+        "keyword": {
+          "text": "vs convertmyfile",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 8 clicks ($20.00 waste)",
+          "wasteAmount": 20,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      },
+      {
+        "keyword": {
+          "text": "zamzar vs convertmyfile",
+          "matchType": "EXACT"
+        },
+        "metadata": {
+          "reason": "No conversions from 8 clicks ($20.00 waste)",
+          "wasteAmount": 20,
+          "confidence": 0.5,
+          "createdAt": "2025-09-05T10:23:19.929Z",
+          "createdBy": "seo-ads-expert-v1.4"
+        },
+        "campaignId": "PLACEHOLDER_CAMPAIGN_ID",
+        "adGroupId": "PLACEHOLDER_ADGROUP_ID"
+      }
+    ]
+  },
+  "applicationInstructions": {
+    "shared": "Create or update shared negative list named \"Non-Intent Terms\"",
+    "campaign": "Apply to all campaigns for the product",
+    "adGroup": "Apply to specific ad groups based on relevance"
+  }
+}

@@ -427,7 +427,7 @@ export class SEOAdsOrchestrator {
       console.log('🛡️ Running use-case level claims validation...');
       let claimsValidation: ProductClaimsValidation | undefined;
       try {
-        claimsValidation = await validateProductClaims(clusteringResult.clusters, options.product);
+        claimsValidation = await validateProductClaims(clusters, options.product);
         const failedClusters = claimsValidation.summary.clusters_failed;
         const warningClusters = claimsValidation.summary.clusters_with_warnings;
         
@@ -445,7 +445,7 @@ export class SEOAdsOrchestrator {
 
       // Run URL health checks on all landing pages
       console.log('🔍 Running URL health checks on landing pages...');
-      const landingPageUrls = [...new Set(clusteringResult.clusters.map((cluster: any) => cluster.landingPage).filter(Boolean))];
+      const landingPageUrls = [...new Set(clusters.map((cluster: any) => cluster.landingPage).filter(Boolean))];
       const urlHealthResults = [];
       
       for (const url of landingPageUrls) {
