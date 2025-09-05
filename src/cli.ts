@@ -302,6 +302,127 @@ program
     }
   });
 
+// v1.4 Performance Analysis Commands
+const performance = new Command('performance')
+  .description('Performance analysis and optimization commands');
+
+performance
+  .command('ingest-ads')
+  .description('Import Google Ads performance data')
+  .requiredOption('-p, --product <product>', 'Product name')
+  .option('-f, --from <source>', 'Data source: gaql or csv', 'csv')
+  .option('--file <path>', 'CSV file path if source=csv')
+  .option('--start-date <date>', 'Start date (YYYY-MM-DD)')
+  .option('--end-date <date>', 'End date (YYYY-MM-DD)')
+  .option('--batch-size <size>', 'Batch size for memory management', '1000')
+  .action(async (options) => {
+    console.log('📊 Ingesting Google Ads performance data...\n');
+    
+    try {
+      const { ingestPerformanceData } = await import('./commands/ingest-ads.js');
+      await ingestPerformanceData({
+        product: options.product,
+        source: options.from,
+        filePath: options.file,
+        dateRange: {
+          start: options.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          end: options.endDate || new Date().toISOString().split('T')[0]
+        },
+        batchSize: parseInt(options.batchSize)
+      });
+      
+      console.log('\n✅ Performance data ingested successfully!');
+    } catch (error) {
+      console.error('❌ Failed to ingest performance data:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+performance
+  .command('analyze-waste')
+  .description('Analyze waste and propose negative keywords')
+  .requiredOption('-p, --product <product>', 'Product name')
+  .option('-w, --window <days>', 'Analysis window in days', '30')
+  .option('--min-spend <amount>', 'Minimum wasted spend threshold', '10')
+  .option('--min-impr <count>', 'Minimum impressions threshold', '100')
+  .option('--memory-limit <mb>', 'Memory limit for processing', '512')
+  .action(async (options) => {
+    console.log('🔍 Analyzing waste and generating negative keywords...\n');
+    
+    try {
+      const { analyzeWaste } = await import('./commands/analyze-waste.js');
+      const results = await analyzeWaste({
+        product: options.product,
+        windowDays: parseInt(options.window),
+        minSpend: parseFloat(options.minSpend),
+        minImpressions: parseInt(options.minImpr),
+        memoryLimit: parseInt(options.memoryLimit)
+      });
+      
+      console.log(`\n✅ Analysis complete!`);
+      console.log(`💸 Total waste identified: $${results.totalWaste.toFixed(2)}`);
+      console.log(`🚫 Negatives proposed: ${results.negativesCount}`);
+      console.log(`📁 Report saved to: ${results.outputPath}`);
+    } catch (error) {
+      console.error('❌ Failed to analyze waste:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+performance
+  .command('quality-score')
+  .description('Analyze and triage Quality Score issues')
+  .requiredOption('-p, --product <product>', 'Product name')
+  .option('--concurrent-checks <n>', 'Concurrent URL health checks', '5')
+  .option('--include-health', 'Include landing page health analysis')
+  .action(async (options) => {
+    console.log('⚡ Analyzing Quality Score issues...\n');
+    
+    try {
+      const { analyzeQualityScore } = await import('./commands/quality-score.js');
+      const results = await analyzeQualityScore({
+        product: options.product,
+        concurrentChecks: parseInt(options.concurrentChecks),
+        includeHealth: options.includeHealth || false
+      });
+      
+      console.log(`\n✅ Quality Score analysis complete!`);
+      console.log(`📊 Ad groups analyzed: ${results.adGroupCount}`);
+      console.log(`⚠️ Low QS ad groups: ${results.lowQsCount}`);
+      console.log(`💡 Recommendations: ${results.recommendationsCount}`);
+      console.log(`📁 Report saved to: ${results.outputPath}`);
+    } catch (error) {
+      console.error('❌ Failed to analyze Quality Score:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+performance
+  .command('paid-organic-gaps')
+  .description('Analyze paid/organic synergy opportunities')
+  .requiredOption('-p, --product <product>', 'Product name')
+  .action(async (options) => {
+    console.log('🔄 Analyzing paid/organic gaps...\n');
+    
+    try {
+      const { analyzePaidOrganicGaps } = await import('./commands/paid-organic-gaps.js');
+      const results = await analyzePaidOrganicGaps({
+        product: options.product
+      });
+      
+      console.log(`\n✅ Gap analysis complete!`);
+      console.log(`🎯 SEO wins without paid: ${results.seoWinsNoPaid}`);
+      console.log(`💰 Paid wins without SEO: ${results.paidWinsNoSeo}`);
+      console.log(`🌟 Both winning: ${results.bothWinning}`);
+      console.log(`📁 Report saved to: ${results.outputPath}`);
+    } catch (error) {
+      console.error('❌ Failed to analyze gaps:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+program.addCommand(performance);
+
 // Add connection test command
 program
   .command('test')
