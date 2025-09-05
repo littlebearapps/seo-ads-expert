@@ -189,8 +189,22 @@ export class SearchConsoleConnector {
         }
       }
 
+      // Try to determine correct site format - prefer domain property if available
+      let siteUrl = query.site;
+      
+      // If query.site looks like a URL but we have domain property in sites, use domain property
+      if (query.site.startsWith('http') && this.sites.length > 0) {
+        const domainProperty = this.sites.find(site => site.startsWith('sc-domain:'));
+        if (domainProperty) {
+          logger.info(`🔄 Using domain property ${domainProperty} instead of ${query.site}`);
+          siteUrl = domainProperty;
+        }
+      }
+      
+      logger.info(`🔍 Querying Search Console for: ${siteUrl}`);
+      
       const response = await this.searchConsole.searchanalytics.query({
-        siteUrl: query.site,
+        siteUrl: siteUrl,
         requestBody: requestBody,
       });
 

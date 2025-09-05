@@ -1,4 +1,4 @@
-# SEO & Google Ads Expert Tool - V1.5 A/B TESTING FRAMEWORK ✅
+# SEO & Google Ads Expert Tool - V1.6 MICROSOFT ADS & STORE OPTIMIZATION ✅
 
 ## 🚀 Quick Start
 
@@ -19,6 +19,18 @@ npx tsx scripts/test-unified-auth.js
 
 # Generate complete marketing plan (11 seconds)
 npx tsx src/cli.ts plan --product palettekit
+
+# Test v1.6 integration (Microsoft Ads + Store Optimization)
+npx tsx test-v16-integration.ts
+
+# V1.6 NEW: Microsoft Ads integration
+npx tsx src/cli-microsoft.ts export --product palettekit --date 2025-09-05
+
+# V1.6 NEW: Edge Store optimization audit
+npx tsx src/cli.ts edge-store-audit --product palettekit
+
+# V1.6 NEW: Cross-platform performance analysis
+npx tsx src/cli.ts cross-platform --product palettekit
 
 # Test v1.5 A/B Testing Framework with real data
 npx tsx test-v15-real-data.ts

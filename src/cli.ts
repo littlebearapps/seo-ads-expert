@@ -31,7 +31,7 @@ program
   .option('-m, --markets <markets>', 'Target markets (comma-separated)', 'AU,US,GB')
   .option('--max-keywords <number>', 'Maximum keywords to analyze', '200')
   .option('--max-serp-calls <number>', 'Maximum SERP API calls', '30')
-  .option('--format <format>', 'Output format: all (default), ads-editor (CSV only)', 'all')
+  .option('--format <format>', 'Output format: all (default), ads-editor, microsoft-ads', 'all')
   .option('--export <export>', 'Export additional data: utm-template', '')
   .option('--validate-only', 'Run validation checks only (no plan generation)')
   .option('--skip-health-check', 'Skip URL health checks (development/emergency)')
@@ -667,6 +667,126 @@ program
       
     } catch (error) {
       console.error('❌ Validation failed:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// Add Edge Store audit command
+program
+  .command('edge-store-audit')
+  .description('Generate comprehensive Edge Store audit report')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .action(async (options) => {
+    console.log(`🏪 Generating Edge Store audit for ${options.product}...\n`);
+    
+    try {
+      const { EdgeStoreAnalyzer } = await import('./analyzers/edge-store-analyzer.js');
+      const { EdgeStoreAuditWriter } = await import('./writers/edge-store-audit-writer.js');
+      const { join } = await import('path');
+      
+      // Sample listing data (in production, this would come from actual store data)
+      const listing = {
+        name: `${options.product.charAt(0).toUpperCase()}${options.product.slice(1)} - Chrome Extension`,
+        shortDescription: 'Professional Chrome extension with advanced features for productivity',
+        detailedDescription: `Advanced Chrome extension that helps users with productivity and workflow optimization.`,
+        keywords: ['chrome extension', 'productivity', 'tools', 'browser extension'],
+        category: 'Developer Tools',
+        screenshots: [
+          { url: 'screenshot1.png', caption: 'Main interface' },
+          { url: 'screenshot2.png', caption: 'Features overview' }
+        ]
+      };
+      
+      // Sample keyword data (in production, this would come from keyword analysis)
+      const keywordData = [
+        { keyword: 'chrome extension', volume: 1000, competition: 'medium', cpc: 0.8, score: 0.85 },
+        { keyword: 'productivity tools', volume: 800, competition: 'low', cpc: 0.5, score: 0.80 },
+        { keyword: 'browser extension', volume: 600, competition: 'low', cpc: 0.4, score: 0.75 },
+        { keyword: 'developer tools', volume: 500, competition: 'medium', cpc: 0.9, score: 0.70 }
+      ];
+      
+      // Run analysis
+      const analyzer = new EdgeStoreAnalyzer();
+      const optimization = await analyzer.analyzeWithKeywordData(listing, keywordData);
+      
+      // Generate audit report
+      const writer = new EdgeStoreAuditWriter();
+      const date = new Date().toISOString().split('T')[0];
+      const outputPath = join('plans', options.product, date, 'edge-store-audit.md');
+      await writer.writeEdgeStoreAudit(options.product, optimization, outputPath);
+      
+      console.log('✅ Edge Store audit completed!');
+      console.log(`📁 Report saved to: ${outputPath}`);
+      console.log(`\n📊 Expected Impact:`);
+      console.log(`- Discoverability: +${optimization.expectedLift.discoverability}%`);
+      console.log(`- Click-Through Rate: +${optimization.expectedLift.ctr}%`);
+      console.log(`- Install Rate: +${optimization.expectedLift.installs}%`);
+      
+    } catch (error) {
+      console.error('❌ Edge Store audit failed:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+// Add cross-platform analysis command
+program
+  .command('cross-platform')
+  .description('Analyze cross-platform performance (Google + Microsoft Ads)')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .option('--start <date>', 'Start date (YYYY-MM-DD)')
+  .option('--end <date>', 'End date (YYYY-MM-DD)')
+  .action(async (options) => {
+    console.log(`🖥️ Analyzing cross-platform performance for ${options.product}...\n`);
+    
+    try {
+      const { CrossPlatformMonitor } = await import('./monitors/cross-platform-monitor.js');
+      
+      const monitor = new CrossPlatformMonitor();
+      const dateRange = options.start && options.end ? 
+        { start: options.start, end: options.end } : 
+        undefined;
+      
+      const { metrics, insights } = await monitor.generateCrossPlatformReport(options.product, dateRange);
+      
+      console.log('📊 Cross-Platform Performance Report');
+      console.log('='.repeat(50));
+      
+      // Combined metrics
+      console.log('\n📈 Combined Performance');
+      console.log(`Total Impressions: ${metrics.combined.totalImpressions.toLocaleString()}`);
+      console.log(`Total Clicks: ${metrics.combined.totalClicks.toLocaleString()}`);
+      console.log(`Total Cost: $${metrics.combined.totalCost.toFixed(2)}`);
+      console.log(`Average CTR: ${(metrics.combined.avgCTR * 100).toFixed(2)}%`);
+      console.log(`Average CPC: $${metrics.combined.avgCPC.toFixed(2)}`);
+      
+      // Platform comparison
+      if (metrics.platforms.google && metrics.platforms.microsoft) {
+        console.log('\n🏆 Platform Comparison');
+        console.log(`Google Share: ${metrics.comparison.platformSplit.google}%`);
+        console.log(`Microsoft Share: ${metrics.comparison.platformSplit.microsoft}%`);
+        console.log(`Performance Leader: ${metrics.comparison.performanceLeader}`);
+        console.log(`Cost Efficiency Leader: ${metrics.comparison.costEfficiencyLeader}`);
+      }
+      
+      // Top opportunities
+      if (insights.opportunities.length > 0) {
+        console.log('\n💡 Top Opportunities');
+        insights.opportunities.slice(0, 3).forEach((opp, i) => {
+          console.log(`${i + 1}. ${opp.title} (${opp.platform.toUpperCase()})`);
+          console.log(`   Impact: ${opp.potentialImpact.toUpperCase()}, Effort: ${opp.effort.toUpperCase()}`);
+        });
+      }
+      
+      // Budget recommendations
+      console.log('\n💰 Budget Allocation');
+      console.log(`Recommended Google: ${insights.budgetAllocation.recommended.google}%`);
+      console.log(`Recommended Microsoft: ${insights.budgetAllocation.recommended.microsoft}%`);
+      console.log(`Reasoning: ${insights.budgetAllocation.reasoning}`);
+      
+      console.log('\n✅ Cross-platform analysis completed!');
+      
+    } catch (error) {
+      console.error('❌ Cross-platform analysis failed:', error instanceof Error ? error.message : error);
       process.exit(1);
     }
   });

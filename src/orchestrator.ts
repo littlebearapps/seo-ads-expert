@@ -403,6 +403,61 @@ export class SEOAdsOrchestrator {
         return csvPaths;
       }
       
+      // Check if we should generate Microsoft Ads bulk CSV
+      if (options.format === 'microsoft-ads') {
+        try {
+          console.log('📊 Generating Microsoft Ads bulk import CSV...');
+          const { MicrosoftAdsCSVWriter } = await import('./writers/microsoft-ads-csv.js');
+          const fullOutputPath = join(writerOptions.outputPath, writerOptions.productName, writerOptions.date);
+          mkdirSync(fullOutputPath, { recursive: true });
+          
+          // Transform clusters to campaign structure for Microsoft Ads
+          const campaignName = `${productConfig.name} - Search Campaign`;
+          const campaign = {
+            name: campaignName,
+            budget: 50, // Default daily budget
+            status: 'ENABLED',
+            adGroups: clusters.map(cluster => ({
+              name: cluster.name,
+              campaignName: campaignName,
+              status: 'ENABLED',
+              keywords: cluster.keywords.map(kw => ({
+                keyword: kw.keyword,
+                matchType: 'PHRASE', // Default to phrase match for Microsoft
+                cpc: kw.cpc || 1.0,
+                status: 'ENABLED'
+              })),
+              ads: [{
+                type: 'RSA',
+                status: 'ENABLED',
+                headlines: productConfig.rsa_headlines || [
+                  `${productConfig.name} - Chrome Extension`,
+                  'Professional Tools',
+                  'Boost Your Productivity'
+                ],
+                descriptions: productConfig.rsa_descriptions || [
+                  `${productConfig.description}`,
+                  'Download now from Chrome Web Store'
+                ],
+                finalUrl: cluster.landingPage || productConfig.landing_pages[0]?.url || 'https://littlebearapps.com'
+              }]
+            }))
+          };
+          
+          const microsoftWriter = new MicrosoftAdsCSVWriter();
+          const csvPath = await microsoftWriter.exportBulkCsv(
+            [campaign],
+            join(fullOutputPath, 'microsoft-ads-bulk.csv')
+          );
+          
+          console.log('✅ Microsoft Ads bulk CSV generated successfully');
+          return [csvPath];
+        } catch (error) {
+          console.error('❌ Microsoft Ads export error:', error);
+          throw error;
+        }
+      }
+      
       // Generate keywords CSV
       const keywordsCsv = await this.writerEngine.writeKeywordsCsv(keywords, writerOptions);
       outputPaths.push(keywordsCsv);

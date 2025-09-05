@@ -1,8 +1,6 @@
 import { stringify } from 'csv-stringify/sync';
 import pino from 'pino';
 import { z } from 'zod';
-import { StrategicOrchestrator } from '../analyzers/strategic-orchestrator.js';
-import { UnifiedOpportunitySchema } from '../types/schemas.js';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 
@@ -274,11 +272,9 @@ export class GoogleToMicrosoftTranslator {
 
 // Main Microsoft Ads CSV writer
 export class MicrosoftAdsCSVWriter {
-  private orchestrator: StrategicOrchestrator;
   private translator: GoogleToMicrosoftTranslator;
 
   constructor() {
-    this.orchestrator = new StrategicOrchestrator();
     this.translator = new GoogleToMicrosoftTranslator();
   }
 
