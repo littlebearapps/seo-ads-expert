@@ -8,8 +8,8 @@ import { DatabaseConnectionPool } from '../database/json-db.js';
 import { QualityScoreAnalyzer } from '../analyzers/quality-score-analyzer.js';
 import { QualityScoreReportWriter } from '../writers/quality-score-report-writer.js';
 import type { QualityScoreData } from '../connectors/google-ads-performance.js';
-import path from 'path';
-import fs from 'fs/promises';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 interface QualityScoreOptions {
   product: string;
@@ -127,7 +127,7 @@ export async function analyzeQualityScore(options: QualityScoreOptions): Promise
         issues: {
           adRelevance: categorized.adRelevance.length,
           landingPageExperience: categorized.landingPageExperience.length,
-          expectedCTR: categorized.expectedCTR.length
+          expectedCtr: categorized.expectedCtr.length
         },
         recommendations: analysis.recommendations.map(rec => ({
           type: rec.type,
@@ -162,8 +162,8 @@ export async function analyzeQualityScore(options: QualityScoreOptions): Promise
         landingPageExperience: analyses.filter(a => 
           a.issues.some(i => i.component === 'landingPageExperience')
         ).length,
-        expectedCTR: analyses.filter(a => 
-          a.issues.some(i => i.component === 'expectedCTR')
+        expectedCtr: analyses.filter(a => 
+          a.issues.some(i => i.component === 'expectedCtr')
         ).length
       },
       averageQualityScore: 

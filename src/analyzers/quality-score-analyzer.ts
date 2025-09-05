@@ -6,8 +6,8 @@
 import { logger } from '../utils/logger.js';
 import type { QualityScoreData } from '../connectors/google-ads-performance.js';
 import type { URLHealthData } from '../health-checker.js';
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 export interface QSAnalysis {
   adGroupId: string;
@@ -41,7 +41,7 @@ export interface QSRecommendation {
 export interface CategorizedIssues {
   adRelevance: AdRelevanceIssue[];
   landingPageExperience: LPExperienceIssue[];
-  expectedCTR: ExpectedCTRIssue[];
+  expectedCtr: ExpectedCTRIssue[];
 }
 
 export interface AdRelevanceIssue {
@@ -196,7 +196,7 @@ export class QualityScoreAnalyzer {
     const categorized: CategorizedIssues = {
       adRelevance: [],
       landingPageExperience: [],
-      expectedCTR: []
+      expectedCtr: []
     };
     
     for (const issue of analysis.issues) {
@@ -221,9 +221,9 @@ export class QualityScoreAnalyzer {
           });
           break;
           
-        case 'expectedCTR':
+        case 'expectedCtr':
           for (const keyword of issue.affectedKeywords) {
-            categorized.expectedCTR.push({
+            categorized.expectedCtr.push({
               keyword,
               currentCtr: 0, // Would need actual CTR data
               benchmark: 2.0, // Industry benchmark
@@ -285,7 +285,7 @@ export class QualityScoreAnalyzer {
           }
           break;
           
-        case 'expectedCTR':
+        case 'expectedCtr':
           if (issue.avgScore < 5) {
             recommendations.push({
               type: 'ad_copy',

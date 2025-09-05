@@ -8,8 +8,8 @@ import { logger } from '../utils/logger.js';
 import { cache } from '../cache/manager.js';
 import type { SearchTermData, QualityScoreData, DateRange } from './types.js';
 import { parse } from 'csv-parse/sync';
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 export class GoogleAdsPerformanceConnector {
   private customerId: string;

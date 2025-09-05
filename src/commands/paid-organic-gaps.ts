@@ -6,8 +6,8 @@
 import { logger } from '../utils/logger.js';
 import { DatabaseConnectionPool } from '../database/json-db.js';
 import { SearchConsoleConnector } from '../connectors/search-console.js';
-import path from 'path';
-import fs from 'fs/promises';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 interface PaidOrganicGapsOptions {
   product: string;
@@ -103,7 +103,7 @@ export async function analyzePaidOrganicGaps(options: PaidOrganicGapsOptions): P
     const gscConnector = new SearchConsoleConnector();
     if (gscConnector.isAvailable()) {
       try {
-        const gscData = await gscConnector.fetchSearchAnalytics(
+        const gscData = await gscConnector.getSearchAnalytics(
           'sc-domain:littlebearapps.com',
           {
             startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

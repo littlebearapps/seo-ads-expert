@@ -97,7 +97,7 @@ export class QualityScoreReportWriter {
 
     // Expected CTR Issues
     const ctrIssues = analyses.filter(a => 
-      a.issues.some(i => i.component === 'expectedCTR' && i.severity !== 'low')
+      a.issues.some(i => i.component === 'expectedCtr' && i.severity !== 'low')
     );
     report.push(`### Expected CTR Issues (${ctrIssues.length} ad groups)\n`);
     
@@ -106,7 +106,7 @@ export class QualityScoreReportWriter {
       report.push('|----------|----------|-----------|-------------------|---------------------|');
       
       for (const analysis of ctrIssues.slice(0, 10)) {
-        const issue = analysis.issues.find(i => i.component === 'expectedCTR');
+        const issue = analysis.issues.find(i => i.component === 'expectedCtr');
         if (issue) {
           const ctrRec = analysis.recommendations.find(r => 
             r.type === 'ad_copy' || r.type === 'extensions'

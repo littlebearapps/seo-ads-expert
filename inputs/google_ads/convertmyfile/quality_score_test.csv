@@ -1,0 +1,16 @@
+Campaign,Campaign ID,Ad group,Ad group ID,Keyword,Quality score,Expected CTR,Ad relevance,Landing page experience,Match type
+ConvertMyFile - Core,1001,WebP Conversion,2001,convert jpg to webp,8,Above average,Above average,Average,EXACT
+ConvertMyFile - Core,1001,WebP Conversion,2001,webp converter,6,Average,Average,Average,BROAD
+ConvertMyFile - Core,1001,WebP Conversion,2001,webp converter online,7,Above average,Average,Average,PHRASE
+ConvertMyFile - Core,1001,PDF Tools,2002,pdf to word,4,Below average,Below average,Below average,BROAD
+ConvertMyFile - Core,1001,PDF Tools,2002,pdf converter,5,Average,Below average,Average,BROAD
+ConvertMyFile - Core,1001,PDF Tools,2002,convert pdf,3,Below average,Below average,Below average,BROAD
+ConvertMyFile - Core,1001,Image Compression,2003,compress png,7,Average,Above average,Average,EXACT
+ConvertMyFile - Core,1001,Image Compression,2003,png compression,6,Average,Average,Average,PHRASE
+ConvertMyFile - Core,1001,Image Compression,2003,image compressor,5,Below average,Average,Average,BROAD
+ConvertMyFile - Competitors,1002,Competitor Terms,2004,cloudconvert alternative,8,Above average,Above average,Average,EXACT
+ConvertMyFile - Competitors,1002,Competitor Terms,2004,zamzar alternative,7,Average,Above average,Average,EXACT
+ConvertMyFile - Competitors,1002,Competitor Terms,2004,online converter,4,Below average,Average,Below average,BROAD
+ConvertMyFile - Extensions,1003,Chrome Extension,2005,chrome extension converter,9,Above average,Above average,Above average,EXACT
+ConvertMyFile - Extensions,1003,Chrome Extension,2005,file converter extension,8,Above average,Average,Above average,PHRASE
+ConvertMyFile - Extensions,1003,Chrome Extension,2005,browser converter,5,Average,Below average,Average,BROAD

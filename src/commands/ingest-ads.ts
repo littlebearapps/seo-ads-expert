@@ -6,8 +6,8 @@
 import { logger } from '../utils/logger.js';
 import { GoogleAdsPerformanceConnector } from '../connectors/google-ads-performance.js';
 import { DatabaseConnectionPool } from '../database/json-db.js';
-import path from 'path';
-import fs from 'fs/promises';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 interface IngestOptions {
   product: string;

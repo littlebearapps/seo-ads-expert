@@ -9,8 +9,8 @@ import { NgramEngine } from '../analyzers/ngram-engine.js';
 import { WasteReportWriter } from '../writers/waste-report-writer.js';
 import { NegativesCsvWriter } from '../writers/negatives-csv-writer.js';
 import type { SearchTermData } from '../connectors/google-ads-performance.js';
-import path from 'path';
-import fs from 'fs/promises';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 interface AnalyzeWasteOptions {
   product: string;
