@@ -15,6 +15,8 @@ import { CPCJumpPlaybook } from './strategies/pb-cpc-jump.js';
 import { SpendSpikePlaybook } from './strategies/pb-spend-spike.js';
 import { SERPDriftPlaybook } from './strategies/pb-serp-drift.js';
 import { LPRegressionPlaybook } from './strategies/pb-lp-regression.js';
+import { ConversionDropPlaybook } from './strategies/pb-conversion-drop.js';
+import { QualityScorePlaybook } from './strategies/pb-quality-score.js';
 
 export class PlaybookEngine {
   private db: DatabaseManager;
@@ -32,7 +34,9 @@ export class PlaybookEngine {
       ['pb_spend_spike', new SpendSpikePlaybook(db)],
       ['pb_spend_drop', new SpendSpikePlaybook(db)], // Same playbook, different strategy
       ['pb_serp_drift', new SERPDriftPlaybook(db)],
-      ['pb_lp_regression', new LPRegressionPlaybook(db)]
+      ['pb_lp_regression', new LPRegressionPlaybook(db)],
+      ['pb_conversion_drop', new ConversionDropPlaybook(db)],
+      ['pb_quality_score', new QualityScorePlaybook(db)]
     ]);
   }
   

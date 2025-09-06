@@ -31,16 +31,16 @@ export class AlertManager {
   constructor(db: DatabaseManager) {
     this.db = db;
     
-    // Initialize all detectors with explicit any type for heterogeneous detectors
+    // Initialize all detectors with database connections
     this.detectors = new Map<string, any>([
       ['ctr_drop', new CTRDetector(db)],
       ['spend_spike', new SpendDetector(db, 'spike')],
       ['spend_drop', new SpendDetector(db, 'drop')],
       ['cpc_jump', new CPCDetector(db)],
-      ['conversion_drop', new ConversionDetector()],
-      ['quality_score', new QualityScoreDetector()],
-      ['serp_drift', new SERPDriftDetector()],
-      ['lp_regression', new LPRegressionDetector()]
+      ['conversion_drop', new ConversionDetector(db)],
+      ['quality_score', new QualityScoreDetector(db)],
+      ['serp_drift', new SERPDriftDetector(db)],
+      ['lp_regression', new LPRegressionDetector(db)]
     ]);
   }
 
@@ -397,5 +397,12 @@ export class AlertManager {
       return `URL "${entity.url}"`;
     }
     return entity.id;
+  }
+
+  /**
+   * Get detectors map (for testing)
+   */
+  getDetectors(): Map<string, any> {
+    return this.detectors;
   }
 }
