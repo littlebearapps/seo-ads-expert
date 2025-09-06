@@ -148,6 +148,14 @@ export class DatabaseManager {
   }
 
   /**
+   * Get the raw database instance (for advanced operations)
+   */
+  getDb(): Database.Database {
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db;
+  }
+
+  /**
    * Run SQL query with parameters
    */
   run(sql: string, params?: any[]): Database.RunResult {

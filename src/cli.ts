@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name('seo-ads-expert')
   .description('AI-powered SEO & Google Ads planning tool for Chrome extensions')
-  .version('1.0.0');
+  .version('1.7.0');
 
 program
   .command('plan')
@@ -789,6 +789,89 @@ program
       console.error('❌ Cross-platform analysis failed:', error instanceof Error ? error.message : error);
       process.exit(1);
     }
+  });
+
+// v1.7 Alert System Commands
+const alerts = program.command('alerts').description('Alert management and anomaly detection');
+
+alerts
+  .command('check')
+  .description('Run anomaly detection across all metrics')
+  .requiredOption('-p, --product <name>', 'Product name (or "all" for all products)')
+  .option('--window <window>', 'Time window (e.g., "14d:3d" for 14-day baseline, 3-day current)', '14d:3d')
+  .option('--output <path>', 'Output path for alerts.json')
+  .action(async (options) => {
+    const { execSync } = await import('child_process');
+    const command = `node ${path.join(process.cwd(), 'src', 'cli-alerts.js')} check -p "${options.product}" --window "${options.window}"${options.output ? ` --output "${options.output}"` : ''}`;
+    
+    try {
+      execSync(command, { stdio: 'inherit' });
+    } catch (error) {
+      process.exit(1);
+    }
+  });
+
+alerts
+  .command('list')
+  .description('List current alerts')
+  .option('-p, --product <name>', 'Filter by product')
+  .option('-s, --status <status>', 'Filter by status (open|ack|snoozed|closed)')
+  .action(async (options) => {
+    const { execSync } = await import('child_process');
+    const args = [];
+    if (options.product) args.push(`-p "${options.product}"`);
+    if (options.status) args.push(`-s "${options.status}"`);
+    const command = `node ${path.join(process.cwd(), 'src', 'cli-alerts.js')} list ${args.join(' ')}`;
+    
+    try {
+      execSync(command, { stdio: 'inherit' });
+    } catch (error) {
+      process.exit(1);
+    }
+  });
+
+alerts
+  .command('ack <alertId>')
+  .description('Acknowledge an alert')
+  .option('--notes <notes>', 'Add notes')
+  .action(async (alertId, options) => {
+    const { execSync } = await import('child_process');
+    const command = `node ${path.join(process.cwd(), 'src', 'cli-alerts.js')} ack "${alertId}"${options.notes ? ` --notes "${options.notes}"` : ''}`;
+    
+    try {
+      execSync(command, { stdio: 'inherit' });
+    } catch (error) {
+      process.exit(1);
+    }
+  });
+
+alerts
+  .command('snooze <alertId>')
+  .description('Snooze an alert')
+  .requiredOption('--until <date>', 'Snooze until date (YYYY-MM-DD)')
+  .action(async (alertId, options) => {
+    const { execSync } = await import('child_process');
+    const command = `node ${path.join(process.cwd(), 'src', 'cli-alerts.js')} snooze "${alertId}" --until "${options.until}"`;
+    
+    try {
+      execSync(command, { stdio: 'inherit' });
+    } catch (error) {
+      process.exit(1);
+    }
+  });
+
+// Add remediation command (placeholder for Day 2)
+program
+  .command('remedy')
+  .description('Apply remediation for an alert')
+  .requiredOption('--alert-id <id>', 'Alert ID to remediate')
+  .option('--dry-run', 'Preview actions without applying')
+  .option('--apply', 'Apply remediation (default is dry-run)')
+  .action(async (options) => {
+    console.log('🔧 Remediation system coming in v1.7 Day 2...');
+    console.log(`Alert ID: ${options.alertId}`);
+    console.log(`Mode: ${options.apply ? 'APPLY' : 'DRY-RUN'}`);
+    console.log('\nPlaybook system implementation pending.');
   });
 
 program.parse();
