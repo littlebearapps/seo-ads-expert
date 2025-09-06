@@ -860,18 +860,28 @@ alerts
     }
   });
 
-// Add remediation command (placeholder for Day 2)
+// Add remediation command
 program
   .command('remedy')
   .description('Apply remediation for an alert')
   .requiredOption('--alert-id <id>', 'Alert ID to remediate')
   .option('--dry-run', 'Preview actions without applying')
   .option('--apply', 'Apply remediation (default is dry-run)')
+  .option('--allow-bid-changes', 'Allow bid adjustments')
   .action(async (options) => {
-    console.log('🔧 Remediation system coming in v1.7 Day 2...');
-    console.log(`Alert ID: ${options.alertId}`);
-    console.log(`Mode: ${options.apply ? 'APPLY' : 'DRY-RUN'}`);
-    console.log('\nPlaybook system implementation pending.');
+    const { execSync } = await import('child_process');
+    const args = [`--alert-id "${options.alertId}"`];
+    if (!options.apply) args.push('--dry-run');
+    if (options.apply) args.push('--apply');
+    if (options.allowBidChanges) args.push('--allow-bid-changes');
+    
+    const command = `node ${path.join(process.cwd(), 'src', 'cli-remedy.js')} apply ${args.join(' ')}`;
+    
+    try {
+      execSync(command, { stdio: 'inherit' });
+    } catch (error) {
+      process.exit(1);
+    }
   });
 
 program.parse();
