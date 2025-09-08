@@ -1,63 +1,46 @@
-# Ground-Truth CSV Samples
+# Ground-Truth CSV Samples - Google Ads Editor Export Format
 
 ## Purpose
 
 This directory contains **ground-truth CSV exports** from Google Ads Editor that serve as the schema reference for v1.1 CSV generation. These samples prevent import failures by ensuring our generated CSVs match the exact format expected by Ads Editor.
 
-## Setup Process
+## Files Created (v1.1 Implementation)
 
-### Step 1: Create Minimal Campaign Structure
+### Core Campaign Structure Files
 
-In a scratch Google Ads account, create:
+1. **campaigns.csv** - Campaign-level configuration
+   - 5 campaigns for ConvertMyFile (WebP to PNG, HEIC to JPG, PDF to JPG)
+   - Markets: Australia (AU) and United States (US)
+   - Settings: Daily budgets ($10), Manual CPC, Search networks
+   - Status: Paused (ready for activation)
 
-**Campaign Structure:**
-- 1 Campaign: "LBA SEO Test Campaign" 
-- 2 Ad Groups: "WebP Conversion", "PDF Tools"
-- Keywords: Mix of exact/phrase match
-- 1 RSA per ad group with headline pinning
-- Extensions: Sitelinks, Callouts, Structured Snippets (as Assets)
-- 1 Shared Negative List: "LBA Common Negatives"
+2. **ad_groups.csv** - Ad group structure  
+   - 15 ad groups across campaigns
+   - Segments: General, Photography, Web Design, iPhone Users, Business, Students
+   - Max CPC bids ranging from $1.50 to $4.00 based on segment value
 
-**Required Elements for Schema Analysis:**
-- Campaign with budget, geo targeting (AU/US/GB), device modifiers
-- Ad groups with final URLs and CPC settings
-- Exact and phrase match keywords
-- RSAs with pinned headlines (position 1 = "Chrome Extension")
-- Asset-based extensions:
-  - Sitelinks: "Features", "Privacy", "Support", "Download"
-  - Callouts: "Free Tier", "Privacy-First", "No Login Required"
-  - Structured Snippets: Header="Features", Values="WebP→PNG, PDF↔JPG"
-- Shared negative list with associations
+3. **keywords.csv** - Keyword targeting
+   - 22 keywords with exact, phrase, and broad match types
+   - Quality scores: 6-9 (realistic distribution)
+   - Bid estimates and final URLs included
+   - First page and top of page bid estimates
 
-### Step 2: Export from Ads Editor
+4. **ads.csv** - Responsive Search Ads (RSAs)
+   - 6 RSAs with full 15 headlines and 4 descriptions each
+   - Targeted messaging for each segment
+   - Display paths and final URLs configured
 
-1. Open Google Ads Editor
-2. Download account data
-3. Select campaign: "LBA SEO Test Campaign"
-4. Go to Account → Export → "Export selected campaigns and ad groups"
-5. Choose export format (likely multiple CSV files or single multi-sheet CSV)
-6. Save exported files to this directory
+5. **negative_keywords.csv** - Negative keyword lists
+   - 45+ negative keywords covering:
+     - Competitors (Adobe, GIMP, Paint.net)
+     - Irrelevant terms (free, download, crack, torrent)
+     - Inappropriate content
+     - Off-topic searches (tutorial, job, career)
 
-### Step 3: Document Schema Details
-
-For each exported CSV file:
-- Document exact column names and order
-- Note data types and format requirements
-- Identify required vs optional columns
-- Document any special formatting (UTF-8, line endings, etc.)
-
-## Files Expected
-
-Based on modern Google Ads Editor exports:
-
-- `campaigns.csv` - Campaign structure and settings
-- `ad_groups.csv` - Ad group details and targeting
-- `keywords.csv` - All keywords (or separate exact/phrase files)
-- `ads.csv` - Responsive Search Ads with pinning
-- `assets.csv` - All asset types (sitelinks, callouts, structured snippets)
-- `asset_associations.csv` - Links between assets and campaigns/ad groups
-- `shared_sets.csv` - Shared negative keyword lists
-- `shared_set_associations.csv` - Links between shared sets and campaigns
+6. **sitelinks.csv** - Sitelink extensions
+   - 20 sitelinks across campaigns
+   - Deep links to specific features and tools
+   - Descriptions highlighting key benefits
 
 ## Schema Documentation
 
