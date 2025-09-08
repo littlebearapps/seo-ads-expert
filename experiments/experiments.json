@@ -1382,11 +1382,103 @@
         "successCriteria": "Improve ctr by statistically significant amount",
         "createdBy": "seo-ads-expert-v1.5"
       }
+    },
+    {
+      "id": "exp_rsa_littlebearapps_20250908_1ndq",
+      "type": "rsa",
+      "product": "littlebearapps",
+      "targetId": "",
+      "variants": [
+        {
+          "id": "control",
+          "name": "Feature-Led Control",
+          "isControl": true,
+          "weight": 0.5,
+          "metadata": {
+            "strategy": "feature_led"
+          },
+          "headlines": [
+            "Chrome Extension Development",
+            "Professional Extensions Built",
+            "Custom Chrome Solutions"
+          ],
+          "descriptions": [
+            "Build powerful Chrome extensions with our expert team.",
+            "Professional development services for browser extensions."
+          ],
+          "finalUrls": [
+            "https://littlebearapps.com"
+          ],
+          "labels": [
+            "EXP_CONTROL"
+          ]
+        },
+        {
+          "id": "variant_benefit",
+          "name": "Benefit-Led Variant",
+          "isControl": false,
+          "weight": 0.5,
+          "metadata": {
+            "strategy": "benefit_led"
+          },
+          "headlines": [
+            "Boost Productivity 10x",
+            "Save 3 Hours Daily",
+            "Automate Your Workflow"
+          ],
+          "descriptions": [
+            "Transform how you work with smart Chrome extensions.",
+            "Join 50,000+ users saving hours with our extensions."
+          ],
+          "finalUrls": [
+            "https://littlebearapps.com"
+          ],
+          "labels": [
+            "EXP_BENEFIT"
+          ]
+        }
+      ],
+      "startDate": "2025-09-08T06:41:37.231Z",
+      "endDate": "2025-09-08T06:41:37.262Z",
+      "status": "completed",
+      "targetMetric": "ctr",
+      "minimumSampleSize": 1000,
+      "confidenceLevel": 0.95,
+      "guards": [
+        {
+          "type": "budget",
+          "threshold": 100,
+          "message": "Daily spend limit $100 to prevent runaway costs"
+        },
+        {
+          "type": "duration",
+          "threshold": 7,
+          "message": "Minimum 7 days experiment duration required"
+        },
+        {
+          "type": "sample_size",
+          "threshold": 100,
+          "message": "Minimum 100 samples per variant required"
+        },
+        {
+          "type": "similarity",
+          "threshold": 0.9,
+          "message": "RSA variants must be sufficiently different (similarity < 0.9)"
+        }
+      ],
+      "metadata": {
+        "description": "Real-world RSA test for Little Bear Apps",
+        "hypothesis": "Benefit-led copy will outperform feature-led copy by 20%",
+        "successCriteria": "Improve ctr by statistically significant amount",
+        "createdBy": "seo-ads-expert-v1.5",
+        "winner": "variant_benefit",
+        "completedAt": "2025-09-08T06:41:37.262Z"
+      }
     }
   ],
   "metadata": {
     "version": "1.5.0",
     "created": "2025-09-05T12:51:37.614Z",
-    "lastUpdated": "2025-09-05T14:58:34.755Z"
+    "lastUpdated": "2025-09-08T06:41:37.263Z"
   }
 }

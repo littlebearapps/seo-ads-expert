@@ -13,18 +13,36 @@ export const OpportunityConfigSchema = z.object({
     market_size: z.number().min(0).max(1).default(0.15),
     seasonality: z.number().min(0).max(1).default(0.10),
     first_party_performance: z.number().min(0).max(1).default(0.05)
+  }).default({
+    search_volume: 0.25,
+    commercial_intent: 0.20,
+    serp_difficulty: 0.15,
+    data_quality: 0.10,
+    market_size: 0.15,
+    seasonality: 0.10,
+    first_party_performance: 0.05
   }),
   business_priorities: z.object({
     revenue_focus: z.enum(['high', 'medium', 'low']).default('high'),
     brand_building: z.enum(['high', 'medium', 'low']).default('medium'),
     competitive_defense: z.enum(['high', 'medium', 'low']).default('medium'),
     market_expansion: z.enum(['high', 'medium', 'low']).default('low')
+  }).default({
+    revenue_focus: 'high',
+    brand_building: 'medium',
+    competitive_defense: 'medium',
+    market_expansion: 'low'
   }),
   investment_thresholds: z.object({
     high_impact_min: z.number().default(7.5),
     medium_impact_min: z.number().default(5.0),
     quick_win_max_effort: z.number().default(20), // hours
     enterprise_min_volume: z.number().default(1000)
+  }).default({
+    high_impact_min: 7.5,
+    medium_impact_min: 5.0,
+    quick_win_max_effort: 20,
+    enterprise_min_volume: 1000
   })
 });
 
@@ -146,10 +164,13 @@ export class OpportunityAnalyzer {
   private config: OpportunityConfig;
   
   constructor(config: Partial<OpportunityConfig> = {}) {
+    // Parse the config with defaults - Zod will apply default values automatically
+    const defaultConfig = OpportunityConfigSchema.parse({});
+    
     this.config = OpportunityConfigSchema.parse({
-      weights: { ...OpportunityConfigSchema.shape.weights._def.innerType._def.defaultValue(), ...config.weights },
-      business_priorities: { ...OpportunityConfigSchema.shape.business_priorities._def.innerType._def.defaultValue(), ...config.business_priorities },
-      investment_thresholds: { ...OpportunityConfigSchema.shape.investment_thresholds._def.innerType._def.defaultValue(), ...config.investment_thresholds }
+      weights: { ...defaultConfig.weights, ...config.weights },
+      business_priorities: { ...defaultConfig.business_priorities, ...config.business_priorities },
+      investment_thresholds: { ...defaultConfig.investment_thresholds, ...config.investment_thresholds }
     });
   }
   
