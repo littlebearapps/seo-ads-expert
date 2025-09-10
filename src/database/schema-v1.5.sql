@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS fact_ab_tests (
   min_sample_size INTEGER NOT NULL,
   confidence_level REAL DEFAULT 0.95,
   baseline_data_source TEXT, -- Links to v1.4 performance data
-  waste_insights_used JSON, -- v1.4 waste analysis insights
-  qs_insights_used JSON, -- v1.4 quality score insights
+  waste_insights_used TEXT, -- v1.4 waste analysis insights (stored as JSON string)
+  qs_insights_used TEXT, -- v1.4 quality score insights (stored as JSON string)
   hypothesis TEXT,
   description TEXT,
   success_criteria TEXT,
@@ -49,15 +49,15 @@ CREATE TABLE IF NOT EXISTS fact_ab_variants (
   variant_name TEXT NOT NULL,
   label TEXT, -- Google Ads label for tracking
   copy_hash TEXT, -- Hash for similarity checking
-  headlines JSON, -- RSA headlines array
-  descriptions JSON, -- RSA descriptions array
-  final_urls JSON, -- RSA final URLs array
+  headlines TEXT, -- RSA headlines array (stored as JSON string)
+  descriptions TEXT, -- RSA descriptions array (stored as JSON string)
+  final_urls TEXT, -- RSA final URLs array (stored as JSON string)
   lp_path TEXT, -- Landing page path for LP experiments
-  content_changes JSON, -- LP content modifications
-  routing_rules JSON, -- LP routing configuration
-  is_control BOOLEAN DEFAULT FALSE,
+  content_changes TEXT, -- LP content modifications (stored as JSON string)
+  routing_rules TEXT, -- LP routing configuration (stored as JSON string)
+  is_control INTEGER DEFAULT 0, -- Use 0/1 for boolean
   weight REAL DEFAULT 0.5, -- Traffic allocation weight
-  metadata JSON, -- Additional variant metadata
+  metadata TEXT, -- Additional variant metadata (stored as JSON string)
   similarity_score REAL, -- Similarity to control variant
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (test_id, variant_id),
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS fact_ab_guards (
   threshold REAL NOT NULL,
   message TEXT NOT NULL,
   last_check_at TIMESTAMP,
-  last_check_result BOOLEAN,
+  last_check_result INTEGER, -- Use 0/1 for boolean
   last_check_value REAL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (test_id, guard_type),
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS fact_ab_metrics (
   -- Data quality flags
   data_source TEXT, -- 'google_ads', 'analytics', 'estimated'
   data_quality_score REAL DEFAULT 1.0,
-  has_anomaly BOOLEAN DEFAULT FALSE,
+  has_anomaly INTEGER DEFAULT 0, -- Use 0/1 for boolean
   
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (date, test_id, variant_id),
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS fact_ab_results (
   confidence_level REAL,
   
   -- Early stopping
-  early_stop_recommended BOOLEAN DEFAULT FALSE,
+  early_stop_recommended INTEGER DEFAULT 0, -- Use 0/1 for boolean
   early_stop_reason TEXT,
   
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS fact_ab_conversions (
   attribution_model TEXT DEFAULT 'last_touch',
   
   -- Event data
-  event_data JSON,
+  event_data TEXT, -- Event data (stored as JSON string)
   revenue REAL,
   quantity INTEGER DEFAULT 1,
   
@@ -301,7 +301,7 @@ SELECT
   
   -- Variant counts
   (SELECT COUNT(*) FROM fact_ab_variants abv WHERE abv.test_id = abt.test_id) as variant_count,
-  (SELECT variant_name FROM fact_ab_variants abv WHERE abv.test_id = abt.test_id AND abv.is_control = TRUE) as control_variant,
+  (SELECT variant_name FROM fact_ab_variants abv WHERE abv.test_id = abt.test_id AND abv.is_control = 1) as control_variant,
   
   -- Current metrics (latest date)
   (SELECT SUM(clicks) FROM fact_ab_metrics abm WHERE abm.test_id = abt.test_id AND abm.date = (
@@ -344,13 +344,5 @@ END;
 -- INITIAL DATA & DEFAULTS
 -- =============================================================================
 
--- Insert default guard configurations for new experiments
--- These will be referenced by the ExperimentManager when creating experiments
-INSERT OR IGNORE INTO fact_ab_guards (test_id, guard_type, threshold, message) 
-VALUES 
-  ('__default_rsa__', 'similarity', 0.9, 'RSA variants must be sufficiently different (similarity < 0.9)'),
-  ('__default_rsa__', 'budget', 100.0, 'Daily spend limit $100 to prevent runaway costs'),
-  ('__default_rsa__', 'duration', 7.0, 'Minimum 7 days experiment duration required'),
-  ('__default_rsa__', 'sample_size', 100.0, 'Minimum 100 samples per variant required'),
-  ('__default_landing_page__', 'duration', 7.0, 'Minimum 7 days experiment duration required'),
-  ('__default_landing_page__', 'sample_size', 100.0, 'Minimum 100 samples per variant required');
+-- Note: Default guard configurations are now handled in application code
+-- to avoid foreign key constraint violations during initialization

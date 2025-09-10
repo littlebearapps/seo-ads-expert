@@ -21,16 +21,19 @@ export function fixDecimals(value: number, precision: number = 2): string {
 
 /**
  * Fix decimals for all numeric values in an object
+ * Returns numbers rounded to specified precision (not strings)
  */
 export function fixObjectDecimals<T extends Record<string, any>>(obj: T, precision: number = 2): T {
   const result = { ...obj };
   
   for (const [key, value] of Object.entries(result)) {
     if (typeof value === 'number') {
-      result[key] = fixDecimals(value, precision);
+      // Round to specified precision but keep as number
+      result[key] = Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
     } else if (Array.isArray(value)) {
       result[key] = value.map(item => 
-        typeof item === 'number' ? fixDecimals(item, precision) :
+        typeof item === 'number' ? 
+          Math.round(item * Math.pow(10, precision)) / Math.pow(10, precision) :
         typeof item === 'object' && item !== null ? fixObjectDecimals(item, precision) : item
       );
     } else if (typeof value === 'object' && value !== null) {

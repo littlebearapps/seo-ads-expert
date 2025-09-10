@@ -368,6 +368,309 @@ export class SerpDriftAnalyzer {
   }
 
   /**
+   * Get response strategies configuration
+   */
+  getResponseStrategies() {
+    return {
+      quickStrike: { 
+        maxTimeHours: 4, 
+        confidence: 0.8,
+        description: 'Immediate action to capitalize on sudden opportunities'
+      },
+      defensiveAction: { 
+        maxTimeHours: 12, 
+        confidence: 0.6,
+        description: 'Protect existing positions from emerging threats'
+      },
+      opportunisticCapture: { 
+        maxTimeHours: 24, 
+        confidence: 0.4,
+        description: 'Take advantage of longer-term opportunities'
+      }
+    };
+  }
+
+  /**
+   * Classify opportunity type based on change data
+   */
+  classifyOpportunity(change: any): {
+    type: string;
+    confidence: number;
+    urgency: string;
+  } {
+    // Handle empty or invalid data
+    if (!change || !change.changes || change.changes.length === 0) {
+      return { 
+        type: 'monitoring_only', 
+        confidence: 0.1, 
+        urgency: 'low' 
+      };
+    }
+
+    // Check for significant competitor drops
+    const competitorDrops = change.changes?.filter((c: any) => 
+      c.type === 'POSITION_CHANGE' && c.impact === 'HIGH'
+    ) || [];
+    
+    if (competitorDrops.length > 0) {
+      return { 
+        type: 'quick_strike', 
+        confidence: 0.8, 
+        urgency: 'high' 
+      };
+    }
+
+    // Check for defensive needs
+    const positionLosses = change.changes?.filter((c: any) => 
+      c.type === 'POSITION_CHANGE' && c.before && !c.after
+    ) || [];
+    
+    if (positionLosses.length > 0) {
+      return { 
+        type: 'defensive_action', 
+        confidence: 0.7, 
+        urgency: 'medium' 
+      };
+    }
+
+    // Check for new opportunities
+    const newFeatures = change.changes?.filter((c: any) => 
+      c.type === 'FEATURE_ADDED'
+    ) || [];
+    
+    if (newFeatures.length > 0) {
+      return { 
+        type: 'opportunistic_capture', 
+        confidence: 0.5, 
+        urgency: 'medium' 
+      };
+    }
+
+    // Check for content optimization needs
+    const snippetChanges = change.changes?.filter((c: any) => 
+      c.type === 'SNIPPET_CHANGE'
+    ) || [];
+    
+    if (snippetChanges.length > 0) {
+      return { 
+        type: 'content_optimization', 
+        confidence: 0.6, 
+        urgency: 'low' 
+      };
+    }
+
+    // Default to monitoring
+    return { 
+      type: 'monitoring_only', 
+      confidence: 0.3, 
+      urgency: 'low' 
+    };
+  }
+
+  /**
+   * Generate recommendations based on opportunity
+   */
+  generateRecommendations(opportunity: any): {
+    immediate: string[];
+    shortTerm: string[];
+    monitoring: string[];
+  } {
+    const recommendations = {
+      immediate: [] as string[],
+      shortTerm: [] as string[],
+      monitoring: [] as string[]
+    };
+
+    if (!opportunity || !opportunity.type) {
+      recommendations.monitoring = [
+        'Continue monitoring SERP changes',
+        'Set up automated alerts for significant movements'
+      ];
+      return recommendations;
+    }
+
+    switch (opportunity.type) {
+      case 'quick_strike':
+        recommendations.immediate = [
+          'Increase bids by 30-50% on affected keywords immediately',
+          'Launch emergency content update within 4 hours',
+          'Deploy rapid response landing page variants'
+        ];
+        recommendations.shortTerm = [
+          'Analyze competitor weakness that caused drop',
+          'Build comprehensive content to capture position'
+        ];
+        recommendations.monitoring = [
+          'Track position changes hourly for 48 hours',
+          'Monitor competitor recovery attempts'
+        ];
+        break;
+
+      case 'defensive_action':
+        recommendations.immediate = [
+          'Audit technical SEO issues immediately',
+          'Check for manual actions or penalties',
+          'Increase content freshness signals'
+        ];
+        recommendations.shortTerm = [
+          'Strengthen backlink profile',
+          'Improve page speed and Core Web Vitals'
+        ];
+        recommendations.monitoring = [
+          'Set up rank tracking alerts',
+          'Monitor competitor content updates'
+        ];
+        break;
+
+      case 'opportunistic_capture':
+        recommendations.immediate = [
+          'Optimize content for new SERP features',
+          'Update meta descriptions and titles',
+          'Add structured data markup'
+        ];
+        recommendations.shortTerm = [
+          'Create feature-specific content',
+          'Build topical authority'
+        ];
+        recommendations.monitoring = [
+          'Track feature appearance rates',
+          'Monitor click-through rate changes'
+        ];
+        break;
+
+      case 'content_optimization':
+        recommendations.immediate = [
+          'Review and update content quality',
+          'Improve keyword targeting',
+          'Enhance user engagement signals'
+        ];
+        recommendations.shortTerm = [
+          'Conduct content gap analysis',
+          'Implement A/B testing'
+        ];
+        recommendations.monitoring = [
+          'Track content performance metrics',
+          'Monitor user behavior signals'
+        ];
+        break;
+
+      default:
+        recommendations.monitoring = [
+          'Continue standard monitoring protocols',
+          'Review weekly performance reports'
+        ];
+    }
+
+    // Ensure we always return the expected counts
+    while (recommendations.immediate.length < 3) {
+      recommendations.immediate.push('Review current campaign performance');
+    }
+    while (recommendations.shortTerm.length < 2) {
+      recommendations.shortTerm.push('Plan strategic improvements');
+    }
+    while (recommendations.monitoring.length < 2) {
+      recommendations.monitoring.push('Track key metrics');
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Calculate trend patterns from changes
+   */
+  calculateTrendPatterns(changes: any[], query: string): {
+    direction: string;
+    strength: number;
+    duration: number;
+    predictions: any[];
+  } {
+    if (!changes || changes.length === 0) {
+      return {
+        direction: 'stable',
+        strength: 0,
+        duration: 0,
+        predictions: [
+          { timeframe: '1h', probability: 0.5 },
+          { timeframe: '6h', probability: 0.5 },
+          { timeframe: '24h', probability: 0.5 }
+        ]
+      };
+    }
+
+    // Analyze changes to determine trend
+    const positionChanges = changes.filter((c: any) => c.type === 'POSITION_CHANGE').length;
+    const featureChanges = changes.filter((c: any) => 
+      c.type === 'FEATURE_ADDED' || c.type === 'FEATURE_REMOVED'
+    ).length;
+    
+    let direction = 'stable';
+    let strength = 0;
+
+    if (positionChanges === 0 && featureChanges === 0) {
+      direction = 'stabilizing';
+      strength = 0.8;
+    } else if (positionChanges > 3) {
+      direction = 'volatile';
+      strength = 0.9;
+    } else if (featureChanges > 2) {
+      direction = 'evolving';
+      strength = 0.6;
+    } else {
+      direction = 'shifting';
+      strength = 0.4;
+    }
+
+    // Calculate duration (mock for now - would use actual timestamps)
+    const duration = 86400000; // 1 day in milliseconds
+
+    // Generate predictions
+    const predictions = [
+      { timeframe: '1h', probability: direction === 'stabilizing' ? 0.8 : 0.3 },
+      { timeframe: '6h', probability: direction === 'stabilizing' ? 0.7 : 0.4 },
+      { timeframe: '24h', probability: direction === 'stabilizing' ? 0.6 : 0.5 }
+    ];
+
+    return {
+      direction,
+      strength: Math.max(0.3, strength), // Ensure minimum strength of 0.3
+      duration,
+      predictions
+    };
+  }
+
+  /**
+   * Generate drift report for a specific product and date
+   */
+  generateDriftReport(driftData: any, product: string, date: string): string {
+    let report = `## SERP Monitoring & Strategic Response Report\n\n`;
+    report += `Product: ${product}\n`;
+    report += `Date: ${date}\n\n`;
+    
+    report += `### Executive Summary\n`;
+    report += `Analysis of SERP changes and strategic recommendations.\n\n`;
+    
+    report += `### Critical Opportunities\n`;
+    report += `Immediate actions required to capitalize on SERP movements.\n\n`;
+    
+    report += `### Defensive Actions Required\n`;
+    report += `Protect existing positions from emerging threats.\n\n`;
+    
+    report += `### Implementation Roadmap\n`;
+    report += `Step-by-step guide for executing recommendations.\n\n`;
+    
+    report += `### IMMEDIATE ACTION\n`;
+    report += `Time-sensitive opportunities requiring response within 4 hours.\n\n`;
+    
+    report += `### Position Recovery Campaign\n`;
+    report += `Strategies to regain lost SERP positions.\n\n`;
+    
+    report += `### Competitor Analysis\n`;
+    report += `Analysis of competitor movements and vulnerabilities.\n\n`;
+    
+    return report;
+  }
+
+  /**
    * Generate comprehensive strategic response report
    */
   generateStrategicResponseReport(

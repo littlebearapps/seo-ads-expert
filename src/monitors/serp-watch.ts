@@ -110,10 +110,16 @@ interface SerpMonitorConfig {
 }
 
 export class SerpWatchMonitor {
-  private config: SerpMonitorConfig;
+  private config: SerpMonitorConfig & {
+    enabledFeatures?: string[];
+    monitoringIntervals?: { high: number; medium: number; low: number };
+  };
   private snapshotDir: string;
 
-  constructor(config?: Partial<SerpMonitorConfig>, snapshotDir?: string) {
+  constructor(config?: Partial<SerpMonitorConfig & {
+    enabledFeatures?: string[];
+    monitoringIntervals?: { high: number; medium: number; low: number };
+  }>, snapshotDir?: string) {
     this.config = {
       clusters: ['pdf-tools', 'image-tools', 'document-tools'],
       markets: ['US', 'GB', 'AU'],
@@ -127,6 +133,8 @@ export class SerpWatchMonitor {
         [ChangeType.SNIPPET_CHANGE]: 0.2,
         [ChangeType.VOLUME_CHANGE]: 0.7
       },
+      enabledFeatures: Object.values(SerpFeature),
+      monitoringIntervals: { high: 60, medium: 180, low: 360 },
       ...config
     };
     
@@ -847,6 +855,188 @@ export class SerpWatchMonitor {
     if (!fs.existsSync(this.snapshotDir)) {
       fs.mkdirSync(this.snapshotDir, { recursive: true });
     }
+  }
+
+  /**
+   * Create an empty snapshot structure
+   */
+  createEmptySnapshot(query: string, market: string): any {
+    return {
+      query,
+      market,
+      timestamp: Date.now(),
+      serp_features: {},
+      organic_results: [],
+      paid_ads: []
+    };
+  }
+
+  /**
+   * Calculate volatility score between two snapshots
+   */
+  calculateVolatilityScore(oldSnapshot: any, newSnapshot: any): {
+    overall: number;
+    organic: number;
+    features: number;
+    ads: number;
+  } {
+    if (!oldSnapshot) {
+      return { overall: 1.0, organic: 0, features: 0, ads: 0 };
+    }
+
+    let organicScore = 0;
+    let featureScore = 0;
+    let adScore = 0;
+
+    // Calculate organic changes
+    if (oldSnapshot.organic_results && newSnapshot.organic_results) {
+      const oldDomains = oldSnapshot.organic_results.slice(0, 10).map((r: any) => r.domain);
+      const newDomains = newSnapshot.organic_results.slice(0, 10).map((r: any) => r.domain);
+      
+      let changes = 0;
+      for (let i = 0; i < Math.min(oldDomains.length, newDomains.length); i++) {
+        if (oldDomains[i] !== newDomains[i]) changes++;
+      }
+      organicScore = changes / 10;
+    }
+
+    // Calculate feature changes
+    if (oldSnapshot.serp_features && newSnapshot.serp_features) {
+      const oldFeatures = Object.keys(oldSnapshot.serp_features);
+      const newFeatures = Object.keys(newSnapshot.serp_features);
+      
+      const allFeatures = new Set([...oldFeatures, ...newFeatures]);
+      let featureChanges = 0;
+      
+      for (const feature of allFeatures) {
+        if ((oldSnapshot.serp_features[feature] || false) !== (newSnapshot.serp_features[feature] || false)) {
+          featureChanges++;
+        }
+      }
+      
+      featureScore = allFeatures.size > 0 ? featureChanges / allFeatures.size : 0;
+    }
+
+    // Calculate ad changes
+    if (oldSnapshot.paid_ads && newSnapshot.paid_ads) {
+      const oldAdCount = oldSnapshot.paid_ads.length;
+      const newAdCount = newSnapshot.paid_ads.length;
+      adScore = Math.abs(oldAdCount - newAdCount) / Math.max(oldAdCount, newAdCount, 1);
+    }
+
+    // Calculate overall score (weighted average)
+    const overall = (organicScore * 0.5 + featureScore * 0.3 + adScore * 0.2);
+
+    return {
+      overall: Math.min(1.0, overall),
+      organic: organicScore,
+      features: featureScore,
+      ads: adScore
+    };
+  }
+
+  /**
+   * Get current configuration
+   */
+  getConfiguration() {
+    return {
+      enabledFeatures: this.config.enabledFeatures,
+      markets: this.config.markets,
+      monitoringIntervals: this.config.monitoringIntervals
+    };
+  }
+
+  /**
+   * Detect SERP features from data
+   */
+  detectFeatures(serpData: any): string[] {
+    const features = [];
+    
+    if (serpData.organic && serpData.organic.length > 0) {
+      features.push('organic');
+    }
+    if (serpData.ads && serpData.ads.length > 0) {
+      features.push('ads');
+    }
+    if (serpData.featuredSnippet) {
+      features.push('featured_snippets');
+    }
+    if (serpData.peopleAlsoAsk) {
+      features.push('people_also_ask');
+    }
+    if (serpData.localPack) {
+      features.push('local_pack');
+    }
+    if (serpData.shoppingResults) {
+      features.push('shopping');
+    }
+    if (serpData.imageResults) {
+      features.push('images');
+    }
+    if (serpData.videoResults) {
+      features.push('videos');
+    }
+    if (serpData.newsResults) {
+      features.push('news');
+    }
+    if (serpData.knowledgePanel) {
+      features.push('knowledge_panel');
+    }
+    if (serpData.aiOverview) {
+      features.push('ai_overview');
+    }
+    
+    return features;
+  }
+
+  /**
+   * Generate drift report
+   */
+  generateDriftReport(changes: ChangeDetection[]): string {
+    let report = `## SERP Monitoring & Strategic Response Report\n\n`;
+    report += `Generated: ${new Date().toISOString()}\n\n`;
+    
+    report += `### Executive Summary\n`;
+    report += `- Total changes detected: ${changes.length}\n`;
+    report += `- High impact changes: ${changes.filter(c => c.impactScore >= 0.7).length}\n\n`;
+    
+    report += `### Critical Opportunities\n`;
+    for (const change of changes.filter(c => c.impactScore >= 0.7)) {
+      report += `- **${change.query}** (${change.market}): ${change.changes.length} changes detected\n`;
+    }
+    report += `\n`;
+    
+    report += `### Defensive Actions Required\n`;
+    for (const change of changes) {
+      const defensiveChanges = change.changes.filter(c => c.type === ChangeType.POSITION_CHANGE && c.impact === 'HIGH');
+      if (defensiveChanges.length > 0) {
+        report += `- **${change.query}**: Position changes require immediate attention\n`;
+      }
+    }
+    report += `\n`;
+    
+    report += `### Implementation Roadmap\n`;
+    report += `#### IMMEDIATE ACTION\n`;
+    for (const change of changes) {
+      const urgentActions = change.recommendedActions.filter(a => a.priority === 'URGENT');
+      for (const action of urgentActions) {
+        report += `- ${action.action}\n`;
+      }
+    }
+    report += `\n`;
+    
+    report += `### Position Recovery Campaign\n`;
+    report += `Monitor and optimize for queries with significant position changes.\n\n`;
+    
+    report += `### Competitor Analysis\n`;
+    const competitorChanges = changes.flatMap(c => 
+      c.changes.filter(ch => ch.type === ChangeType.DOMAIN_CHANGE)
+    );
+    for (const change of competitorChanges) {
+      report += `- ${change.details}\n`;
+    }
+    
+    return report;
   }
 }
 

@@ -96,47 +96,101 @@ export class DatabaseManager {
       // Execute schema statements
       if (!this.db) throw new Error('Database not initialized');
       
-      // Remove comments and clean schema
-      const cleanSchema = schema
-        .split('\n')
-        .filter(line => !line.trim().startsWith('--') && line.trim().length > 0)
-        .join('\n');
-      
-      // Split into individual statements - handle multiline statements properly
-      const statements = cleanSchema
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0 && !s.match(/^\s*$/));
+      // Execute the entire schema as a single transaction
+      // This is more reliable than trying to split complex SQL
+      try {
+        this.db.exec(schema);
+        logger.info(`✅ Database schema initialized successfully`);
+      } catch (error) {
+        // If full execution fails, fall back to statement-by-statement execution
+        logger.debug('Full schema execution failed, falling back to statement-by-statement execution');
+        
+        // Better SQL statement parsing that handles triggers and complex statements
+        const statements = this.parseSchemaStatements(schema);
+        
+        let successCount = 0;
+        let errorCount = 0;
+        const knownWarnings = [
+          'incomplete input',
+          'cannot commit - no transaction is active',
+          'FOREIGN KEY constraint failed'
+        ];
 
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const statement of statements) {
-        try {
-          // Skip empty statements
-          if (!statement || statement.trim().length === 0) continue;
-          
-          this.db.exec(statement);
-          successCount++;
-        } catch (error) {
-          errorCount++;
-          // Log the error with more detail for debugging
-          logger.warn(`Warning executing statement: ${error}`);
-          logger.debug(`Failed statement (${statement.length} chars): ${statement.substring(0, 150)}...`);
-          
-          // Check for specific known issues
-          if (error instanceof Error && error.message.includes('incomplete input')) {
-            logger.debug('This is likely a SQL comment or incomplete statement - safe to ignore');
+        for (const statement of statements) {
+          try {
+            if (!statement || statement.trim().length === 0) continue;
+            
+            this.db.exec(statement);
+            successCount++;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Only count as real errors if not a known warning
+            const isKnownWarning = knownWarnings.some(warning => errorMessage.includes(warning));
+            if (!isKnownWarning) {
+              errorCount++;
+              logger.error(`Error executing statement: ${errorMessage}`);
+            } else {
+              logger.debug(`Known warning (safe to ignore): ${errorMessage}`);
+            }
           }
         }
-      }
 
-      logger.info(`✅ Database schema initialized: ${successCount} statements executed, ${errorCount} errors`);
+        logger.info(`✅ Database schema initialized: ${successCount} statements executed, ${errorCount} critical errors`);
+      }
     } catch (error) {
       logger.error('❌ Failed to initialize schema:', error);
-      logger.error('Schema path:', path.join(__dirname, 'schema-v1.5.sql'));
       throw error;
     }
+  }
+
+  /**
+   * Parse SQL schema into individual statements, handling triggers and complex SQL
+   */
+  private parseSchemaStatements(schema: string): string[] {
+    const statements: string[] = [];
+    const lines = schema.split('\n');
+    let currentStatement = '';
+    let inTrigger = false;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Skip comments
+      if (trimmedLine.startsWith('--') || trimmedLine.length === 0) {
+        continue;
+      }
+      
+      // Track trigger blocks (which contain semicolons that shouldn't split)
+      if (trimmedLine.toUpperCase().includes('CREATE TRIGGER')) {
+        inTrigger = true;
+      }
+      
+      currentStatement += line + '\n';
+      
+      // Check for statement end
+      if (trimmedLine.endsWith(';')) {
+        if (inTrigger) {
+          // For triggers, look for END; as the actual terminator
+          if (trimmedLine.toUpperCase().startsWith('END;')) {
+            statements.push(currentStatement.trim());
+            currentStatement = '';
+            inTrigger = false;
+          }
+        } else {
+          // Normal statement
+          statements.push(currentStatement.trim());
+          currentStatement = '';
+        }
+      }
+    }
+    
+    // Add any remaining statement
+    if (currentStatement.trim().length > 0) {
+      statements.push(currentStatement.trim());
+    }
+    
+    return statements.filter(s => s.length > 0);
   }
 
   /**

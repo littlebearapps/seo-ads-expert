@@ -65,6 +65,43 @@ export class RSAVariantGenerator {
   constructor(private embeddingService?: EmbeddingService) {}
 
   /**
+   * Generate default headlines when none exist
+   */
+  private generateDefaultHeadlines(adGroup: AdGroup): string[] {
+    const product = adGroup.name || 'Product';
+    return [
+      `${product} - Try It Free`,
+      `Best ${product} Online`,
+      `${product} Made Easy`,
+      `Professional ${product}`,
+      `Fast ${product} Service`,
+      `${product} - Get Started`,
+      `Trusted ${product} Solution`,
+      `${product} For Everyone`,
+      `Simple ${product} Tool`,
+      `${product} - Save Time`,
+      `Reliable ${product}`,
+      `${product} - Free Trial`,
+      `Premium ${product}`,
+      `${product} - No Download`,
+      `Secure ${product} Online`
+    ];
+  }
+
+  /**
+   * Generate default descriptions when none exist
+   */
+  private generateDefaultDescriptions(adGroup: AdGroup): string[] {
+    const product = adGroup.name || 'Product';
+    return [
+      `Try our ${product} free. No signup required. Works on all devices.`,
+      `Professional ${product} service. Fast, secure, and easy to use online.`,
+      `Get started with ${product} in seconds. Free trial available now.`,
+      `The best ${product} solution. Trusted by millions of users worldwide.`
+    ];
+  }
+
+  /**
    * Calculate similarity between two RSA variants
    */
   calculateSimilarity(variant1: any, variant2: any): number {
@@ -98,15 +135,15 @@ export class RSAVariantGenerator {
 
     const variants: RSAVariant[] = [];
     
-    // Always include control variant
+    // Always include control variant - handle missing properties
     const controlVariant: RSAVariant = {
       id: 'control',
       name: 'Control (Current)',
       isControl: true,
       weight: 0.5, // Even split for A/B test
-      headlines: [...adGroup.currentHeadlines],
-      descriptions: [...adGroup.currentDescriptions],
-      finalUrls: [adGroup.landingPageUrl],
+      headlines: adGroup.currentHeadlines ? [...adGroup.currentHeadlines] : this.generateDefaultHeadlines(adGroup),
+      descriptions: adGroup.currentDescriptions ? [...adGroup.currentDescriptions] : this.generateDefaultDescriptions(adGroup),
+      finalUrls: [adGroup.landingPageUrl || 'https://example.com'],
       labels: ['EXP_CONTROL'],
       metadata: {
         strategy: 'control',
@@ -519,7 +556,9 @@ export class LandingPageVariantGenerator {
     basePage: PageContent,
     strategy: 'headline' | 'proof_block' | 'faq_order' | 'social_proof'
   ): Promise<PageVariant> {
-    let variantPath = basePage.path.replace('.html', `_${strategy}.html`);
+    // Handle undefined path property
+    const basePath = basePage?.path || 'page.html';
+    let variantPath = basePath.replace('.html', `_${strategy}.html`);
     
     return {
       id: `variant_${strategy}`,
@@ -529,7 +568,7 @@ export class LandingPageVariantGenerator {
       contentPath: variantPath,
       routingRules: { 
         strategy,
-        originalPath: basePage.path 
+        originalPath: basePage?.path || 'page.html' 
       },
       metadata: {
         strategy,

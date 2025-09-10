@@ -410,9 +410,27 @@ export class ExperimentManager {
           break;
           
         case 'duration':
-          // Check experiment duration
-          const days = experiment.endDate ? 
-            (experiment.endDate.getTime() - experiment.startDate.getTime()) / (24 * 60 * 60 * 1000) : 0;
+          // Check experiment duration - handle both Date objects and date strings
+          let startTime: number;
+          let endTime: number;
+          
+          if (experiment.startDate instanceof Date) {
+            startTime = experiment.startDate.getTime();
+          } else if (experiment.startDate) {
+            startTime = new Date(experiment.startDate).getTime();
+          } else {
+            startTime = Date.now();
+          }
+          
+          if (experiment.endDate instanceof Date) {
+            endTime = experiment.endDate.getTime();
+          } else if (experiment.endDate) {
+            endTime = new Date(experiment.endDate).getTime();
+          } else {
+            endTime = startTime;
+          }
+          
+          const days = (endTime - startTime) / (24 * 60 * 60 * 1000);
           currentValue = days;
           passed = currentValue >= guard.threshold;
           message = `Experiment duration: ${currentValue} days`;
