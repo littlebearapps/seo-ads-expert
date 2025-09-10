@@ -9,7 +9,7 @@
  * 🚨 SAFETY CHECKLIST - COMPLETE BEFORE EXECUTION:
  * 
  * ✅ 1. VERIFY all landing pages are live and working
- * ✅ 2. CONFIRM daily budget is acceptable: $0/day
+ * ✅ 2. CONFIRM daily budget is acceptable: $2/day
  * ✅ 3. CHECK geo targeting matches your requirements: AU
  * ✅ 4. VALIDATE desktop-only targeting is intended (mobile -100%)
  * ✅ 5. REVIEW all campaigns will be created as PAUSED (safe default)
@@ -18,8 +18,8 @@
  * ✅ 8. TEST in preview mode first (set DRY_RUN = true)
  * 
  * 🔧 SCRIPT CONFIGURATION:
- * - Total Ad Groups: 0
- * - Total Keywords: 0
+ * - Total Ad Groups: 1
+ * - Total Keywords: 1
  * - Campaign Status: PAUSED (requires manual activation)
  * - Device Targeting: Desktop only (mobile -100% bid modifier)
  * - Labels: All entities tagged with LBA_SEO_ADS_EXPERT_2025-09-03
@@ -31,12 +31,12 @@
  * 
  * 📊 EXPECTED CHANGES:
  * - CREATE: 1 campaign (undefined - AU - 2025-09-03)
- * - CREATE: 0 ad groups
- * - CREATE: 0 keywords
- * - CREATE: 0 responsive search ads
+ * - CREATE: 1 ad groups
+ * - CREATE: 1 keywords
+ * - CREATE: 1 responsive search ads
  * - APPLY: Shared negative list with 8 negatives
  * 
- * Generated: 2025-09-08T06:30:39.636Z
+ * Generated: 2025-09-08T10:30:01.241Z
  */
 
 
@@ -101,7 +101,7 @@ function main() {
 
 function createCampaignStructure(allowHighBudget) {
   // Budget validation
-  const dailyBudget = 0;
+  const dailyBudget = 2;
   
   if (dailyBudget > SAFETY_CONFIG.MAX_DAILY_BUDGET_AUD && !allowHighBudget) {
     throw new Error('Daily budget $' + dailyBudget + ' exceeds safety limit of $' + SAFETY_CONFIG.MAX_DAILY_BUDGET_AUD + '. Set ALLOW_HIGH_BUDGET=true to override.');
@@ -158,9 +158,35 @@ function createCampaignStructure(allowHighBudget) {
 // ============================================================================
 
 function createAdGroups(campaign) {
-  console.log('\n🎯 Creating 0 ad groups...');
+  console.log('\n🎯 Creating 1 ad groups...');
   
   const adGroups = [];
+  // Ad Group 1: Test Cluster
+  console.log('Creating ad group: Test Cluster');
+  
+  const adGroup0 = campaign.newAdGroupBuilder()
+    .withName('Test Cluster')
+    .withStatus('PAUSED')
+    .withCpc(2.50) // Default max CPC
+    .build();
+    
+  if (adGroup0.isSuccessful()) {
+    const ag0 = adGroup0.getResult();
+    console.log('✅ Ad group created: Test Cluster');
+    
+    // Apply label
+    ag0.applyLabel(SAFETY_CONFIG.LABEL_PREFIX + '_' + DATE_STAMP);
+    
+    // Create keywords
+    createKeywordsForAdGroup(ag0, [{"text":"test keyword","matchType":"EXACT","maxCpc":3}]);
+    
+    // Create responsive search ad
+    createResponsiveSearchAd(ag0, {"headlines":["Test Cluster Chrome Extension","Test Cluster Tool","Free Browser Extension","Privacy-First File Conversion","Fast Test Cluster Tool"],"descriptions":["Test Cluster directly in your browser. Privacy-first, no uploads required. Fast and secure.","One-click Test Cluster conversion. Free Chrome extension with professional results."],"pinnedHeadlines":[{"text":"Test Cluster Chrome Extension","position":1}],"finalUrl":"https://example.com/test?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}&utm_term={keyword}"});
+    
+    adGroups.push(ag0);
+  } else {
+    console.error('❌ Failed to create ad group Test Cluster:', adGroup0.getErrors().join(', '));
+  }
   
   console.log('✅ All ad groups created successfully');
   return adGroups;
@@ -267,18 +293,22 @@ function previewCampaignChanges() {
   
   console.log('🏢 CAMPAIGN TO CREATE:');
   console.log('  Name: undefined - AU - 2025-09-03');
-  console.log('  Budget: $0/day');
+  console.log('  Budget: $2/day');
   console.log('  Status: PAUSED (requires manual activation)');
   console.log('  Markets: AU');
   console.log('  Device Targeting: Desktop only (mobile -100%)\n');
   
-  console.log('🎯 AD GROUPS TO CREATE (' + 0 + '):');
+  console.log('🎯 AD GROUPS TO CREATE (' + 1 + '):');
   
+  console.log('  1. Test Cluster');
+  console.log('     Keywords: 1 (test keyword)');
+  console.log('     Landing Page: https://example.com/test');
+  console.log('     Negatives: 11');
   
   console.log('\n📊 SUMMARY:');
-  console.log('  Total Keywords: 0');
-  console.log('  Total Ads: 0');
-  console.log('  Estimated Daily Spend: $0');
+  console.log('  Total Keywords: 1');
+  console.log('  Total Ads: 1');
+  console.log('  Estimated Daily Spend: $2');
   console.log('  Safety Label: ' + SAFETY_CONFIG.LABEL_PREFIX + '_' + DATE_STAMP);
   
   console.log('\n⚠️  TO EXECUTE FOR REAL:');
@@ -289,6 +319,6 @@ function previewCampaignChanges() {
   console.log('\n🔒 SAFETY REMINDERS:');
   console.log('  - All campaigns will be PAUSED by default');
   console.log('  - Desktop-only targeting (mobile -100%)');
-  console.log('  - Budget capped at $0/day');
+  console.log('  - Budget capped at $2/day');
   console.log('  - All entities labeled for easy identification');
 }

@@ -7,6 +7,7 @@ import { logger } from '../utils/logger.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { experimentRepository } from '../database/experiment-repository.js';
+import { RSAVariantGenerator, LandingPageVariantGenerator } from './variant-generator.js';
 
 export interface Variant {
   id: string;
@@ -135,12 +136,55 @@ export class ExperimentManager {
 
     const experimentId = this.generateExperimentId(config.type, config.product);
     
+    // Generate variants based on strategies
+    let variants: (RSAVariant | PageVariant)[] = [];
+    if (config.variantStrategies && config.variantStrategies.length > 0) {
+      if (config.type === 'rsa') {
+        const rsaGenerator = new RSAVariantGenerator();
+        // Create a base RSA for testing matching expected format
+        const baseRSA = {
+          adGroupId: config.targetId,
+          adGroupName: config.product,
+          name: config.product,
+          product: config.product,
+          useCase: 'general',
+          keywords: ['keyword1', 'keyword2', 'keyword3'],
+          currentHeadlines: ['Default H1', 'Default H2', 'Default H3'],
+          currentDescriptions: ['Default D1', 'Default D2'],
+          landingPageUrl: 'https://example.com',
+          path1: 'test',
+          path2: 'path',
+          v14Insights: config.useV14Insights ? { wasteAnalysis: [], qsAnalysis: [] } : undefined
+        };
+        variants = await rsaGenerator.generateRSAVariants(baseRSA, config.variantStrategies);
+      } else if (config.type === 'landing_page') {
+        const lpGenerator = new LandingPageVariantGenerator();
+        // Create a base page for testing matching expected format
+        const basePage = {
+          landingPage: config.targetId,
+          path: config.targetId.startsWith('/') ? config.targetId : `/landing/${config.targetId}.html`,
+          headline: 'Default Headline',
+          subheadline: 'Default Subheadline',
+          cta: 'Default CTA',
+          features: [],
+          testimonials: [],
+          faqs: [],
+          proofPoints: []
+        };
+        // Generate variants for each strategy
+        for (const strategy of config.variantStrategies) {
+          const strategyVariants = await lpGenerator.generatePageVariants(basePage, strategy as any);
+          variants.push(...strategyVariants);
+        }
+      }
+    }
+    
     const experiment: Experiment = {
       id: experimentId,
       type: config.type,
       product: config.product,
       targetId: config.targetId,
-      variants: [], // Will be populated by variant generators
+      variants: variants,
       startDate: new Date(),
       endDate: config.duration ? new Date(Date.now() + config.duration * 24 * 60 * 60 * 1000) : undefined,
       status: 'draft',
@@ -238,8 +282,8 @@ export class ExperimentManager {
       throw new Error(`Cannot complete experiment in ${experiment.status} status`);
     }
 
-    // Validate winner exists
-    if (winner !== 'control' && !experiment.variants.find(v => v.id === winner)) {
+    // Validate winner exists (check by ID or name)
+    if (winner !== 'control' && !experiment.variants.find(v => v.id === winner || v.name === winner)) {
       throw new Error(`Winner variant ${winner} not found in experiment`);
     }
 

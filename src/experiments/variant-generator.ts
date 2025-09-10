@@ -65,6 +65,29 @@ export class RSAVariantGenerator {
   constructor(private embeddingService?: EmbeddingService) {}
 
   /**
+   * Calculate similarity between two RSA variants
+   */
+  calculateSimilarity(variant1: any, variant2: any): number {
+    const headlines1 = variant1.headlines || [];
+    const headlines2 = variant2.headlines || [];
+    const descriptions1 = variant1.descriptions || [];
+    const descriptions2 = variant2.descriptions || [];
+    
+    const all1 = [...headlines1, ...descriptions1];
+    const all2 = [...headlines2, ...descriptions2];
+    
+    let matches = 0;
+    for (const text of all1) {
+      if (all2.includes(text)) {
+        matches++;
+      }
+    }
+    
+    const totalElements = Math.max(all1.length, all2.length);
+    return totalElements > 0 ? matches / totalElements : 0;
+  }
+
+  /**
    * Generate RSA variants based on strategies
    */
   async generateRSAVariants(
@@ -435,6 +458,31 @@ export class RSAVariantGenerator {
  * Landing Page Variant Generator
  */
 export class LandingPageVariantGenerator {
+  /**
+   * Calculate similarity between two page variants
+   */
+  calculatePageSimilarity(variant1: any, variant2: any): number {
+    const fields1 = [
+      variant1.headline || '',
+      variant1.subheadline || '',
+      variant1.cta || ''
+    ];
+    const fields2 = [
+      variant2.headline || '',
+      variant2.subheadline || '',
+      variant2.cta || ''
+    ];
+    
+    let matches = 0;
+    for (let i = 0; i < fields1.length; i++) {
+      if (fields1[i] === fields2[i]) {
+        matches++;
+      }
+    }
+    
+    return fields1.length > 0 ? matches / fields1.length : 0;
+  }
+
   /**
    * Generate page variants based on strategy
    */

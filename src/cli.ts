@@ -853,6 +853,98 @@ program
     }
   });
 
+// Add One-Click Apply command
+program
+  .command('apply')
+  .description('Apply generated plan directly to Google Ads (one-click campaign creation)')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .requiredOption('-c, --customer-id <id>', 'Google Ads customer ID')
+  .option('--plan-date <date>', 'Plan date (YYYY-MM-DD)', new Date().toISOString().split('T')[0])
+  .option('--budget <amount>', 'Override daily budget amount')
+  .option('--start-date <date>', 'Campaign start date (YYYY-MM-DD)')
+  .option('--auto-start', 'Automatically start campaign after creation')
+  .option('--test-mode', 'Run in test mode (no actual creation)')
+  .option('--validate-only', 'Only validate account, don\'t create campaign')
+  .action(async (options) => {
+    console.log('🚀 One-Click Campaign Apply\n');
+    
+    try {
+      const { oneClickApplier } = await import('./appliers/one-click-apply.js');
+      const { join } = await import('path');
+      
+      // Validate account first
+      if (options.validateOnly) {
+        console.log('🔍 Validating Google Ads account...');
+        const validation = await oneClickApplier.validateAccount(options.customerId);
+        
+        if (validation.valid) {
+          console.log('✅ Account validation successful');
+        } else {
+          console.log('❌ Account validation failed:');
+          validation.errors.forEach(err => console.log(`   - ${err}`));
+        }
+        
+        if (validation.warnings.length > 0) {
+          console.log('\n⚠️  Warnings:');
+          validation.warnings.forEach(warn => console.log(`   - ${warn}`));
+        }
+        
+        return;
+      }
+      
+      // Build plan path
+      const planPath = join('plans', options.product, options.planDate);
+      
+      console.log(`📄 Loading plan from: ${planPath}`);
+      console.log(`🎯 Target account: ${options.customerId}`);
+      
+      if (options.testMode) {
+        console.log('\n🧪 TEST MODE - No actual campaigns will be created\n');
+      }
+      
+      // Apply the plan
+      const result = await oneClickApplier.apply({
+        planPath,
+        customerId: options.customerId,
+        testMode: options.testMode || false,
+        budgetOverride: options.budget ? parseFloat(options.budget) : undefined,
+        startDate: options.startDate,
+        autoStart: options.autoStart || false
+      });
+      
+      // Display results
+      if (result.success) {
+        console.log('\n✅ Campaign created successfully!');
+        console.log(`   Campaign ID: ${result.campaignId}`);
+        console.log(`   Ad Groups: ${result.adGroupIds.length}`);
+        console.log(`   Keywords: ${result.keywordCount}`);
+        console.log(`   Ads: ${result.adCount}`);
+        
+        if (!options.autoStart) {
+          console.log('\n💡 Campaign is PAUSED. Start it manually in Google Ads when ready.');
+        }
+      } else {
+        console.log('\n❌ Campaign creation failed');
+        result.errors.forEach(err => {
+          console.log(`   ${err.entity}: ${err.message}`);
+        });
+      }
+      
+      if (result.warnings.length > 0) {
+        console.log('\n⚠️  Warnings:');
+        result.warnings.forEach(warn => console.log(`   - ${warn}`));
+      }
+      
+      if (result.rollbackAvailable) {
+        console.log('\n🔄 Rollback available if needed');
+      }
+      
+    } catch (error) {
+      console.error('❌ Apply failed:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
 // Add Edge Store audit command
 program
   .command('edge-store-audit')

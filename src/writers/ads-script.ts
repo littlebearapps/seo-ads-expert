@@ -119,7 +119,7 @@ export class GoogleAdsScriptGenerator {
     try {
       writeFileSync(scriptPath, scriptContent, 'utf8');
       logger.info(`✅ Google Ads Script generated: ${scriptPath}`);
-      return scriptPath;
+      return scriptContent; // Return content for testing, path is logged
     } catch (error) {
       logger.error('❌ Failed to write Google Ads Script:', error);
       throw error;
@@ -617,7 +617,7 @@ function previewCampaignChanges() {
   private generateHeadlines(cluster: KeywordCluster, _productConfig: any): string[] {
     return [
       `${cluster.name} Chrome Extension`, // Pinned headline
-      `Convert ${cluster.useCase.replace('-', ' to ').toUpperCase()} Files`,
+      cluster.useCase ? `Convert ${cluster.useCase.replace('-', ' to ').toUpperCase()} Files` : `${cluster.name} Tool`,
       'Free Browser Extension',
       'Privacy-First File Conversion',
       `Fast ${cluster.name} Tool`
@@ -625,16 +625,24 @@ function previewCampaignChanges() {
   }
 
   private generateDescriptions(cluster: KeywordCluster, _productConfig: any): string[] {
+    const useCase = cluster.useCase || cluster.name;
     return [
       `${cluster.name} directly in your browser. Privacy-first, no uploads required. Fast and secure.`,
-      `One-click ${cluster.useCase} conversion. Free Chrome extension with professional results.`
+      `One-click ${useCase} conversion. Free Chrome extension with professional results.`
     ];
   }
 
   private generateFinalUrl(cluster: KeywordCluster, _options: AdsScriptOptions): string {
+    // Use landingPage if provided, otherwise generate URL
+    if (cluster.landingPage) {
+      const utmParams = '?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}&utm_term={keyword}';
+      return `${cluster.landingPage}${utmParams}`;
+    }
+    
     const baseUrl = 'https://littlebearapps.com';
     const utmParams = '?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}&utm_term={keyword}';
-    const slug = cluster.useCase.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const slug = cluster.useCase ? cluster.useCase.toLowerCase().replace(/[^a-z0-9-]/g, '-') :
+                 cluster.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     
     return `${baseUrl}/convertmyfile/${slug}${utmParams}`;
   }
