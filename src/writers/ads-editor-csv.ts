@@ -2,25 +2,39 @@ import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import * as csv from 'csv-stringify/sync';
 import pino from 'pino';
+import { z } from 'zod';
 import { KeywordCluster } from '../clustering.js';
 import { formatCsvDeterministic } from '../utils/deterministic.js';
+import { 
+  CSV_COLUMN_REGISTRIES,
+  CSV_SCHEMAS,
+  CampaignRow,
+  AdGroupRow,
+  KeywordRow,
+  RSARow,
+  SitelinkAssetRow,
+  CalloutAssetRow,
+  StructuredSnippetAssetRow,
+  AssetAssociationRow,
+  CSV_SCHEMA_VERSION
+} from '../schemas/csv-schemas.js';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
 });
 
 /**
- * Modern Ads Editor CSV Export System
+ * Modern Ads Editor CSV Export System with Ground-Truth Validation
  * 
  * Generates Google Ads Editor compatible CSV files for bulk upload.
- * Based on official Google Ads Editor CSV format documentation.
+ * Uses ground-truth CSV schemas for reliable imports.
  * 
- * Supports:
- * - Campaigns
- * - Ad Groups
- * - Keywords
- * - Responsive Search Ads (RSAs)
- * - Negative Keywords
+ * Features:
+ * - Schema-driven column ordering
+ * - Runtime validation with Zod
+ * - Character limit enforcement
+ * - Complete RSA pinning support
+ * - Asset-based structure support
  */
 
 // ============================================================================
@@ -33,73 +47,18 @@ export interface AdsEditorExportOptions {
   productConfig: any;
   outputPath: string;
   markets?: string[];
+  validateOnly?: boolean; // Dry run for validation
+  includeAssets?: boolean; // Include sitelinks, callouts, etc.
 }
 
-export interface AdsEditorCampaignRow {
-  'Campaign': string;
-  'Campaign type': 'Search';
-  'Campaign status': 'Enabled' | 'Paused';
-  'Campaign daily budget': number;
-  'Networks': string;
-  'Language targeting': string;
-  'Location': string;
-  'Bid strategy type': string;
-  'Start date': string;
-  'Labels': string;
-}
+// Using schema-driven types from csv-schemas.ts
+export type AdsEditorCampaignRow = CampaignRow;
 
-export interface AdsEditorAdGroupRow {
-  'Campaign': string;
-  'Ad group': string;
-  'Ad group status': 'Enabled' | 'Paused';
-  'Ad group type': 'Search Standard';
-  'Max CPC': number;
-  'Labels': string;
-}
+export type AdsEditorAdGroupRow = AdGroupRow;
 
-export interface AdsEditorKeywordRow {
-  'Campaign': string;
-  'Ad group': string;
-  'Keyword': string;
-  'Type': 'Broad' | 'Phrase' | 'Exact';
-  'Max CPC': number;
-  'Final URL': string;
-  'Status': 'Enabled' | 'Paused';
-  'Labels': string;
-}
+export type AdsEditorKeywordRow = KeywordRow;
 
-export interface AdsEditorRSARow {
-  'Campaign': string;
-  'Ad group': string;
-  'Status': 'Enabled' | 'Paused';
-  'Ad type': 'Responsive search ad';
-  'Headline 1': string;
-  'Headline 1 position': string;
-  'Headline 2': string;
-  'Headline 2 position': string;
-  'Headline 3': string;
-  'Headline 4': string;
-  'Headline 5': string;
-  'Headline 6': string;
-  'Headline 7': string;
-  'Headline 8': string;
-  'Headline 9': string;
-  'Headline 10': string;
-  'Headline 11': string;
-  'Headline 12': string;
-  'Headline 13': string;
-  'Headline 14': string;
-  'Headline 15': string;
-  'Description 1': string;
-  'Description 2': string;
-  'Description 3': string;
-  'Description 4': string;
-  'Final URL': string;
-  'Path 1': string;
-  'Path 2': string;
-  'Tracking template': string;
-  'Labels': string;
-}
+export type AdsEditorRSARow = RSARow;
 
 export interface AdsEditorNegativeKeywordRow {
   'Campaign': string;
@@ -107,6 +66,57 @@ export interface AdsEditorNegativeKeywordRow {
   'Keyword': string;
   'Type': 'Campaign negative' | 'Negative';
   'Match type': 'Broad' | 'Phrase' | 'Exact';
+}
+
+// ============================================================================
+// VALIDATION HELPERS
+// ============================================================================
+
+/**
+ * Validates data against schema and returns validated/cleaned data
+ */
+function validateRow<T>(schema: z.ZodSchema<T>, data: any, rowType: string): T | null {
+  try {
+    return schema.parse(data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      logger.error({
+        rowType,
+        errors: error.errors,
+        data
+      }, `Validation failed for ${rowType}`);
+    }
+    return null;
+  }
+}
+
+/**
+ * Truncates text to fit Google Ads character limits
+ */
+function truncateText(text: string, maxLength: number): string {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  
+  // Try to truncate at word boundary
+  const truncated = text.substring(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  if (lastSpace > maxLength * 0.8) {
+    return truncated.substring(0, lastSpace);
+  }
+  
+  return truncated;
+}
+
+/**
+ * Formats URL for Google Ads (ensures proper protocol)
+ */
+function formatUrl(url: string): string {
+  if (!url) return '';
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`;
+  }
+  return url;
 }
 
 // ============================================================================
@@ -157,15 +167,21 @@ export class AdsEditorCsvExporter {
     const negativesPath = await this.exportNegativeKeywords(options);
     outputPaths.push(negativesPath);
     
+    // Generate asset CSVs if requested
+    if (options.includeAssets !== false) {
+      const assetPaths = await this.exportAssets(options);
+      outputPaths.push(...assetPaths);
+    }
+    
     logger.info(`✅ Generated ${outputPaths.length} Ads Editor CSV files`);
     return outputPaths;
   }
   
   /**
-   * Export campaigns CSV
+   * Export campaigns CSV with schema validation
    */
   private async exportCampaigns(options: AdsEditorExportOptions): Promise<string> {
-    const campaigns: AdsEditorCampaignRow[] = [];
+    const campaigns: CampaignRow[] = [];
     
     // Create one campaign per market if multiple markets, otherwise single campaign
     const markets = options.markets && options.markets.length > 0 ? options.markets : ['US'];
@@ -175,175 +191,266 @@ export class AdsEditorCsvExporter {
         ? `${this.productName} - ${market} Search`
         : this.campaignName;
       
-      campaigns.push({
-        'Campaign': campaignName,
-        'Campaign type': 'Search',
-        'Campaign status': 'Paused', // Start paused for safety
-        'Campaign daily budget': this.defaultBudget,
-        'Networks': 'Google Search;Search Partners',
-        'Language targeting': this.getLanguageForMarket(market),
-        'Location': this.getLocationForMarket(market),
-        'Bid strategy type': 'Manual CPC',
-        'Start date': this.getTodayDate(),
-        'Labels': `${this.productName};Chrome Extension;${market}`
-      });
+      const campaignData = {
+        Campaign: campaignName,
+        'Campaign Type': 'Search' as const,
+        Status: 'Paused' as const, // Start paused for safety
+        Budget: this.defaultBudget,
+        'Budget Type': 'Daily' as const,
+        'Bid Strategy Type': 'Manual CPC' as const,
+        Networks: 'Google Search;Search Partners',
+        Languages: this.getLanguageForMarket(market),
+        Location: this.getLocationForMarket(market),
+        'Campaign Labels': `${this.productName};v${CSV_SCHEMA_VERSION};${market}`,
+        // Optional fields
+        'Target CPA': undefined,
+        'Target ROAS': undefined,
+        'Location Bid Modifier': undefined,
+        'Excluded Location': undefined,
+        'Device': undefined,
+        'Device Bid Modifier': undefined,
+        'Ad Schedule': undefined,
+        'Ad Schedule Bid Modifier': undefined,
+        'Start Date': this.getTodayDate(),
+        'End Date': undefined
+      };
+      
+      const validated = validateRow(CSV_SCHEMAS.campaigns, campaignData, 'Campaign');
+      if (validated) {
+        campaigns.push(validated);
+      }
     }
     
-    const csvContent = this.generateCsv(campaigns);
+    // Generate CSV with proper column order from schema
+    const csvContent = csv.stringify(campaigns, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.campaigns as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
     const outputPath = join(options.outputPath, 'campaigns.csv');
-    writeFileSync(outputPath, csvContent);
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
     
     logger.info(`✅ Generated campaigns.csv with ${campaigns.length} campaigns`);
     return outputPath;
   }
   
   /**
-   * Export ad groups CSV
+   * Export ad groups CSV with schema validation
    */
   private async exportAdGroups(options: AdsEditorExportOptions): Promise<string> {
-    const adGroups: AdsEditorAdGroupRow[] = [];
+    const adGroups: AdGroupRow[] = [];
     
     for (const cluster of options.clusters) {
-      // Skip unmapped clusters
-      if (!cluster.mapped_landing_page) continue;
+      // Use landing page from cluster or config
+      const landingPage = cluster.landingPage || 
+                         cluster.mapped_landing_page || 
+                         options.productConfig?.landingPages?.home || '';
+      
+      if (!landingPage) continue;
       
       const adGroupName = this.sanitizeAdGroupName(cluster.name);
       
-      adGroups.push({
-        'Campaign': this.campaignName,
-        'Ad group': adGroupName,
-        'Ad group status': 'Enabled',
-        'Ad group type': 'Search Standard',
-        'Max CPC': cluster.suggested_bid || this.defaultMaxCpc,
-        'Labels': `${cluster.use_case || 'General'};${cluster.intent || 'Informational'}`
-      });
+      const adGroupData = {
+        Campaign: this.campaignName,
+        'Ad Group': adGroupName,
+        Status: 'Enabled' as const,
+        'Max CPC': cluster.suggested_bid || cluster.avgCpc || this.defaultMaxCpc,
+        'Final URL': formatUrl(landingPage),
+        'Ad Group Labels': `cluster_${cluster.id};${cluster.use_case || 'General'}`,
+        // Optional fields
+        'Target CPA': undefined,
+        'Target ROAS': undefined,
+        'Final Mobile URL': undefined,
+        'Tracking Template': options.productConfig?.trackingTemplate,
+        'Custom Parameters': undefined
+      };
+      
+      const validated = validateRow(CSV_SCHEMAS.ad_groups, adGroupData, 'Ad Group');
+      if (validated) {
+        adGroups.push(validated);
+      }
     }
     
-    const csvContent = this.generateCsv(adGroups);
+    const csvContent = csv.stringify(adGroups, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.ad_groups as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
     const outputPath = join(options.outputPath, 'ad_groups.csv');
-    writeFileSync(outputPath, csvContent);
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
     
     logger.info(`✅ Generated ad_groups.csv with ${adGroups.length} ad groups`);
     return outputPath;
   }
   
   /**
-   * Export keywords CSV
+   * Export keywords CSV with schema validation
    */
   private async exportKeywords(options: AdsEditorExportOptions): Promise<string> {
-    const keywords: AdsEditorKeywordRow[] = [];
+    const keywordsExact: KeywordRow[] = [];
+    const keywordsPhrase: KeywordRow[] = [];
     
     for (const cluster of options.clusters) {
-      if (!cluster.mapped_landing_page) continue;
+      const landingPage = cluster.landingPage || 
+                         cluster.mapped_landing_page || 
+                         options.productConfig?.landingPages?.home || '';
+      
+      if (!landingPage) continue;
       
       const adGroupName = this.sanitizeAdGroupName(cluster.name);
-      const finalUrl = cluster.mapped_landing_page;
+      const finalUrl = formatUrl(landingPage);
       
       for (const keyword of cluster.keywords) {
-        // Add broad match modifier version
-        keywords.push({
-          'Campaign': this.campaignName,
-          'Ad group': adGroupName,
-          'Keyword': `+${keyword.keyword.replace(/ /g, ' +')}`,
-          'Type': 'Broad',
-          'Max CPC': keyword.suggested_bid || this.defaultMaxCpc,
-          'Final URL': finalUrl,
-          'Status': 'Enabled',
-          'Labels': keyword.source || 'seed'
-        });
-        
-        // Add phrase match version for high-value keywords
+        // Add exact match for high-value keywords
         if (keyword.score && keyword.score > 0.7) {
-          keywords.push({
-            'Campaign': this.campaignName,
-            'Ad group': adGroupName,
-            'Keyword': `"${keyword.keyword}"`,
-            'Type': 'Phrase',
-            'Max CPC': (keyword.suggested_bid || this.defaultMaxCpc) * 1.2,
+          const exactData = {
+            Campaign: this.campaignName,
+            'Ad Group': adGroupName,
+            Keyword: `[${keyword.keyword}]`,
+            'Match Type': 'Exact' as const,
+            Status: 'Enabled' as const,
+            'Max CPC': keyword.cpc || keyword.suggested_bid || this.defaultMaxCpc,
             'Final URL': finalUrl,
-            'Status': 'Enabled',
-            'Labels': `${keyword.source || 'seed'};high-value`
-          });
+            'Keyword Labels': `source_${keyword.source || 'seed'};high_value`,
+            // Optional fields
+            'Final Mobile URL': undefined,
+            'Tracking Template': options.productConfig?.trackingTemplate,
+            'Custom Parameters': undefined
+          };
+          
+          const validated = validateRow(CSV_SCHEMAS.keywords_exact, exactData, 'Keyword');
+          if (validated) {
+            keywordsExact.push(validated);
+          }
         }
         
-        // Add exact match for very high-value keywords
-        if (keyword.score && keyword.score > 0.85) {
-          keywords.push({
-            'Campaign': this.campaignName,
-            'Ad group': adGroupName,
-            'Keyword': `[${keyword.keyword}]`,
-            'Type': 'Exact',
-            'Max CPC': (keyword.suggested_bid || this.defaultMaxCpc) * 1.5,
-            'Final URL': finalUrl,
-            'Status': 'Enabled',
-            'Labels': `${keyword.source || 'seed'};premium`
-          });
+        // Add phrase match for all keywords
+        const phraseData = {
+          Campaign: this.campaignName,
+          'Ad Group': adGroupName,
+          Keyword: `"${keyword.keyword}"`,
+          'Match Type': 'Phrase' as const,
+          Status: 'Enabled' as const,
+          'Max CPC': (keyword.cpc || keyword.suggested_bid || this.defaultMaxCpc) * 0.9,
+          'Final URL': finalUrl,
+          'Keyword Labels': `source_${keyword.source || 'seed'}`,
+          // Optional fields
+          'Final Mobile URL': undefined,
+          'Tracking Template': options.productConfig?.trackingTemplate,
+          'Custom Parameters': undefined
+        };
+        
+        const validatedPhrase = validateRow(CSV_SCHEMAS.keywords_phrase, phraseData, 'Keyword');
+        if (validatedPhrase) {
+          keywordsPhrase.push(validatedPhrase);
         }
       }
     }
     
-    const csvContent = this.generateCsv(keywords);
-    const outputPath = join(options.outputPath, 'keywords.csv');
-    writeFileSync(outputPath, csvContent);
+    // Write exact match keywords
+    const exactCsvContent = csv.stringify(keywordsExact, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.keywords_exact as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    const exactPath = join(options.outputPath, 'keywords_exact.csv');
+    writeFileSync(exactPath, formatCsvDeterministic(exactCsvContent));
     
-    logger.info(`✅ Generated keywords.csv with ${keywords.length} keywords`);
-    return outputPath;
+    // Write phrase match keywords
+    const phraseCsvContent = csv.stringify(keywordsPhrase, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.keywords_phrase as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    const phrasePath = join(options.outputPath, 'keywords_phrase.csv');
+    writeFileSync(phrasePath, formatCsvDeterministic(phraseCsvContent));
+    
+    logger.info(`✅ Generated keywords with ${keywordsExact.length} exact and ${keywordsPhrase.length} phrase`);
+    return exactPath; // Return primary file path
   }
   
   /**
-   * Export Responsive Search Ads CSV
+   * Export Responsive Search Ads CSV with schema validation
    */
   private async exportRSAs(options: AdsEditorExportOptions): Promise<string> {
-    const rsas: AdsEditorRSARow[] = [];
+    const rsas: RSARow[] = [];
     
     for (const cluster of options.clusters) {
-      if (!cluster.mapped_landing_page || !cluster.headlines || !cluster.descriptions) continue;
+      const landingPage = cluster.landingPage || 
+                         cluster.mapped_landing_page || 
+                         options.productConfig?.landingPages?.home || '';
+      
+      if (!landingPage) continue;
       
       const adGroupName = this.sanitizeAdGroupName(cluster.name);
       
-      // Ensure we have at least 3 headlines and 2 descriptions (RSA minimum)
-      const headlines = this.ensureMinimumAssets(cluster.headlines, 15, 30);
-      const descriptions = this.ensureMinimumAssets(cluster.descriptions, 4, 90);
+      // Generate headlines with proper character limits
+      const headlines = this.generateHeadlines(cluster, options.productConfig);
+      const descriptions = this.generateDescriptions(cluster, options.productConfig);
       
-      const rsa: AdsEditorRSARow = {
-        'Campaign': this.campaignName,
-        'Ad group': adGroupName,
-        'Status': 'Enabled',
-        'Ad type': 'Responsive search ad',
-        'Headline 1': headlines[0] || '',
-        'Headline 1 position': 'Pinned to position 1', // Pin "Chrome Extension" headline
-        'Headline 2': headlines[1] || '',
-        'Headline 2 position': '',
-        'Headline 3': headlines[2] || '',
-        'Headline 4': headlines[3] || '',
-        'Headline 5': headlines[4] || '',
-        'Headline 6': headlines[5] || '',
-        'Headline 7': headlines[6] || '',
-        'Headline 8': headlines[7] || '',
-        'Headline 9': headlines[8] || '',
-        'Headline 10': headlines[9] || '',
-        'Headline 11': headlines[10] || '',
-        'Headline 12': headlines[11] || '',
-        'Headline 13': headlines[12] || '',
-        'Headline 14': headlines[13] || '',
-        'Headline 15': headlines[14] || '',
-        'Description 1': descriptions[0] || '',
-        'Description 2': descriptions[1] || '',
-        'Description 3': descriptions[2] || '',
-        'Description 4': descriptions[3] || '',
-        'Final URL': cluster.mapped_landing_page,
-        'Path 1': 'Chrome',
-        'Path 2': this.productName.substring(0, 15),
-        'Tracking template': '{lpurl}?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}&utm_term={keyword}',
-        'Labels': `RSA;${cluster.use_case || 'General'}`
+      const rsaData: any = {
+        Campaign: this.campaignName,
+        'Ad Group': adGroupName,
+        'Ad Type': 'Responsive search ad' as const,
+        Status: 'Enabled' as const,
+        'Final URL': formatUrl(landingPage),
+        'Path 1': truncateText(options.productConfig?.brand || 'tools', 15),
+        'Path 2': truncateText(cluster.theme || cluster.use_case || 'online', 15),
+        'Tracking Template': options.productConfig?.trackingTemplate,
+        'Custom Parameters': undefined,
+        'Ad Labels': `rsa_v${CSV_SCHEMA_VERSION}`,
+        'Final Mobile URL': undefined
       };
       
-      rsas.push(rsa);
+      // Add headlines with pinning support
+      headlines.forEach((headline, index) => {
+        const num = index + 1;
+        if (num <= 15) {
+          rsaData[`Headline ${num}`] = truncateText(headline.text, 30);
+          rsaData[`Headline ${num} Pinned`] = headline.pinned || '';
+        }
+      });
+      
+      // Fill remaining headline slots with undefined
+      for (let i = headlines.length + 1; i <= 15; i++) {
+        rsaData[`Headline ${i}`] = undefined;
+        rsaData[`Headline ${i} Pinned`] = undefined;
+      }
+      
+      // Add descriptions
+      descriptions.forEach((desc, index) => {
+        const num = index + 1;
+        if (num <= 4) {
+          rsaData[`Description ${num}`] = truncateText(desc, 90);
+        }
+      });
+      
+      // Fill remaining description slots
+      for (let i = descriptions.length + 1; i <= 4; i++) {
+        rsaData[`Description ${i}`] = undefined;
+      }
+      
+      const validated = validateRow(CSV_SCHEMAS.ads_rsa, rsaData, 'RSA');
+      if (validated) {
+        rsas.push(validated);
+      }
     }
     
-    const csvContent = this.generateCsv(rsas);
-    const outputPath = join(options.outputPath, 'responsive_search_ads.csv');
-    writeFileSync(outputPath, csvContent);
+    const csvContent = csv.stringify(rsas, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.ads_rsa as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
+    const outputPath = join(options.outputPath, 'ads_rsa.csv');
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
     
     logger.info(`✅ Generated responsive_search_ads.csv with ${rsas.length} RSAs`);
     return outputPath;
@@ -492,22 +599,121 @@ export class AdsEditorCsvExporter {
   }
   
   /**
+   * Generate headlines with pinning support
+   */
+  private generateHeadlines(cluster: KeywordCluster, productConfig: any): Array<{text: string, pinned?: '1' | '2' | '3' | ''}> {
+    const headlines: Array<{text: string, pinned?: '1' | '2' | '3' | ''}> = [];
+    
+    // Pin brand name in position 1 if available
+    if (productConfig?.brand) {
+      headlines.push({
+        text: productConfig.brand,
+        pinned: '1'
+      });
+    }
+    
+    // Add main benefit in position 2
+    if (productConfig?.mainBenefit) {
+      headlines.push({
+        text: productConfig.mainBenefit,
+        pinned: '2'
+      });
+    }
+    
+    // Add existing headlines or generate from keywords
+    if (cluster.headlines && cluster.headlines.length > 0) {
+      cluster.headlines.forEach(h => headlines.push({ text: h }));
+    } else {
+      // Generate from top keywords
+      const topKeywords = cluster.keywords
+        .sort((a, b) => (b.volume || 0) - (a.volume || 0))
+        .slice(0, 5);
+      
+      for (const kw of topKeywords) {
+        const headline = kw.keyword
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+        headlines.push({ text: headline });
+      }
+    }
+    
+    // Add value props
+    const valueProps = productConfig?.valueProps || [
+      'Save Time & Money',
+      'Trusted by Thousands',
+      'Easy to Use',
+      'Professional Results',
+      'Start Free Today'
+    ];
+    
+    for (const prop of valueProps) {
+      if (headlines.length < 15) {
+        headlines.push({ text: prop });
+      }
+    }
+    
+    // Ensure minimum 3 headlines
+    while (headlines.length < 3) {
+      headlines.push({ text: `Best ${cluster.theme || cluster.use_case || 'Solution'}` });
+    }
+    
+    return headlines.slice(0, 15);
+  }
+  
+  /**
+   * Generate descriptions for RSAs
+   */
+  private generateDescriptions(cluster: KeywordCluster, productConfig: any): string[] {
+    const descriptions: string[] = [];
+    
+    // Use existing descriptions if available
+    if (cluster.descriptions && cluster.descriptions.length > 0) {
+      descriptions.push(...cluster.descriptions);
+    } else {
+      // Generate default descriptions
+      descriptions.push(
+        productConfig?.mainDescription || 
+        `Professional ${cluster.theme || cluster.use_case || 'tools'} for your business. Get started today with our easy-to-use platform.`
+      );
+      
+      descriptions.push(
+        productConfig?.benefitDescription ||
+        `Save time and increase productivity. Trusted by professionals worldwide. Try it free.`
+      );
+      
+      if (productConfig?.features && productConfig.features.length > 0) {
+        const features = productConfig.features.slice(0, 3).join(', ');
+        descriptions.push(`Features: ${features}. Start your free trial today.`);
+      }
+      
+      descriptions.push(
+        productConfig?.ctaDescription ||
+        `Join thousands of satisfied customers. No credit card required. Start your free trial now!`
+      );
+    }
+    
+    return descriptions.slice(0, 4);
+  }
+  
+  /**
    * Get language code for market
    */
   private getLanguageForMarket(market: string): string {
+    // Return language codes for Google Ads (using ISO codes)
     const languageMap: Record<string, string> = {
-      'US': '1000', // English
-      'GB': '1000', // English
-      'UK': '1000', // English
-      'AU': '1000', // English
-      'CA': '1000', // English
-      'DE': '1001', // German
-      'FR': '1002', // French
-      'ES': '1003', // Spanish
-      'IT': '1004', // Italian
+      'US': 'en',
+      'GB': 'en',
+      'UK': 'en',
+      'AU': 'en',
+      'CA': 'en',
+      'DE': 'de',
+      'FR': 'fr',
+      'ES': 'es',
+      'IT': 'it',
     };
     
-    return languageMap[market] || '1000'; // Default to English
+    return languageMap[market] || 'en'; // Default to English
   }
   
   /**
@@ -539,6 +745,249 @@ export class AdsEditorCsvExporter {
     const day = String(today.getDate()).padStart(2, '0');
     
     return `${year}-${month}-${day}`;
+  }
+  
+  /**
+   * Export asset CSVs (sitelinks, callouts, structured snippets)
+   */
+  private async exportAssets(options: AdsEditorExportOptions): Promise<string[]> {
+    const outputPaths: string[] = [];
+    const { productConfig } = options;
+    
+    // Generate sitelinks
+    const sitelinks = await this.exportSitelinks(options);
+    if (sitelinks) outputPaths.push(sitelinks);
+    
+    // Generate callouts
+    const callouts = await this.exportCallouts(options);
+    if (callouts) outputPaths.push(callouts);
+    
+    // Generate structured snippets
+    const structured = await this.exportStructuredSnippets(options);
+    if (structured) outputPaths.push(structured);
+    
+    // Generate asset associations
+    const associations = await this.exportAssetAssociations(options);
+    if (associations) outputPaths.push(associations);
+    
+    return outputPaths;
+  }
+  
+  /**
+   * Export sitelinks CSV with schema validation
+   */
+  private async exportSitelinks(options: AdsEditorExportOptions): Promise<string | null> {
+    const sitelinks: SitelinkAssetRow[] = [];
+    const { productConfig } = options;
+    
+    const sitelinkAssets = productConfig?.assets?.sitelinks || [
+      { text: 'Features', url: '/features', desc1: 'Powerful features', desc2: 'Easy to use' },
+      { text: 'Pricing', url: '/pricing', desc1: 'Affordable plans', desc2: 'Start free' },
+      { text: 'About', url: '/about', desc1: 'Learn more', desc2: 'Our story' },
+      { text: 'Contact', url: '/contact', desc1: 'Get in touch', desc2: '24/7 support' }
+    ];
+    
+    sitelinkAssets.forEach((sitelink: any, index: number) => {
+      const assetData = {
+        'Asset Type': 'Sitelink' as const,
+        Asset: `sitelink_${index + 1}`,
+        'Asset Status': 'Enabled' as const,
+        'Link Text': truncateText(sitelink.text, 25),
+        'Final URL': formatUrl((productConfig?.domain || '') + sitelink.url),
+        'Description 1': truncateText(sitelink.desc1 || '', 35),
+        'Description 2': truncateText(sitelink.desc2 || '', 35),
+        'Final Mobile URL': undefined
+      };
+      
+      const validated = validateRow(CSV_SCHEMAS.assets_sitelinks, assetData, 'Sitelink');
+      if (validated) {
+        sitelinks.push(validated);
+      }
+    });
+    
+    if (sitelinks.length === 0) return null;
+    
+    const csvContent = csv.stringify(sitelinks, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.assets_sitelinks as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
+    const outputPath = join(options.outputPath, 'assets_sitelinks.csv');
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
+    
+    logger.info(`✅ Generated assets_sitelinks.csv with ${sitelinks.length} sitelinks`);
+    return outputPath;
+  }
+  
+  /**
+   * Export callouts CSV with schema validation
+   */
+  private async exportCallouts(options: AdsEditorExportOptions): Promise<string | null> {
+    const callouts: CalloutAssetRow[] = [];
+    const { productConfig } = options;
+    
+    const calloutTexts = productConfig?.assets?.callouts || [
+      'Free Shipping', '24/7 Support', 'Money Back Guarantee', 'Award Winning',
+      'Easy Returns', 'Price Match', 'Same Day Service', 'Expert Help'
+    ];
+    
+    calloutTexts.forEach((text: string, index: number) => {
+      const assetData = {
+        'Asset Type': 'Callout' as const,
+        Asset: `callout_${index + 1}`,
+        'Asset Status': 'Enabled' as const,
+        'Callout Text': truncateText(text, 25)
+      };
+      
+      const validated = validateRow(CSV_SCHEMAS.assets_callouts, assetData, 'Callout');
+      if (validated) {
+        callouts.push(validated);
+      }
+    });
+    
+    if (callouts.length === 0) return null;
+    
+    const csvContent = csv.stringify(callouts, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.assets_callouts as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
+    const outputPath = join(options.outputPath, 'assets_callouts.csv');
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
+    
+    logger.info(`✅ Generated assets_callouts.csv with ${callouts.length} callouts`);
+    return outputPath;
+  }
+  
+  /**
+   * Export structured snippets CSV with schema validation
+   */
+  private async exportStructuredSnippets(options: AdsEditorExportOptions): Promise<string | null> {
+    const structured: StructuredSnippetAssetRow[] = [];
+    const { productConfig } = options;
+    
+    const snippets = productConfig?.assets?.structured || [
+      { header: 'Service catalog', values: 'Conversion, Design, Development, Marketing' },
+      { header: 'Types', values: 'Professional, Enterprise, Custom, Starter' },
+      { header: 'Brands', values: productConfig?.brand ? `${productConfig.brand}, Chrome, Google, Extensions` : 'Chrome, Google, Extensions, Tools' }
+    ];
+    
+    snippets.forEach((snippet: any, index: number) => {
+      const assetData = {
+        'Asset Type': 'Structured snippet' as const,
+        Asset: `structured_${index + 1}`,
+        'Asset Status': 'Enabled' as const,
+        Header: snippet.header,
+        Values: snippet.values
+      };
+      
+      const validated = validateRow(CSV_SCHEMAS.assets_structured, assetData, 'Structured');
+      if (validated) {
+        structured.push(validated);
+      }
+    });
+    
+    if (structured.length === 0) return null;
+    
+    const csvContent = csv.stringify(structured, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.assets_structured as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
+    const outputPath = join(options.outputPath, 'assets_structured.csv');
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
+    
+    logger.info(`✅ Generated assets_structured.csv with ${structured.length} snippets`);
+    return outputPath;
+  }
+  
+  /**
+   * Export asset associations CSV with schema validation
+   */
+  private async exportAssetAssociations(options: AdsEditorExportOptions): Promise<string | null> {
+    const associations: AssetAssociationRow[] = [];
+    const { productConfig } = options;
+    
+    // Get campaigns for association
+    const markets = options.markets && options.markets.length > 0 ? options.markets : ['US'];
+    
+    for (const market of markets) {
+      const campaignName = markets.length > 1 
+        ? `${this.productName} - ${market} Search`
+        : this.campaignName;
+      
+      // Associate sitelinks at campaign level
+      const sitelinkCount = productConfig?.assets?.sitelinks?.length || 4;
+      for (let i = 1; i <= sitelinkCount; i++) {
+        const assocData = {
+          Campaign: campaignName,
+          'Ad Group': undefined,
+          'Asset Type': 'Sitelink' as const,
+          Asset: `sitelink_${i}`,
+          Status: 'Enabled' as const
+        };
+        
+        const validated = validateRow(CSV_SCHEMAS.asset_associations, assocData, 'Association');
+        if (validated) {
+          associations.push(validated);
+        }
+      }
+      
+      // Associate callouts at campaign level
+      const calloutCount = productConfig?.assets?.callouts?.length || 8;
+      for (let i = 1; i <= Math.min(calloutCount, 4); i++) { // Max 4 callouts per campaign
+        const assocData = {
+          Campaign: campaignName,
+          'Ad Group': undefined,
+          'Asset Type': 'Callout' as const,
+          Asset: `callout_${i}`,
+          Status: 'Enabled' as const
+        };
+        
+        const validated = validateRow(CSV_SCHEMAS.asset_associations, assocData, 'Association');
+        if (validated) {
+          associations.push(validated);
+        }
+      }
+      
+      // Associate structured snippets at campaign level
+      const structuredCount = productConfig?.assets?.structured?.length || 3;
+      for (let i = 1; i <= Math.min(structuredCount, 2); i++) { // Max 2 structured snippets per campaign
+        const assocData = {
+          Campaign: campaignName,
+          'Ad Group': undefined,
+          'Asset Type': 'Structured snippet' as const,
+          Asset: `structured_${i}`,
+          Status: 'Enabled' as const
+        };
+        
+        const validated = validateRow(CSV_SCHEMAS.asset_associations, assocData, 'Association');
+        if (validated) {
+          associations.push(validated);
+        }
+      }
+    }
+    
+    if (associations.length === 0) return null;
+    
+    const csvContent = csv.stringify(associations, {
+      header: true,
+      columns: CSV_COLUMN_REGISTRIES.asset_associations as any,
+      quoted: true,
+      quoted_empty: true
+    });
+    
+    const outputPath = join(options.outputPath, 'asset_associations.csv');
+    writeFileSync(outputPath, formatCsvDeterministic(csvContent));
+    
+    logger.info(`✅ Generated asset_associations.csv with ${associations.length} associations`);
+    return outputPath;
   }
 }
 

@@ -37,6 +37,7 @@ program
   .option('--skip-health-check', 'Skip URL health checks (development/emergency)')
   .option('--diff-only', 'Generate diff against previous run only')
   .option('--dry-run', 'Show what would be generated without execution')
+  .option('--include-bing', 'Include Bing/Edge keyword data for Microsoft Ads')
   .action(async (options) => {
     const startTime = Date.now();
     
@@ -143,7 +144,8 @@ program
         maxSerpCalls: parseInt(options.maxSerpCalls),
         format: options.format,
         skipHealthCheck: options.skipHealthCheck,
-        dryRun: options.dryRun
+        dryRun: options.dryRun,
+        includeBingData: options.includeBing || false
       };
       
       const { generatePlan } = await import('./orchestrator.js');
@@ -609,6 +611,88 @@ program.addCommand(api);
 import { setupExperimentCommands } from './cli-experiments.js';
 setupExperimentCommands(program);
 
+// SERP monitoring commands
+program
+  .command('serp-monitor')
+  .description('Monitor SERP changes and generate alerts')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .option('-k, --keywords <list>', 'Comma-separated keywords to monitor')
+  .option('-m, --markets <list>', 'Markets to monitor (default: AU,US)', 'AU,US')
+  .option('--snapshot', 'Create SERP snapshot for comparison')
+  .action(async (options) => {
+    try {
+      const { SerpWatchMonitor } = await import('./monitors/serp-watch.js');
+      const monitor = new SerpWatchMonitor();
+      
+      const keywords = options.keywords ? options.keywords.split(',') : [];
+      const markets = options.markets.split(',');
+      
+      if (options.snapshot) {
+        // Create snapshot
+        logger.info('📸 Creating SERP snapshot...');
+        for (const keyword of keywords) {
+          for (const market of markets) {
+            await monitor.createSnapshot(keyword, market, options.product);
+          }
+        }
+        logger.info('✅ SERP snapshots created');
+      } else {
+        // Monitor for changes
+        logger.info('👀 Monitoring SERP changes...');
+        const changes = await monitor.monitorChanges(options.product, keywords, markets);
+        
+        if (changes.length > 0) {
+          logger.warn(`⚠️ ${changes.length} SERP changes detected!`);
+          changes.forEach(change => {
+            logger.info(`  - ${change.keyword} (${change.market}): ${change.description}`);
+          });
+        } else {
+          logger.info('✅ No significant SERP changes detected');
+        }
+      }
+    } catch (error) {
+      logger.error('❌ SERP monitoring failed:', error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('serp-drift')
+  .description('Analyze SERP drift patterns and generate strategic recommendations')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .option('-d, --days <number>', 'Days to analyze (default: 30)', '30')
+  .option('-o, --output <path>', 'Output path for report')
+  .action(async (options) => {
+    try {
+      const { SerpDriftAnalyzer } = await import('./analyzers/serp-drift.js');
+      const analyzer = new SerpDriftAnalyzer();
+      
+      logger.info('📊 Analyzing SERP drift patterns...');
+      const analysis = await analyzer.analyzeDrift(options.product, parseInt(options.days));
+      
+      // Generate report
+      const report = analyzer.generateReport(analysis);
+      
+      if (options.output) {
+        const fs = await import('fs/promises');
+        await fs.writeFile(options.output, JSON.stringify(report, null, 2));
+        logger.info(`✅ SERP drift report saved to: ${options.output}`);
+      } else {
+        // Console summary
+        logger.info('📈 SERP Drift Analysis Summary:');
+        logger.info(`  Volatility Score: ${report.volatilityScore}/100`);
+        logger.info(`  Trend: ${report.trend}`);
+        logger.info(`  Recommended Strategy: ${report.strategy}`);
+        if (report.alerts.length > 0) {
+          logger.warn(`  ⚠️ ${report.alerts.length} alerts generated`);
+        }
+      }
+    } catch (error) {
+      logger.error('❌ SERP drift analysis failed:', error);
+      process.exit(1);
+    }
+  });
+
 // Add connection test command
 program
   .command('test')
@@ -637,10 +721,108 @@ program
 // Add product validation command
 program
   .command('validate')
-  .description('Validate product configurations')
+  .description('Validate product configurations or CSV imports')
   .option('-p, --product <name>', 'Validate specific product')
+  .option('--csv <path>', 'Validate CSV file for import')
+  .option('--csv-type <type>', 'CSV type: kwp, campaigns, keywords, ads', 'kwp')
+  .option('--batch <paths>', 'Validate multiple CSV files (comma-separated)')
+  .option('--report', 'Generate detailed validation report')
   .action(async (options) => {
     try {
+      // Handle CSV validation
+      if (options.csv || options.batch) {
+        const { 
+          validateKeywordPlannerCsv,
+          validateEditorImportCsv,
+          validateBatch,
+          generateValidationReport
+        } = await import('./validators/csv-import-validator.js');
+        
+        console.log('📊 CSV Import Validation\n');
+        
+        if (options.batch) {
+          // Batch validation
+          const files = options.batch.split(',').map((path: string) => ({
+            path: path.trim(),
+            type: options.csvType as 'kwp' | 'campaigns' | 'keywords' | 'ads'
+          }));
+          
+          const results = await validateBatch(files);
+          
+          // Display results
+          for (const [file, result] of Object.entries(results)) {
+            console.log(`\n📄 ${file}:`);
+            console.log(`   Status: ${result.valid ? '✅ Valid' : '❌ Invalid'}`);
+            console.log(`   Rows: ${result.stats.validRows}/${result.stats.totalRows} valid`);
+            if (result.errors.length > 0) {
+              console.log(`   Errors: ${result.errors.length}`);
+            }
+            if (result.warnings.length > 0) {
+              console.log(`   Warnings: ${result.warnings.length}`);
+            }
+          }
+          
+          if (options.report) {
+            const report = generateValidationReport(results);
+            const reportPath = `./validation-report-${Date.now()}.md`;
+            await import('fs').then(fs => fs.promises.writeFile(reportPath, report));
+            console.log(`\n💾 Report saved to: ${reportPath}`);
+          }
+          
+        } else {
+          // Single file validation
+          const result = options.csvType === 'kwp' 
+            ? validateKeywordPlannerCsv(options.csv)
+            : validateEditorImportCsv(options.csv, options.csvType as 'campaigns' | 'keywords' | 'ads');
+          
+          console.log(`📄 File: ${options.csv}`);
+          console.log(`   Type: ${options.csvType}`);
+          console.log(`   Status: ${result.valid ? '✅ Valid' : '❌ Invalid'}`);
+          console.log(`\n📊 Statistics:`);
+          console.log(`   Total Rows: ${result.stats.totalRows}`);
+          console.log(`   Valid Rows: ${result.stats.validRows}`);
+          console.log(`   Error Rows: ${result.stats.errorRows}`);
+          console.log(`   Warning Rows: ${result.stats.warningRows}`);
+          
+          if (result.errors.length > 0) {
+            console.log(`\n❌ Errors (first 5):`);
+            result.errors.slice(0, 5).forEach(err => {
+              console.log(`   Row ${err.row}, Col "${err.column}": ${err.message}`);
+            });
+            if (result.errors.length > 5) {
+              console.log(`   ... and ${result.errors.length - 5} more`);
+            }
+          }
+          
+          if (result.warnings.length > 0) {
+            console.log(`\n⚠️  Warnings (first 5):`);
+            result.warnings.slice(0, 5).forEach(warn => {
+              console.log(`   Row ${warn.row}, Col "${warn.column}": ${warn.message}`);
+            });
+            if (result.warnings.length > 5) {
+              console.log(`   ... and ${result.warnings.length - 5} more`);
+            }
+          }
+          
+          if (Object.keys(result.stats.missingValues).length > 0) {
+            console.log(`\n📉 Missing Values:`);
+            for (const [field, count] of Object.entries(result.stats.missingValues)) {
+              console.log(`   ${field}: ${count} rows`);
+            }
+          }
+          
+          if (options.report) {
+            const report = generateValidationReport({ [options.csv]: result });
+            const reportPath = `./validation-report-${Date.now()}.md`;
+            await import('fs').then(fs => fs.promises.writeFile(reportPath, report));
+            console.log(`\n💾 Report saved to: ${reportPath}`);
+          }
+        }
+        
+        return;
+      }
+      
+      // Original product validation
       const { loadProductConfig, getAvailableProducts } = await import('./utils/product-loader.js');
       
       if (options.product) {

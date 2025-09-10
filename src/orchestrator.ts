@@ -21,6 +21,7 @@ import { KwpCsvConnector } from './connectors/kwp-csv.js';
 import { SearchConsoleConnector } from './connectors/search-console.js';
 import { RapidApiKeywordConnector } from './connectors/rapid-keywords.js';
 import { RapidApiSerpConnector } from './connectors/rapid-serp.js';
+import { BingKeywordsConnector } from './connectors/bing-keywords.js';
 
 // Import types
 import { KeywordData, PlanSummary } from './connectors/types.js';
@@ -37,6 +38,7 @@ export interface PlanOptions {
   format?: 'all' | 'ads-editor';
   skipHealthCheck?: boolean;
   dryRun?: boolean;
+  includeBingData?: boolean;
 }
 
 export interface PlanResult {
@@ -71,6 +73,7 @@ export class SEOAdsOrchestrator {
   private gscConnector: SearchConsoleConnector;
   private keywordConnector: RapidApiKeywordConnector;
   private serpConnector: RapidApiSerpConnector;
+  private bingConnector: BingKeywordsConnector;
 
   constructor() {
     // Initialize all engines
@@ -92,6 +95,7 @@ export class SEOAdsOrchestrator {
     this.gscConnector = new SearchConsoleConnector();
     this.keywordConnector = new RapidApiKeywordConnector();
     this.serpConnector = new RapidApiSerpConnector();
+    this.bingConnector = new BingKeywordsConnector();
   }
 
   async generatePlan(options: PlanOptions): Promise<PlanResult> {
@@ -294,9 +298,60 @@ export class SEOAdsOrchestrator {
         warnings.push('Keyword expansion failed - using seed queries only');
       }
     }
+    
+    // Collect Bing keywords data if requested
+    if (options.includeBingData) {
+      try {
+        console.log('  🔍 Collecting Bing/Edge keyword data...');
+        
+        // Get Bing keyword suggestions
+        const seedKeywords = productConfig.seed_queries.slice(0, 10);
+        const bingResponse = await this.bingConnector.getKeywordSuggestions(
+          seedKeywords,
+          options.markets[0], // Use primary market
+          {
+            maxResults: Math.floor(options.maxKeywords / 2),
+            includeMetrics: true
+          }
+        );
+        
+        if (bingResponse.suggestions.length > 0) {
+          // Convert Bing suggestions to KeywordData format
+          const bingKeywords: KeywordData[] = bingResponse.suggestions.map(suggestion => ({
+            keyword: suggestion.keyword,
+            volume: suggestion.searchVolume || 0,
+            cpc: suggestion.suggestedBid || 0,
+            competition: suggestion.competition || 'Medium',
+            source: 'bing',
+            market: options.markets[0],
+            data_source: 'bing' as const,
+            markets: [options.markets[0]],
+            intent_score: 0.7,
+            final_score: 0,
+            recommended_match_type: 'phrase' as const,
+            serp_features: []
+          }));
+          
+          sources.bing = bingKeywords;
+          logger.info(`✅ Bing: ${bingKeywords.length} keyword suggestions retrieved`);
+          
+          // Calculate Bing market opportunity
+          const opportunity = await this.bingConnector.calculateMarketOpportunity(
+            options.product,
+            bingKeywords.map(k => k.keyword),
+            options.markets[0]
+          );
+          
+          logger.info(`🎯 Bing opportunity score: ${opportunity.opportunityScore.toFixed(1)}/100`);
+        }
+      } catch (error) {
+        logger.warn('⚠️  Bing keywords collection failed:', error);
+        warnings.push('Bing keywords unavailable - Microsoft Ads insights will be limited');
+      }
+    }
 
     // Ensure we have seed queries as fallback
-    if (!sources.kwp && !sources.gsc && !sources.estimated) {
+    if (!sources.kwp && !sources.gsc && !sources.estimated && !sources.bing) {
       logger.warn('⚠️  No external data sources available, using seed queries as fallback');
       sources.estimated = productConfig.seed_queries.map((query: string) => ({
         keyword: query,
