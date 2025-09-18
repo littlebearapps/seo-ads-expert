@@ -6,6 +6,7 @@ import { validateProductExists } from './utils/product-loader.js';
 import { costMonitor } from './utils/cost-monitor.js';
 import { googleAPIManager } from './utils/google-api-manager.js';
 import path from 'path';
+import { promises as fs } from 'fs';
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
@@ -1521,6 +1522,171 @@ program
         ];
         csv += row.join(',') + '\n';
       });
+
+      return csv;
+    }
+  });
+
+// v1.8 Phase 4: Link Suggestions
+program
+  .command('link-suggest')
+  .description('Generate internal linking opportunities for content')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .option('-s, --source <url>', 'Source page URL (or "all" for all pages)')
+  .option('--max-links <number>', 'Maximum links per page', '3')
+  .option('--min-relevance <number>', 'Minimum relevance score (0-1)', '0.5')
+  .option('--format <format>', 'Output format (json|csv|markdown)', 'json')
+  .option('-o, --output <path>', 'Output path')
+  .action(async (options) => {
+    const { LinkOptimizer } = await import('./content/link-optimizer.js');
+    const { DatabaseManager } = await import('./database/database-manager.js');
+
+    console.log(`\n🔗 Generating link suggestions for ${options.product}...`);
+
+    try {
+      const db = new DatabaseManager({ path: './seo-ads-expert.db' });
+      await db.initialize();
+      const optimizer = new LinkOptimizer();
+
+      // Get pages for the product
+      const pages = db.all(
+        'SELECT url, title, content FROM landing_pages WHERE product = ?',
+        [options.product]
+      );
+
+      if (pages.length === 0) {
+        console.error(`❌ No pages found for product: ${options.product}`);
+        process.exit(1);
+      }
+
+      // Convert DB records to Page format
+      const formattedPages = pages.map(p => ({
+        url: p.url,
+        title: p.title,
+        content: p.content || '',
+        keywords: [], // TODO: Extract from keywords table
+        entities: [], // TODO: Extract from entities table
+        existingLinks: [] // TODO: Track existing links
+      }));
+
+      // Find opportunities
+      const allOpportunities = [];
+
+      if (options.source === 'all') {
+        // Generate for all pages
+        for (const sourcePage of formattedPages) {
+          const opportunities = optimizer.findOpportunities(
+            sourcePage,
+            formattedPages,
+            {
+              maxLinksPerPage: parseInt(options.maxLinks),
+              requireRelevance: parseFloat(options.minRelevance)
+            }
+          );
+          allOpportunities.push(...opportunities);
+        }
+      } else {
+        // Generate for specific source page
+        const sourcePage = formattedPages.find(p => p.url === options.source);
+
+        if (!sourcePage) {
+          console.error(`❌ Source page not found: ${options.source}`);
+          process.exit(1);
+        }
+
+        const opportunities = optimizer.findOpportunities(
+          sourcePage,
+          formattedPages,
+          {
+            maxLinksPerPage: parseInt(options.maxLinks),
+            requireRelevance: parseFloat(options.minRelevance)
+          }
+        );
+        allOpportunities.push(...opportunities);
+      }
+
+      // Validate opportunities
+      const { valid, invalid } = optimizer.validateOpportunities(allOpportunities);
+
+      console.log(`\n✅ Found ${valid.length} valid link opportunities`);
+      if (invalid.length > 0) {
+        console.log(`⚠️  ${invalid.length} opportunities were invalid`);
+      }
+
+      // Format output
+      let output;
+      switch (options.format) {
+        case 'csv':
+          output = formatLinksAsCSV(valid);
+          break;
+        case 'markdown':
+          output = formatLinksAsMarkdown(valid, options.product);
+          break;
+        default:
+          output = JSON.stringify(valid, null, 2);
+      }
+
+      // Save or display
+      if (options.output) {
+        await fs.writeFile(options.output, output);
+        console.log(`\n💾 Saved link suggestions to ${options.output}`);
+      } else {
+        console.log('\n' + output);
+      }
+
+    } catch (error) {
+      console.error('❌ Error generating link suggestions:', error);
+      process.exit(1);
+    }
+
+    function formatLinksAsMarkdown(links, product) {
+      let md = `# Link Suggestions - ${product}\n\n`;
+      md += `Generated: ${new Date().toISOString()}\n\n`;
+      md += `## Summary\n\n`;
+      md += `- **Total Opportunities**: ${links.length}\n`;
+      md += `- **Pages Affected**: ${new Set(links.map(l => l.sourceUrl)).size}\n`;
+      md += `- **Average Strength**: ${(links.reduce((sum, l) => sum + l.strength, 0) / links.length).toFixed(1)}/3\n\n`;
+
+      md += `## Link Opportunities\n\n`;
+
+      // Group by source page
+      const bySource = {};
+      for (const link of links) {
+        if (!bySource[link.sourceUrl]) {
+          bySource[link.sourceUrl] = [];
+        }
+        bySource[link.sourceUrl].push(link);
+      }
+
+      for (const [source, sourceLinks] of Object.entries(bySource)) {
+        md += `### ${source}\n\n`;
+
+        for (const link of sourceLinks) {
+          md += `- **Target**: ${link.targetUrl}\n`;
+          md += `  - Anchor: "${link.anchorText}"\n`;
+          md += `  - Type: ${link.type}\n`;
+          md += `  - Strength: ${link.strength}/3\n`;
+          md += `  - Rationale: ${link.rationale}\n\n`;
+        }
+      }
+
+      return md;
+    }
+
+    function formatLinksAsCSV(links) {
+      let csv = 'Source URL,Target URL,Anchor Text,Type,Strength,Rationale\n';
+
+      for (const link of links) {
+        const row = [
+          link.sourceUrl,
+          link.targetUrl,
+          `"${link.anchorText.replace(/"/g, '""')}"`,
+          link.type,
+          link.strength,
+          `"${link.rationale.replace(/"/g, '""')}"`
+        ];
+        csv += row.join(',') + '\n';
+      }
 
       return csv;
     }
