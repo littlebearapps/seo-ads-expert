@@ -1,10 +1,10 @@
 /**
- * Database Connection Pool - v1.4
- * Manages SQLite connections with proper transaction isolation
- * Note: Using sqlite3 package for better Node.js compatibility
+ * v1.4 Database Connection Pool
+ * Implements Task 4.1 from v1.4 implementation plan
+ * Provides connection pooling and transaction support for concurrent operations
  */
 
-import sqlite3 from 'sqlite3';
+import Database from 'better-sqlite3';
 import { logger } from '../utils/logger.js';
 import path from 'path';
 import fs from 'fs/promises';
