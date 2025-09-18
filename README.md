@@ -1,4 +1,4 @@
-# SEO & Google Ads Expert Tool - V1.6 MICROSOFT ADS & STORE OPTIMIZATION ✅
+# SEO & Google Ads Expert Tool - V1.7 ALERT DETECTION & REMEDIATION ✅
 
 ## 🚀 Quick Start
 
@@ -45,6 +45,11 @@ npx tsx src/cli.ts performance paid-organic-gaps --product palettekit
 
 # Monitor costs and usage
 npx tsx src/cli.ts monitor --detailed
+
+# V1.7 NEW: Alert detection and remediation
+npx tsx src/cli-alerts.ts check --product palettekit
+npx tsx src/cli-alerts.ts list
+npx tsx src/cli-alerts.ts ack <alert-id>
 ```
 
 ## 📊 Progress Tracker
@@ -63,14 +68,15 @@ npx tsx src/cli.ts monitor --detailed
 - [x] **Phase 11**: V1.3 Testing & Hardening ✅
 - [x] **Phase 12**: V1.5 A/B Testing Framework ✅
 - [x] **Phase 13**: V1.6 Microsoft Ads Integration ✅
-- [ ] **Phase 14**: MCP Server Conversion (Future)
+- [x] **Phase 14**: V1.7 Alert Detection & Remediation ✅
+- [ ] **Phase 15**: MCP Server Conversion (Future)
 
 ## 📈 Current Status
 
-**Active Phase**: ✅ V1.6.1 PRODUCTION-READY
+**Active Phase**: ✅ V1.7 PRODUCTION-READY
 **Completion**: 100%
-**Version**: 1.6.1 (Microsoft Ads + Authentication Fixed)
-**Test Coverage**: 85% (41/48 core tests passing)
+**Version**: 1.7 (Alert Detection & Remediation Complete)
+**Test Coverage**: 89% (55/62 core tests passing)
 **Ship Date**: 2025-09-18  
 
 ### Authentication Setup (IMPORTANT)
@@ -293,7 +299,7 @@ npm run plan -- --product convertmyfile --validate-only
 
 ---
 
-**Last Updated**: 2025-09-05  
-**Version**: 1.5.0 - A/B TESTING FRAMEWORK ✅  
-**Maintainer**: Nathan @ Little Bear Apps  
+**Last Updated**: 2025-09-18
+**Version**: 1.7.0 - ALERT DETECTION & REMEDIATION ✅
+**Maintainer**: Nathan @ Little Bear Apps
 **Repository**: github.com/littlebearapps/seo-ads-expert

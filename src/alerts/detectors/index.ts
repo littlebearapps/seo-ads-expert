@@ -10,3 +10,4 @@ export { ConversionDetector } from './conversion-detector.js';
 export { QualityScoreDetector } from './quality-score-detector.js';
 export { SERPDriftDetector } from './serp-drift-detector.js';
 export { LPRegressionDetector } from './lp-regression-detector.js';
+export { LPHealthDetector } from './lp-health-detector.js';
