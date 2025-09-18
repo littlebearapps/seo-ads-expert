@@ -2,21 +2,21 @@
   "data_sources": {
     "kwp_csv": {
       "available": true,
-      "records": "45.00"
+      "records": 45
     },
     "rapid_keywords": {
       "available": true,
-      "calls_made": "8.00",
-      "calls_remaining": "12.00"
+      "calls_made": 8,
+      "calls_remaining": 12
     },
     "rapid_serp": {
       "available": true,
-      "calls_made": "15.00",
-      "calls_remaining": "85.00"
+      "calls_made": 15,
+      "calls_remaining": 85
     },
     "search_console": {
       "available": true,
-      "records": "23.00"
+      "records": 23
     }
   },
   "markets": [
@@ -25,18 +25,18 @@
     "US"
   ],
   "outputs": {
-    "ad_groups_created": "7.00",
-    "keywords_found": "156.00",
-    "landing_pages_briefed": "3.00",
-    "landing_pages_mapped": "4.00",
-    "shared_negatives": "12.00",
-    "url_health_checks": "7.00",
-    "url_health_failures": "0.00"
+    "ad_groups_created": 7,
+    "keywords_found": 156,
+    "landing_pages_briefed": 3,
+    "landing_pages_mapped": 4,
+    "shared_negatives": 12,
+    "url_health_checks": 7,
+    "url_health_failures": 0
   },
-  "performance_score": "8.31",
+  "performance_score": 8.31,
   "processing": {
-    "cache_hit_rate": "0.73",
-    "duration_ms": "30111.00",
+    "cache_hit_rate": 0.73,
+    "duration_ms": 30111,
     "end_time": "2025-09-03T10:30:15.234Z",
     "start_time": "2025-09-03T10:29:45.123Z"
   },
