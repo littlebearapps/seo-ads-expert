@@ -364,6 +364,273 @@ export class DatabaseManager {
   getConnection(): Database.Database | null {
     return this.db;
   }
+
+  // =============================================================================
+  // V1.8 ENTITY COVERAGE METHODS
+  // =============================================================================
+
+  /**
+   * Save entity coverage analysis to database
+   */
+  async saveCoverageAnalysis(analysis: any): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO fact_entity_coverage
+      (measured_at, product, cluster, market, coverage_score, competitor_avg, gap_count, recommendations_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      analysis.measuredAt,
+      analysis.product,
+      analysis.cluster,
+      analysis.market,
+      analysis.coverageScore,
+      analysis.competitorAverage,
+      analysis.gapCount,
+      JSON.stringify({
+        entityGaps: analysis.entityGaps,
+        sectionGaps: analysis.sectionGaps,
+        schemaGaps: analysis.schemaGaps,
+        recommendations: analysis.recommendations
+      })
+    );
+
+    logger.info(`Saved coverage analysis for ${analysis.product}/${analysis.cluster}/${analysis.market}`);
+  }
+
+  /**
+   * Get latest coverage analysis for a product/cluster/market
+   */
+  async getLatestCoverageAnalysis(product: string, cluster: string, market: string): Promise<any | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      SELECT * FROM fact_entity_coverage
+      WHERE product = ? AND cluster = ? AND market = ?
+      ORDER BY measured_at DESC
+      LIMIT 1
+    `);
+
+    const result = stmt.get(product, cluster, market) as any;
+
+    if (!result) return null;
+
+    // Parse JSON fields
+    const recommendations = JSON.parse(result.recommendations_json || '{}');
+
+    return {
+      product: result.product,
+      cluster: result.cluster,
+      market: result.market,
+      measuredAt: result.measured_at,
+      coverageScore: result.coverage_score,
+      competitorAverage: result.competitor_avg,
+      gapCount: result.gap_count,
+      entityGaps: recommendations.entityGaps || [],
+      sectionGaps: recommendations.sectionGaps || [],
+      schemaGaps: recommendations.schemaGaps || [],
+      recommendations: recommendations.recommendations || []
+    };
+  }
+
+  /**
+   * Get SERP data for entity extraction
+   */
+  async getSERPData(product: string, markets: string[]): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const marketPlaceholders = markets.map(() => '?').join(',');
+    const stmt = this.db.prepare(`
+      SELECT * FROM fact_serp_snapshot
+      WHERE product = ? AND market IN (${marketPlaceholders})
+      ORDER BY snapshot_date DESC
+    `);
+
+    return stmt.all(product, ...markets) as any[];
+  }
+
+  /**
+   * Save page snapshot to database
+   */
+  async savePageSnapshot(snapshot: any): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO fact_page_snapshot
+      (captured_at, page_url, word_count, headings_json, sections_json, present_entities_json, schema_types_json, content_hash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      snapshot.capturedAt,
+      snapshot.url,
+      snapshot.wordCount,
+      JSON.stringify(snapshot.headings),
+      JSON.stringify(snapshot.sections),
+      JSON.stringify(snapshot.presentEntities),
+      JSON.stringify(snapshot.schemaTypes),
+      snapshot.contentHash
+    );
+  }
+
+  /**
+   * Get page snapshots for analysis
+   */
+  async getPageSnapshots(urls?: string[]): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    let stmt;
+    let params: any[] = [];
+
+    if (urls && urls.length > 0) {
+      const placeholders = urls.map(() => '?').join(',');
+      stmt = this.db.prepare(`
+        SELECT * FROM fact_page_snapshot
+        WHERE page_url IN (${placeholders})
+        ORDER BY captured_at DESC
+      `);
+      params = urls;
+    } else {
+      stmt = this.db.prepare(`
+        SELECT * FROM fact_page_snapshot
+        ORDER BY captured_at DESC
+      `);
+    }
+
+    const results = stmt.all(...params) as any[];
+
+    return results.map(row => ({
+      url: row.page_url,
+      capturedAt: row.captured_at,
+      wordCount: row.word_count,
+      headings: JSON.parse(row.headings_json || '[]'),
+      sections: JSON.parse(row.sections_json || '[]'),
+      presentEntities: JSON.parse(row.present_entities_json || '[]'),
+      schemaTypes: JSON.parse(row.schema_types_json || '[]'),
+      contentHash: row.content_hash
+    }));
+  }
+
+  /**
+   * Save entity to database
+   */
+  async saveEntity(entity: any, productId: number): Promise<number> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO dim_entity
+      (product_id, canonical, variants_json, importance)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(
+      productId,
+      entity.canonical,
+      JSON.stringify(entity.variants),
+      entity.importance
+    );
+
+    return result.lastInsertRowid as number;
+  }
+
+  /**
+   * Get entities for a product
+   */
+  async getEntities(productId: number, minImportance: number = 0): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      SELECT * FROM dim_entity
+      WHERE product_id = ? AND importance >= ?
+      ORDER BY importance DESC
+    `);
+
+    const results = stmt.all(productId, minImportance) as any[];
+
+    return results.map(row => ({
+      entityId: row.entity_id,
+      canonical: row.canonical,
+      variants: JSON.parse(row.variants_json || '[]'),
+      importance: row.importance,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+  }
+
+  /**
+   * Get recommendations from coverage analysis
+   */
+  async getRecommendations(product: string, url?: string, minImpact: number = 1): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare(`
+      SELECT recommendations_json FROM fact_entity_coverage
+      WHERE product = ?
+      ORDER BY measured_at DESC
+      LIMIT 10
+    `);
+
+    const results = stmt.all(product) as any[];
+    const allRecommendations: any[] = [];
+
+    for (const row of results) {
+      const data = JSON.parse(row.recommendations_json || '{}');
+      if (data.recommendations) {
+        allRecommendations.push(...data.recommendations);
+      }
+    }
+
+    // Filter and deduplicate recommendations
+    const filtered = allRecommendations
+      .filter(rec => rec.impact >= minImpact)
+      .filter(rec => !url || rec.targetUrl === url);
+
+    // Remove duplicates by title
+    const unique = filtered.filter((rec, index, self) =>
+      index === self.findIndex(r => r.title === rec.title)
+    );
+
+    return unique.sort((a, b) => {
+      const aScore = (a.impact / a.effort) * a.priority;
+      const bScore = (b.impact / b.effort) * b.priority;
+      return bScore - aScore;
+    });
+  }
+
+  /**
+   * Get entity coverage statistics
+   */
+  getEntityStats(): {
+    entities: number;
+    pageSnapshots: number;
+    coverageAnalyses: number;
+    recommendations: number;
+  } {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const entities = this.db.prepare('SELECT COUNT(*) as count FROM dim_entity').get() as { count: number };
+    const pageSnapshots = this.db.prepare('SELECT COUNT(*) as count FROM fact_page_snapshot').get() as { count: number };
+    const coverageAnalyses = this.db.prepare('SELECT COUNT(*) as count FROM fact_entity_coverage').get() as { count: number };
+
+    // Count recommendations from JSON data
+    const analysisResults = this.db.prepare('SELECT recommendations_json FROM fact_entity_coverage').all() as any[];
+    let recommendationCount = 0;
+    for (const row of analysisResults) {
+      const data = JSON.parse(row.recommendations_json || '{}');
+      if (data.recommendations) {
+        recommendationCount += data.recommendations.length;
+      }
+    }
+
+    return {
+      entities: entities.count,
+      pageSnapshots: pageSnapshots.count,
+      coverageAnalyses: coverageAnalyses.count,
+      recommendations: recommendationCount
+    };
+  }
 }
 
 // Export singleton instance

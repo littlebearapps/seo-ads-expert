@@ -228,8 +228,18 @@
 **Recent Updates** (2025-09-18):
 - ✅ **Test Cleanup**: Removed 6 deprecated JSON service account authentication tests
 - ✅ **Package Fix**: Added missing google-ads-api dependency
+- ✅ **V1.8 Phase 1**: Entity coverage analysis system complete (13/13 tests passing)
 - ⚠️ **API Requirement**: Need Google Ads API production access for 100% coverage
 - 🎯 **Action Item**: Apply for Google Ads API Basic Access through Developer Console
+
+**V1.8 Entity Auditor Features** (2025-09-18):
+- 🏷️ **Entity Extraction**: Multi-source extraction from SERP, keywords, reviews, PAA
+- 📊 **Coverage Analysis**: Gap detection against top 3 competitors
+- 🎯 **Importance Scoring**: Commercial intent detection and frequency weighting
+- 📋 **Recommendations**: Prioritized action items with impact/effort scoring
+- 📄 **Report Generation**: Professional Markdown, CSV, JSON outputs
+- 💾 **Database Integration**: SQLite persistence with v1.8 schema extensions
+- 🔍 **CLI Commands**: `entity audit`, `entity gaps`, `entity enhance`
 
 ---
 
