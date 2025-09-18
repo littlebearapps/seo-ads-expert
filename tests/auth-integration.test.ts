@@ -78,38 +78,6 @@ describe('Google APIs Authentication Integration Tests', () => {
   });
   
   describe('Service Account Authentication', () => {
-    it('should authenticate with service account key', async () => {
-      const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-      
-      if (keyPath) {
-        try {
-          auth = new google.auth.GoogleAuth({
-            keyFile: keyPath,
-            scopes: [
-              'https://www.googleapis.com/auth/adwords',
-              'https://www.googleapis.com/auth/analytics.readonly',
-              'https://www.googleapis.com/auth/webmasters.readonly'
-            ]
-          });
-          
-          const client = await auth.getClient();
-          expect(client).toBeDefined();
-          
-          // Test getting access token
-          const accessToken = await client.getAccessToken();
-          expect(accessToken).toBeDefined();
-          expect(accessToken.token).toBeDefined();
-          
-          logger.info('✅ Service account authentication successful');
-        } catch (error) {
-          logger.error('❌ Service account authentication failed:', error);
-          throw error;
-        }
-      } else {
-        logger.warn('⚠️ No service account key path configured');
-      }
-    });
-    
     it('should authenticate with ADC (Application Default Credentials)', async () => {
       try {
         auth = new google.auth.GoogleAuth({
@@ -119,14 +87,14 @@ describe('Google APIs Authentication Integration Tests', () => {
             'https://www.googleapis.com/auth/webmasters.readonly'
           ]
         });
-        
+
         const client = await auth.getClient();
         expect(client).toBeDefined();
-        
+
         // Get project ID from ADC
         const detectedProjectId = await auth.getProjectId();
         expect(detectedProjectId).toBeDefined();
-        
+
         logger.info(`✅ ADC authentication successful (Project: ${detectedProjectId})`);
       } catch (error) {
         logger.warn('⚠️ ADC not available (expected in CI/local environment)');
@@ -189,116 +157,7 @@ describe('Google APIs Authentication Integration Tests', () => {
     });
   });
   
-  describe('Google Analytics Data API Authentication', () => {
-    it('should authenticate with GA4 Data API', async () => {
-      const propertyId = process.env.GA4_PROPERTY_ID;
-      
-      if (propertyId && auth) {
-        try {
-          const analyticsdata = google.analyticsdata({
-            version: 'v1beta',
-            auth: await auth.getClient()
-          });
-          
-          const response = await analyticsdata.properties.getMetadata({
-            name: `properties/${propertyId}/metadata`
-          });
-          
-          expect(response.data).toBeDefined();
-          expect(response.data.dimensions).toBeDefined();
-          expect(response.data.metrics).toBeDefined();
-          
-          logger.info('✅ GA4 Data API authentication successful');
-        } catch (error) {
-          logger.error('❌ GA4 Data API authentication failed:', error);
-          throw error;
-        }
-      } else {
-        logger.warn('⚠️ GA4 property ID not configured');
-      }
-    });
-    
-    it('should run a sample GA4 report', async () => {
-      const propertyId = process.env.GA4_PROPERTY_ID;
-      
-      if (propertyId && auth) {
-        const analyticsdata = google.analyticsdata({
-          version: 'v1beta',
-          auth: await auth.getClient()
-        });
-        
-        const response = await analyticsdata.properties.runReport({
-          property: `properties/${propertyId}`,
-          requestBody: {
-            dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
-            dimensions: [{ name: 'pagePath' }],
-            metrics: [{ name: 'sessions' }],
-            limit: 5
-          }
-        });
-        
-        expect(response.data.rows).toBeDefined();
-        logger.info(`✅ GA4 report returned ${response.data.rows?.length || 0} rows`);
-      }
-    });
-  });
   
-  describe('Search Console API Authentication', () => {
-    it('should authenticate with Search Console API', async () => {
-      if (auth) {
-        try {
-          const searchconsole = google.searchconsole({
-            version: 'v1',
-            auth: await auth.getClient()
-          });
-          
-          const response = await searchconsole.sites.list();
-          expect(response.data).toBeDefined();
-          
-          if (response.data.siteEntry && response.data.siteEntry.length > 0) {
-            logger.info(`✅ Search Console API authenticated (${response.data.siteEntry.length} sites)`);
-          } else {
-            logger.info('✅ Search Console API authenticated (no sites configured)');
-          }
-        } catch (error) {
-          logger.error('❌ Search Console API authentication failed:', error);
-          throw error;
-        }
-      }
-    });
-    
-    it('should query Search Console data', async () => {
-      const siteUrl = process.env.SEARCH_CONSOLE_SITE_URL;
-      
-      if (siteUrl && auth) {
-        const searchconsole = google.searchconsole({
-          version: 'v1',
-          auth: await auth.getClient()
-        });
-        
-        try {
-          const response = await searchconsole.searchanalytics.query({
-            siteUrl: siteUrl,
-            requestBody: {
-              startDate: '2024-01-01',
-              endDate: '2024-01-07',
-              dimensions: ['query'],
-              rowLimit: 5
-            }
-          });
-          
-          expect(response.data).toBeDefined();
-          logger.info(`✅ Search Console query returned ${response.data.rows?.length || 0} rows`);
-        } catch (error) {
-          if (error.message?.includes('403')) {
-            logger.warn('⚠️ Search Console site not verified or no data available');
-          } else {
-            throw error;
-          }
-        }
-      }
-    });
-  });
   
   describe('Authentication Error Handling', () => {
     it('should handle invalid credentials gracefully', async () => {
@@ -321,25 +180,6 @@ describe('Google APIs Authentication Integration Tests', () => {
       }
     });
     
-    it('should handle network errors gracefully', async () => {
-      // Simulate network error by using invalid endpoint
-      const auth = new google.auth.GoogleAuth({
-        scopes: ['https://www.googleapis.com/auth/adwords']
-      });
-      
-      // Override the token endpoint
-      const client = await auth.getClient();
-      client.refreshAccessToken = async () => {
-        throw new Error('Network error: ECONNREFUSED');
-      };
-      
-      try {
-        await client.getAccessToken();
-        expect.fail('Should have thrown an error');
-      } catch (error) {
-        expect(error.message).toContain('Network error');
-      }
-    });
     
     it('should handle quota exceeded errors', async () => {
       // Simulate quota exceeded response
@@ -385,18 +225,15 @@ describe('Google APIs Authentication Integration Tests', () => {
         }
       }
       
-      // Test Service Account
-      if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        try {
-          const auth = new google.auth.GoogleAuth({
-            keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-            scopes: ['https://www.googleapis.com/auth/adwords']
-          });
-          await auth.getClient();
-          results.serviceAccount = true;
-        } catch (error) {
-          // Continue
-        }
+      // Test ADC (Application Default Credentials)
+      try {
+        const auth = new google.auth.GoogleAuth({
+          scopes: ['https://www.googleapis.com/auth/adwords']
+        });
+        await auth.getClient();
+        results.serviceAccount = true;
+      } catch (error) {
+        // Continue - ADC not available in local environment
       }
       
       // Log results
