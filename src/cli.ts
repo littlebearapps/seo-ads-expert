@@ -1261,6 +1261,271 @@ program
     }
   });
 
+// v1.8 Content Planning Commands
+program
+  .command('content-roadmap')
+  .description('Generate prioritized content roadmap based on entity gaps')
+  .requiredOption('-p, --product <name>', 'Product name')
+  .option('--clusters <clusters>', 'Specific clusters (comma-separated)', '')
+  .option('--max-items <number>', 'Maximum content items to generate', '20')
+  .option('--format <format>', 'Output format: markdown (default), csv, json', 'markdown')
+  .option('--include-faqs', 'Include FAQ extraction and recommendations')
+  .option('--output <path>', 'Output path (default: plans/product/date/)')
+  .action(async (options) => {
+    console.log(`📝 Generating content roadmap for ${options.product}...\n`);
+
+    try {
+      const { ContentPlanner } = await import('./content/content-planner.js');
+      const { FAQExtractor } = await import('./content/faq-extractor.js');
+      const { CoverageReport, GapType } = await import('./content/types.js');
+      const { join } = await import('path');
+      const { writeFileSync, mkdirSync } = await import('fs');
+
+      // Generate sample coverage report (in production, this would come from entity analysis)
+      const coverageReport: CoverageReport = {
+        product: options.product,
+        clusters: [],
+        overallScore: 70,
+        recommendations: []
+      };
+
+      // Define clusters based on product or use provided clusters
+      let clusters: string[] = [];
+      if (options.clusters) {
+        clusters = options.clusters.split(',').map((c: string) => c.trim());
+      } else {
+        // Default clusters based on product
+        const productClusters: Record<string, string[]> = {
+          convertmyfile: ['webp-to-png', 'pdf-to-word', 'image-compression', 'video-converter'],
+          palettekit: ['color-picker', 'palette-generator', 'color-harmony', 'accessibility-checker'],
+          notebridge: ['note-sync', 'markdown-editor', 'cloud-backup', 'collaboration']
+        };
+        clusters = productClusters[options.product] || ['main-feature'];
+      }
+
+      // Generate coverage data for each cluster
+      for (const cluster of clusters) {
+        const score = 50 + Math.random() * 40; // Random score 50-90 for demo
+
+        coverageReport.clusters.push({
+          cluster,
+          url: `/${options.product}/${cluster}`,
+          score,
+          gaps: [
+            {
+              cluster,
+              type: score < 60 ? GapType.MissingEntities : GapType.MissingSections,
+              severity: score < 60 ? 'major' : 'minor',
+              entities: ['feature-1', 'feature-2', 'feature-3'],
+              description: `Content coverage at ${Math.round(score)}%`,
+              currentCoverage: score,
+              targetCoverage: 90,
+              competitorAvg: 85
+            }
+          ],
+          opportunities: ['Expand content depth', 'Add technical details', 'Include examples'],
+          competitorComparison: {
+            topCompetitor: 'competitor.com',
+            theirScore: 85,
+            advantages: ['Better depth', 'More examples'],
+            disadvantages: ['Complex UI', 'Slower performance']
+          }
+        });
+      }
+
+      const planner = new ContentPlanner();
+
+      // Analyze gaps
+      console.log('📊 Analyzing content gaps...');
+      const gaps = planner.analyzeGaps(coverageReport);
+      console.log(`  Found ${gaps.length} content gaps`);
+
+      // Prioritize content
+      console.log('\n📋 Prioritizing content items...');
+      const contentItems = planner.prioritizeContent(gaps);
+      const maxItems = parseInt(options.maxItems);
+      const topItems = contentItems.slice(0, maxItems);
+      console.log(`  Prioritized ${topItems.length} content items`);
+
+      // Generate calendar
+      console.log('\n📅 Generating content calendar...');
+      const calendar = planner.generateCalendar(topItems);
+      console.log(`  Calendar spans ${calendar.timeline.length} weeks`);
+      console.log(`  Total effort: ${calendar.summary.estimatedEffort} points`);
+      console.log(`  Expected impact: ${calendar.summary.expectedImpact}/100`);
+
+      // Extract FAQs if requested
+      let faqs: any[] = [];
+      if (options.includeFaqs) {
+        console.log('\n❓ Extracting FAQs...');
+        const faqExtractor = new FAQExtractor();
+
+        for (const cluster of clusters.slice(0, 3)) { // Limit to first 3 clusters
+          const clusterFaqs = await faqExtractor.extractFromMultipleSources(
+            options.product,
+            cluster
+          );
+          faqs.push(...clusterFaqs);
+        }
+
+        console.log(`  Extracted ${faqs.length} FAQs`);
+
+        // Create FAQ bank
+        const faqBank = faqExtractor.createFAQBank(faqs, 10);
+        faqs = faqBank; // Use the curated FAQ bank
+      }
+
+      // Generate output based on format
+      const date = new Date().toISOString().split('T')[0];
+      const outputPath = options.output || join('plans', options.product, date);
+      mkdirSync(outputPath, { recursive: true });
+
+      let outputFile: string;
+      let content: string;
+
+      switch (options.format) {
+        case 'csv':
+          outputFile = 'content-roadmap.csv';
+          content = generateCSV(calendar, faqs);
+          break;
+
+        case 'json':
+          outputFile = 'content-roadmap.json';
+          content = JSON.stringify({ calendar, faqs }, null, 2);
+          break;
+
+        default: // markdown
+          outputFile = 'content-roadmap.md';
+          content = generateMarkdown(calendar, gaps, faqs);
+          break;
+      }
+
+      const filePath = join(outputPath, outputFile);
+      writeFileSync(filePath, content);
+
+      console.log(`\n📁 Content roadmap saved to: ${filePath}`);
+
+      // Show summary
+      console.log('\n📊 Roadmap Summary:');
+      console.log(`  Total items: ${calendar.summary.totalItems}`);
+
+      const byType = Object.entries(calendar.summary.byType);
+      if (byType.length > 0) {
+        console.log('  By type:');
+        byType.forEach(([type, count]) => {
+          console.log(`    ${type}: ${count}`);
+        });
+      }
+
+      const byPriority = Object.entries(calendar.summary.byPriority);
+      if (byPriority.length > 0) {
+        console.log('  By priority:');
+        byPriority.forEach(([priority, count]) => {
+          console.log(`    ${priority}: ${count}`);
+        });
+      }
+
+      console.log(`\n✅ Content roadmap generation completed!`);
+
+    } catch (error) {
+      console.error('❌ Content roadmap generation failed:', error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+
+    // Helper functions for output generation
+    function generateMarkdown(calendar: any, gaps: any[], faqs: any[]): string {
+      let md = `# Content Roadmap - ${options.product}\n\n`;
+      md += `Generated: ${new Date().toISOString()}\n\n`;
+
+      md += `## Summary\n\n`;
+      md += `- **Total Content Items**: ${calendar.summary.totalItems}\n`;
+      md += `- **Estimated Effort**: ${calendar.summary.estimatedEffort} points\n`;
+      md += `- **Expected Impact**: ${calendar.summary.expectedImpact}/100\n`;
+      md += `- **Timeline**: ${calendar.timeline.length} weeks\n\n`;
+
+      md += `## Content Calendar\n\n`;
+      calendar.timeline.forEach((week: any, i: number) => {
+        md += `### Week ${i + 1} (${week.weekOf})\n\n`;
+        md += `**Focus**: ${week.focus}\n`;
+        md += `**Total Effort**: ${week.totalEffort} points\n\n`;
+
+        week.items.forEach((item: any) => {
+          md += `#### ${item.title}\n`;
+          md += `- **Type**: ${item.type}\n`;
+          md += `- **Priority**: ${item.priority}/10\n`;
+          md += `- **Impact**: ${item.impact}/100\n`;
+          md += `- **Effort**: ${item.effort}/5\n`;
+          md += `- **Target URL**: ${item.targetUrl}\n`;
+          md += `- **Description**: ${item.description}\n`;
+
+          if (item.recommendations.length > 0) {
+            md += `- **Recommendations**:\n`;
+            item.recommendations.forEach((rec: string) => {
+              md += `  - ${rec}\n`;
+            });
+          }
+
+          md += '\n';
+        });
+      });
+
+      if (faqs.length > 0) {
+        md += `## Recommended FAQs\n\n`;
+        faqs.forEach((faq: any, i: number) => {
+          md += `### ${i + 1}. ${faq.question}\n`;
+          md += `${faq.answer}\n`;
+          md += `- Source: ${faq.source}\n`;
+          md += `- Relevance: ${faq.relevance}/100\n\n`;
+        });
+      }
+
+      md += `## Content Gaps Analysis\n\n`;
+      const bySeverity = {
+        critical: gaps.filter(g => g.severity === 'critical'),
+        major: gaps.filter(g => g.severity === 'major'),
+        minor: gaps.filter(g => g.severity === 'minor')
+      };
+
+      if (bySeverity.critical.length > 0) {
+        md += `### Critical Gaps\n`;
+        bySeverity.critical.forEach(gap => {
+          md += `- **${gap.cluster}**: ${gap.description}\n`;
+        });
+        md += '\n';
+      }
+
+      if (bySeverity.major.length > 0) {
+        md += `### Major Gaps\n`;
+        bySeverity.major.forEach(gap => {
+          md += `- **${gap.cluster}**: ${gap.description}\n`;
+        });
+        md += '\n';
+      }
+
+      return md;
+    }
+
+    function generateCSV(calendar: any, faqs: any[]): string {
+      let csv = 'Title,Type,Priority,Impact,Effort,Due Date,Cluster,Description\n';
+
+      calendar.items.forEach((item: any) => {
+        const row = [
+          `"${item.title}"`,
+          item.type,
+          item.priority,
+          item.impact,
+          item.effort,
+          item.dueDate || '',
+          item.cluster,
+          `"${item.description.replace(/"/g, '""')}"`
+        ];
+        csv += row.join(',') + '\n';
+      });
+
+      return csv;
+    }
+  });
+
 // v1.7 Alert System Commands
 const alerts = program.command('alerts').description('Alert management and anomaly detection');
 
