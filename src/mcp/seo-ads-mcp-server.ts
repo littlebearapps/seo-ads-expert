@@ -23,6 +23,10 @@ import { RealTimePerformanceTracker } from '../tracking/performance-tracker.js';
 import { MetricAggregator } from '../tracking/metric-aggregator.js';
 import { GuardrailSystem } from '../safety/guardrail-system.js';
 import { OptimizerIntegration } from '../optimization/optimizer-integration.js';
+import { IntegratedBidOptimizer } from '../bidding/integrated-bid-optimizer.js';
+import { BidStrategyAdvisor } from '../bidding/bid-strategy-advisor.js';
+import { CompetitionAnalyzer } from '../bidding/competition-analyzer.js';
+import { SeasonalityDetector } from '../bidding/seasonality-detector.js';
 import { Logger } from 'pino';
 import pino from 'pino';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
@@ -50,6 +54,10 @@ export class SEOAdsMCPServer {
   private aggregator: MetricAggregator;
   private guardrails: GuardrailSystem;
   private integration: OptimizerIntegration;
+  private bidOptimizer: IntegratedBidOptimizer;
+  private bidStrategyAdvisor: BidStrategyAdvisor;
+  private competitionAnalyzer: CompetitionAnalyzer;
+  private seasonalityDetector: SeasonalityDetector;
   private logger: Logger;
   private sessions: Map<string, any> = new Map();
 
@@ -85,6 +93,12 @@ export class SEOAdsMCPServer {
       logger: this.logger,
       artifactPath: config.artifactPath,
     });
+
+    // Initialize bidding components
+    this.bidOptimizer = new IntegratedBidOptimizer(this.database, this.logger);
+    this.bidStrategyAdvisor = new BidStrategyAdvisor(this.database, this.logger);
+    this.competitionAnalyzer = new CompetitionAnalyzer(this.database, this.logger);
+    this.seasonalityDetector = new SeasonalityDetector(this.database, this.logger);
 
     // Initialize MCP server
     this.server = new Server(
@@ -340,6 +354,196 @@ export class SEOAdsMCPServer {
             required: ['campaignIds'],
           },
         },
+        {
+          name: 'analyze_bid_strategies',
+          description: 'Analyze and recommend optimal bid strategies for campaigns',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignIds: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Campaign IDs to analyze',
+              },
+              includeCompetition: {
+                type: 'boolean',
+                default: true,
+                description: 'Include competitive analysis',
+              },
+              includeSeasonality: {
+                type: 'boolean',
+                default: true,
+                description: 'Include seasonality patterns',
+              },
+            },
+            required: ['campaignIds'],
+          },
+        },
+        {
+          name: 'optimize_bids_integrated',
+          description: 'Run comprehensive bid and budget optimization with Thompson Sampling',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignIds: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Campaign IDs to optimize',
+              },
+              objective: {
+                type: 'string',
+                enum: ['maximize_conversions', 'target_cpa', 'target_roas', 'balanced'],
+                default: 'balanced',
+                description: 'Optimization objective',
+              },
+              constraints: {
+                type: 'object',
+                properties: {
+                  totalBudget: {
+                    type: 'number',
+                    description: 'Total daily budget limit',
+                  },
+                  maxBudgetChange: {
+                    type: 'number',
+                    default: 25,
+                    description: 'Maximum budget change percentage',
+                  },
+                  targetCPA: {
+                    type: 'number',
+                    description: 'Target cost per acquisition',
+                  },
+                  targetROAS: {
+                    type: 'number',
+                    description: 'Target return on ad spend',
+                  },
+                },
+                required: ['totalBudget'],
+              },
+              riskTolerance: {
+                type: 'number',
+                minimum: 0,
+                maximum: 1,
+                default: 0.3,
+                description: 'Risk tolerance for optimization',
+              },
+              timeHorizon: {
+                type: 'number',
+                default: 30,
+                description: 'Optimization time horizon in days',
+              },
+              testMode: {
+                type: 'boolean',
+                default: true,
+                description: 'Run in test mode without applying changes',
+              },
+            },
+            required: ['campaignIds', 'constraints'],
+          },
+        },
+        {
+          name: 'analyze_competition',
+          description: 'Analyze competitive landscape and auction insights',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignIds: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Campaign IDs to analyze',
+              },
+              includeBidEstimates: {
+                type: 'boolean',
+                default: true,
+                description: 'Include competitor bid estimates',
+              },
+              detectBidWars: {
+                type: 'boolean',
+                default: true,
+                description: 'Detect potential bid wars',
+              },
+            },
+            required: ['campaignIds'],
+          },
+        },
+        {
+          name: 'detect_seasonality',
+          description: 'Detect seasonal patterns and generate forecasts',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignIds: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Campaign IDs to analyze',
+              },
+              lookbackDays: {
+                type: 'number',
+                default: 365,
+                description: 'Days of historical data to analyze',
+              },
+              forecastDays: {
+                type: 'number',
+                default: 30,
+                description: 'Days ahead to forecast',
+              },
+            },
+            required: ['campaignIds'],
+          },
+        },
+        {
+          name: 'calculate_bid_adjustments',
+          description: 'Calculate optimal bid adjustments for campaign segments',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignId: {
+                type: 'string',
+                description: 'Campaign ID to analyze',
+              },
+              objective: {
+                type: 'string',
+                enum: ['maximize_conversions', 'target_cpa', 'target_roas', 'maximize_clicks', 'balanced'],
+                default: 'balanced',
+                description: 'Optimization objective',
+              },
+              constraints: {
+                type: 'object',
+                properties: {
+                  maxBidModifier: {
+                    type: 'number',
+                    default: 1.5,
+                    description: 'Maximum bid modifier (1.5 = +50%)',
+                  },
+                  minBidModifier: {
+                    type: 'number',
+                    default: 0.5,
+                    description: 'Minimum bid modifier (0.5 = -50%)',
+                  },
+                  targetCPA: {
+                    type: 'number',
+                    description: 'Target cost per acquisition',
+                  },
+                  targetROAS: {
+                    type: 'number',
+                    description: 'Target return on ad spend',
+                  },
+                },
+              },
+              aggressiveness: {
+                type: 'string',
+                enum: ['conservative', 'moderate', 'aggressive'],
+                default: 'moderate',
+                description: 'Adjustment aggressiveness',
+              },
+              testMode: {
+                type: 'boolean',
+                default: true,
+                description: 'Run in test mode without applying changes',
+              },
+            },
+            required: ['campaignId'],
+          },
+        },
       ],
     }));
 
@@ -365,6 +569,16 @@ export class SEOAdsMCPServer {
             return await this.handleGetDashboard(args);
           case 'validate_claims':
             return await this.handleValidateClaims(args);
+          case 'analyze_bid_strategies':
+            return await this.handleAnalyzeBidStrategies(args);
+          case 'optimize_bids_integrated':
+            return await this.handleOptimizeBidsIntegrated(args);
+          case 'analyze_competition':
+            return await this.handleAnalyzeCompetition(args);
+          case 'detect_seasonality':
+            return await this.handleDetectSeasonality(args);
+          case 'calculate_bid_adjustments':
+            return await this.handleCalculateBidAdjustments(args);
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -869,6 +1083,200 @@ export class SEOAdsMCPServer {
     } catch (error) {
       return [];
     }
+  }
+
+  /**
+   * Handle bid strategy analysis request
+   */
+  private async handleAnalyzeBidStrategies(args: any): Promise<any> {
+    const { campaignIds } = args;
+
+    const results = [];
+    for (const campaignId of campaignIds) {
+      const analysis = await this.bidStrategyAdvisor.analyzeBidStrategies(campaignId);
+      results.push(analysis);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            data: results,
+            summary: {
+              campaignsAnalyzed: campaignIds.length,
+              recommendationsGenerated: results.reduce((sum, r) => sum + r.recommendedStrategies.length, 0)
+            }
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Handle integrated bid optimization request
+   */
+  private async handleOptimizeBidsIntegrated(args: any): Promise<any> {
+    const { campaignIds, objective, constraints, riskTolerance, timeHorizon, testMode } = args;
+
+    const config = {
+      objective: objective || 'balanced',
+      constraints: {
+        totalBudget: constraints.totalBudget,
+        maxBudgetChange: constraints.maxBudgetChange || 25,
+        targetCPA: constraints.targetCPA,
+        targetROAS: constraints.targetROAS,
+      },
+      riskTolerance: riskTolerance || 0.3,
+      timeHorizon: timeHorizon || 30,
+      includeSeasonality: true,
+      includeCompetition: true,
+    };
+
+    const result = await this.bidOptimizer.optimizeBidding(campaignIds, config);
+
+    if (!testMode) {
+      await this.bidOptimizer.applyOptimizations(result, false);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            data: result,
+            testMode,
+            summary: {
+              budgetAllocations: result.budgetAllocations.length,
+              strategyChanges: result.bidStrategies.filter(s => s.currentStrategy !== s.recommendedStrategy).length,
+              totalExpectedImpact: result.totalExpectedImpact
+            }
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Handle competition analysis request
+   */
+  private async handleAnalyzeCompetition(args: any): Promise<any> {
+    const { campaignIds, includeBidEstimates, detectBidWars } = args;
+
+    const results = [];
+    for (const campaignId of campaignIds) {
+      const competition = await this.competitionAnalyzer.analyzeCompetition(campaignId);
+
+      let bidWar = null;
+      if (detectBidWars) {
+        bidWar = await this.competitionAnalyzer.detectBidWars(campaignId);
+      }
+
+      results.push({
+        campaignId,
+        competition,
+        bidWar
+      });
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            data: results,
+            summary: {
+              campaignsAnalyzed: campaignIds.length,
+              bidWarsDetected: results.filter(r => r.bidWar?.detected).length,
+              highCompetitionCampaigns: results.filter(r =>
+                ['high', 'extreme'].includes(r.competition?.marketDynamics?.intensity)
+              ).length
+            }
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Handle seasonality detection request
+   */
+  private async handleDetectSeasonality(args: any): Promise<any> {
+    const { campaignIds, lookbackDays, forecastDays } = args;
+
+    const results = [];
+    for (const campaignId of campaignIds) {
+      const seasonality = await this.seasonalityDetector.detectSeasonality(
+        campaignId,
+        lookbackDays || 365
+      );
+      results.push({
+        campaignId,
+        seasonality
+      });
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            data: results,
+            summary: {
+              campaignsAnalyzed: campaignIds.length,
+              patternsDetected: results.reduce((sum, r) => sum + r.seasonality.patterns.length, 0),
+              upcomingEvents: results.reduce((sum, r) => sum + r.seasonality.events.length, 0)
+            }
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Handle bid adjustments calculation request
+   */
+  private async handleCalculateBidAdjustments(args: any): Promise<any> {
+    const { campaignId, objective, constraints, aggressiveness, testMode } = args;
+
+    const strategy = {
+      objective: objective || 'balanced',
+      constraints: {
+        maxBidModifier: constraints?.maxBidModifier || 1.5,
+        minBidModifier: constraints?.minBidModifier || 0.5,
+        targetCPA: constraints?.targetCPA,
+        targetROAS: constraints?.targetROAS,
+      },
+      aggressiveness: aggressiveness || 'moderate'
+    };
+
+    const result = await this.bidAdjustmentCalculator.calculateBidAdjustments(campaignId, strategy);
+
+    if (!testMode) {
+      await this.bidAdjustmentCalculator.applyBidAdjustments(campaignId, result.adjustments, false);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            data: result,
+            testMode,
+            summary: {
+              adjustmentsCalculated: result.adjustments.length,
+              priorityAdjustments: result.implementationPriority.length,
+              totalExpectedImpact: result.totalExpectedImpact
+            }
+          }, null, 2),
+        },
+      ],
+    };
   }
 
   /**
