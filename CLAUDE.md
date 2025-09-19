@@ -2,6 +2,20 @@
 
 ## 🎯 Core Info
 
+**V2.0 INTELLIGENT BUDGET OPTIMIZER** (PLAN COMPLETE ✅ - 2025-09-19):
+1. **Thompson Sampling Engine**: Beta-Binomial for CVR + Gamma for value, with exploration floor ≥10%
+2. **MCP Server Architecture**: Full Claude Code integration with ListToolsRequestSchema/CallToolRequestSchema
+3. **Guardrails System**: 5 safety rules (QS≤3, Health<0.6, Claims, Budget caps, Change±25%)
+4. **Real-time Tracking**: Event-driven performance monitoring with 15-minute polling intervals
+5. **Production Fixes**: All v1.9 integration issues resolved, landing_page_health uses crawl_pages/fact_crawl
+
+**V1.9 TECHNICAL SEO INTELLIGENCE** (PLAN REFINED ✅ - 2025-09-19):
+1. **Internal HTML Crawler**: Undici-based with SQLite link graph, 500 pages/min throughput
+2. **Sectioned XML Sitemaps**: 50K URL limit per file, smart sectioning by category/priority
+3. **GSC Indexation Audit**: Coverage reports with discovered/submitted/indexed funnel analysis
+4. **Robots.txt Audit**: Full directive validation, user-agent matching, sitemap discovery
+5. **IndexNow Integration**: 10K URLs/day limit with quota tracking and batch submission
+
 **V1.8 ENTITY COVERAGE & CONTENT OPTIMIZATION** (PRODUCTION-READY ✅):
 1. **Entity Extraction System**: Multi-source entity extraction from SERP, keywords, reviews, PAA
 2. **Schema Generation**: JSON-LD schema generation for SoftwareApplication, FAQPage, HowTo, BreadcrumbList, Article
@@ -42,9 +56,9 @@
 4. **Professional Marketing Assets**: 8 file types generated (CSV, JSON, Markdown, TXT)
 
 **Revenue Model**: Internal Infrastructure Tool (3+ hours manual → 11 seconds automated)
-**Timeline**: ✅ v1.0 COMPLETED 2025-09-03 | ✅ v1.5 COMPLETED 2025-09-05 | ✅ v1.6 COMPLETED 2025-09-05 | ✅ v1.7 COMPLETED 2025-09-18 | ✅ v1.8 COMPLETED 2025-09-18
-**Platform**: Node.js CLI Tool with Entity Coverage, Schema Generation, Content Planning, Link Optimization
-**Status**: ✅ PRODUCTION-READY - Complete SEO solution with content optimization & intelligent monitoring
+**Timeline**: ✅ v1.0-v1.8 COMPLETED | 📋 v1.9 PLAN REFINED 2025-09-19 | 📋 v2.0 PLAN COMPLETE 2025-09-19
+**Platform**: Node.js CLI Tool → MCP Server (v2.0) with Thompson Sampling optimizer
+**Status**: ✅ v1.8 PRODUCTION-READY | 📋 v1.9/v2.0 PLANS COMPLETE - Ready for development
 
 ## 🔧 Technical Stack
 
