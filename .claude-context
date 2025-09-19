@@ -317,14 +317,25 @@ gcloud auth application-default login  # Refresh ADC when needed
 
 ## 📋 Future Enhancements
 
-### v1.9 Roadmap - CLI Consolidation & Architecture Refinement
-- **Priority**: Medium (architectural elegance improvement)
-- **Issue**: Current CLI commands fragmented across 5+ files (cli.ts, cli-alerts.ts, cli-experiments.ts, cli-microsoft.ts, cli-remedy.ts)
-- **v1.8 Impact**: Will add 6th CLI file (cli-entity.ts) continuing fragmentation pattern
-- **v1.9 Solution**: Implement unified command group system within main CLI
-  - Consolidate all commands under single entry point (`seo-ads --help` shows everything)
-  - Maintain modular organization with command groups (entity, schema, content, alerts, experiments)
-  - Improve developer experience and command discoverability
-  - Set pattern for future versions
-- **Implementation**: Use Commander.js .addCommand() with grouped modules
-- **Risk**: Low - pure architectural refinement, no functional changes needed
+### v1.9 Implementation Plan - REFINED ✅ (2025-09-19)
+- **Status**: Complete refined implementation plan with GPT-5 feedback
+- **Priority**: Technical SEO Intelligence & Site Health System
+- **Key Features**: Internal HTML crawler, SQLite link graph, sectioned sitemaps, GSC indexation audit
+- **Critical Path**: CLI consolidation (Day 0.5) - 47+ commands across 6 files need unification
+- **Timeline**: 2-3 weeks | **Dependencies**: v1.8 infrastructure
+- **Document**: `docs/planning-docs/v1.9-implementation-plan-refined.md` ✅
+
+### v2.0 Implementation Plan - CREATED ✅ (2025-09-19)
+- **Status**: Complete implementation plan with GPT-5 collaboration
+- **Priority**: Intelligent Budget Optimizer & MCP Server Architecture
+- **Key Features**: Thompson Sampling engine, real-time tracking, MCP integration, bid strategies, creative rotation
+- **Breakthrough**: Bayesian optimization using Gamma-Poisson model for budget allocation
+- **Timeline**: 3-4 weeks after v1.9 | **Dependencies**: v1.9 crawl system, Google Ads API production access
+- **Document**: `docs/planning-docs/v2.0-implementation-plan.md` ✅
+
+### Planning Session Progress (2025-09-19)
+- ✅ **v1.9 Planned**: 2025-09-19 with Code Mapper assessment + GPT-5 refinement
+- ✅ **v2.0 Planned**: 2025-09-19 with GPT-5 collaboration on Thompson Sampling
+- ✅ **Compatibility Verified**: Both v1.9 and v2.0 integrate seamlessly with existing v1.8 codebase
+- ✅ **Claude Code Operability**: Both versions maintain full Claude Code compatibility
+- ✅ **Security Enhanced**: OpenAI API keys removed from all project .mcp.json files

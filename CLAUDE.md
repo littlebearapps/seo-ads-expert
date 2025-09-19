@@ -264,8 +264,26 @@
 - ✅ **Database Integration**: Extended SQLite schema with v1.8 tables
 - ✅ **Testing**: 100% implementation with graceful fallbacks
 
+## 🔮 Planned Enhancements
+
+### V1.9 - Technical SEO Intelligence (Planned: 2025-09-19)
+- **Internal HTML Crawler**: Full site crawling with link graph analysis
+- **SQLite Link Graph**: Efficient relationship storage and orphan page detection
+- **Sectioned XML Sitemaps**: Intelligent partitioning for large sites
+- **GSC Indexation Audit**: Performance-based optimization recommendations
+- **CLI Consolidation**: Unified subcommand structure (critical path)
+- **Timeline**: 2-3 weeks | **Dependencies**: v1.8 infrastructure
+
+### V2.0 - Budget Optimizer & MCP Server (Planned: 2025-09-19)
+- **Thompson Sampling Engine**: Bayesian optimization for budget allocation
+- **Real-time Performance Tracking**: Continuous learning from Google Ads API
+- **MCP Server Architecture**: Seamless Claude Code integration with natural language
+- **Intelligent Bid Strategies**: Performance-driven bid adjustments
+- **Creative Rotation Policy**: Automated ad variant optimization
+- **Timeline**: 3-4 weeks after v1.9 | **Dependencies**: v1.9 crawl system
+
 ---
 
 **Token Count**: ~950 (Optimized for Claude Code)
-**Last Updated**: 2025-09-18
+**Last Updated**: 2025-09-19
 **Version**: 1.8 - ENTITY COVERAGE & CONTENT OPTIMIZATION COMPLETE ✅
