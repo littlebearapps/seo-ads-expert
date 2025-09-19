@@ -5,7 +5,8 @@
   "main": "dist/cli.js",
   "type": "module",
   "bin": {
-    "seo-ads-expert": "./dist/cli.js"
+    "seo-ads-expert": "./dist/cli.js",
+    "seo-ads-mcp": "./dist/mcp/index.js"
   },
   "scripts": {
     "build": "tsx src/cli/index.ts",
@@ -16,7 +17,12 @@
     "crawl": "tsx src/cli/index.ts crawl",
     "health": "tsx src/cli/index.ts health",
     "sitemap": "tsx src/cli/index.ts sitemap",
+    "mcp": "tsx src/mcp/index.ts",
+    "mcp:dev": "NODE_ENV=development tsx src/mcp/index.ts",
+    "mcp:prod": "NODE_ENV=production tsx src/mcp/index.ts",
     "test": "vitest",
+    "test:mcp": "vitest src/tests/mcp-server.test.ts",
+    "test:guardrails": "vitest src/tests/guardrails.test.ts",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
@@ -29,6 +35,7 @@
   "author": "Little Bear Apps",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
     "@types/cheerio": "^0.22.35",
     "axios": "^1.6.2",
     "better-sqlite3": "^12.2.0",

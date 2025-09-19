@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tests/**/*test*.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*test*.ts', 'src/tests/**/*.test.ts', 'src/**/*.test.ts'],
     exclude: ['node_modules/**', 'dist/**'],
     testTimeout: 10000, // Reduced to 10 seconds - tests should be faster
     hookTimeout: 5000, // Reduced to 5 seconds for hooks

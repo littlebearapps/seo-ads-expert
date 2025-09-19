@@ -1,0 +1,83 @@
+{
+  "databasePath": "./data/seo-ads.db",
+  "artifactPath": "./plans/_optimizer",
+  "logLevel": "info",
+  "googleAdsConfig": {
+    "developerToken": "",
+    "clientId": "",
+    "clientSecret": "",
+    "refreshToken": ""
+  },
+  "server": {
+    "name": "seo-ads-expert",
+    "version": "2.0.0",
+    "description": "Thompson Sampling budget optimizer with real-time performance tracking"
+  },
+  "optimization": {
+    "defaultObjective": "maximize_CWS_Clicks",
+    "defaultTimeframe": 30,
+    "defaultRiskTolerance": 0.3,
+    "defaultConstraints": {
+      "minDailyBudget": 2,
+      "maxDailyBudget": 100,
+      "maxChangePercent": 25,
+      "explorationFloor": 0.1,
+      "min_per_campaign": 2
+    }
+  },
+  "tracking": {
+    "defaultInterval": "15m",
+    "metricsToTrack": [
+      "cost_micros",
+      "clicks",
+      "conversions",
+      "conversion_value_micros",
+      "impressions"
+    ],
+    "triggerThresholds": {
+      "budgetDepletionWarning": 0.8,
+      "budgetDepletionCritical": 0.95,
+      "ctrAnomalyThreshold": 0.3,
+      "cvrAnomalyThreshold": 0.4,
+      "opportunityCpaThreshold": 50
+    }
+  },
+  "guardrails": {
+    "enabled": true,
+    "rules": {
+      "budgetCap": {
+        "enabled": true,
+        "severity": "critical"
+      },
+      "maxChangePercent": {
+        "enabled": true,
+        "defaultLimit": 25,
+        "severity": "high"
+      },
+      "qualityScore": {
+        "enabled": true,
+        "minimumScore": 3,
+        "severity": "critical"
+      },
+      "landingPageHealth": {
+        "enabled": true,
+        "minimumHealth": 0.6,
+        "severity": "critical"
+      },
+      "claimsValidation": {
+        "enabled": true,
+        "maxAgeDays": 30,
+        "severity": "critical"
+      }
+    }
+  },
+  "mcp": {
+    "transport": "stdio",
+    "capabilities": {
+      "tools": true,
+      "resources": true,
+      "prompts": false,
+      "sampling": false
+    }
+  }
+}
