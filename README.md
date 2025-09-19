@@ -1,4 +1,4 @@
-# SEO & Google Ads Expert Tool - V1.8 ENTITY COVERAGE & CONTENT OPTIMIZATION ✅
+# SEO & Google Ads Expert Tool - V1.9 TECHNICAL SEO INTELLIGENCE ✅
 
 ## 🚀 Quick Start
 
@@ -60,6 +60,15 @@ npx tsx src/cli.ts faq-sync --product palettekit
 npx tsx src/cli.ts schema-emit --product palettekit --type faq
 npx tsx src/cli.ts content-roadmap --product palettekit
 npx tsx src/cli.ts link-suggest --product palettekit
+
+# V1.9 NEW: Technical SEO Intelligence
+npx tsx src/cli.ts crawl --domain littlebearapps.com
+npx tsx src/cli.ts generate-sitemap --domain littlebearapps.com
+npx tsx src/cli.ts gsc-indexation --property sc-domain:littlebearapps.com
+npx tsx src/cli.ts robots-audit --url https://littlebearapps.com
+npx tsx src/cli.ts indexnow --urls /path/to/urls.txt --engine bing
+npx tsx src/cli.ts health-report --domain littlebearapps.com
+npx tsx src/cli.ts crawl-session --sessionId <session-id>
 ```
 
 ## 📊 Progress Tracker
@@ -80,15 +89,16 @@ npx tsx src/cli.ts link-suggest --product palettekit
 - [x] **Phase 13**: V1.6 Microsoft Ads Integration ✅
 - [x] **Phase 14**: V1.7 Alert Detection & Remediation ✅
 - [x] **Phase 15**: V1.8 Entity Coverage & Content Optimization ✅
-- [ ] **Phase 16**: MCP Server Conversion (Future)
+- [x] **Phase 16**: V1.9 Technical SEO Intelligence ✅
+- [ ] **Phase 17**: MCP Server Conversion (Future)
 
 ## 📈 Current Status
 
-**Active Phase**: ✅ V1.8 PRODUCTION-READY
+**Active Phase**: ✅ V1.9 PRODUCTION-READY
 **Completion**: 100%
-**Version**: 1.8 (Entity Coverage & Content Optimization Complete)
+**Version**: 1.9 (Technical SEO Intelligence Complete)
 **Test Coverage**: Comprehensive with graceful fallbacks
-**Ship Date**: 2025-09-18  
+**Ship Date**: 2025-09-19  
 
 ### Authentication Setup (IMPORTANT)
 
@@ -123,6 +133,15 @@ gcloud auth application-default login
 - [x] **v1.2 Technical SEO**: Added sitemap, robots.txt, Lighthouse support (11/11 tests)
 - [x] **v1.3 Authentication**: OAuth2 + ADC working, no JSON needed (7/14 tests)
 - [x] **v1.4 Memory & Analytics**: GA4 connector, connection pool, batch processor (18/18 tests)
+
+### All V1.9 Features Complete ✅
+- [x] **Internal HTML Crawler**: Undici-based with SQLite link graph, 500 pages/min throughput
+- [x] **Sectioned XML Sitemaps**: 50K URL limit per file, smart sectioning by category/priority
+- [x] **GSC Indexation Audit**: Coverage reports with discovered/submitted/indexed funnel analysis
+- [x] **Robots.txt Audit**: Full directive validation, user-agent matching, sitemap discovery
+- [x] **IndexNow Integration**: 10K URLs/day limit with quota tracking, Bing/Yandex support
+- [x] **Data Contracts & Formatting**: Standardized JSON contracts, markdown reports, structured logging
+- [x] **Database Enhancements**: fact_crawl/fact_indexation views, centralized IndexNow tables
 
 ### All V1.8 Features Complete ✅
 - [x] **Entity Coverage System**: Multi-source extraction with importance scoring
@@ -327,7 +346,7 @@ npm run plan -- --product convertmyfile --validate-only
 
 ---
 
-**Last Updated**: 2025-09-18
-**Version**: 1.7.0 - ALERT DETECTION & REMEDIATION ✅
+**Last Updated**: 2025-09-19
+**Version**: 1.9.0 - TECHNICAL SEO INTELLIGENCE ✅
 **Maintainer**: Nathan @ Little Bear Apps
 **Repository**: github.com/littlebearapps/seo-ads-expert

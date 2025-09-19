@@ -8,11 +8,14 @@
     "seo-ads-expert": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsx src/cli.ts",
-    "dev": "tsx watch src/cli.ts",
-    "plan": "tsx src/cli.ts plan",
-    "plans": "tsx src/cli.ts list",
-    "show": "tsx src/cli.ts show",
+    "build": "tsx src/cli/index.ts",
+    "dev": "tsx watch src/cli/index.ts",
+    "plan": "tsx src/cli/index.ts plan",
+    "plans": "tsx src/cli/index.ts plan list",
+    "show": "tsx src/cli/index.ts plan show",
+    "crawl": "tsx src/cli/index.ts crawl",
+    "health": "tsx src/cli/index.ts health",
+    "sitemap": "tsx src/cli/index.ts sitemap",
     "test": "vitest",
     "type-check": "tsc --noEmit"
   },
@@ -35,10 +38,14 @@
     "csv-stringify": "^6.4.4",
     "date-fns": "^2.30.0",
     "dotenv": "^17.2.2",
+    "fast-xml-parser": "^5.2.5",
     "google-ads-api": "^21.0.1",
     "googleapis": "^129.0.0",
     "js-yaml": "^4.1.0",
+    "node-fetch": "^2.7.0",
+    "p-queue": "^8.1.1",
     "pino": "^8.17.2",
+    "robots-parser": "^3.0.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
