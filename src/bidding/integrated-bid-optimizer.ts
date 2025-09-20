@@ -209,12 +209,23 @@ export class IntegratedBidOptimizer extends EventEmitter {
       if (perfData) {
         arms.push({
           id: campaignId,
+          name: `Campaign ${campaignId}`,
+          type: 'campaign' as const,
           alpha: Math.max(1, perfData.total_conversions || 0), // Successes
           beta: Math.max(1, perfData.total_clicks - perfData.total_conversions || 0), // Failures
           shape: Math.max(1, perfData.total_conversions || 0), // For Gamma
           scale: perfData.total_conversions > 0 ?
             perfData.total_value / perfData.total_conversions : 1,
           currentBudget: perfData.daily_budget || 10,
+          currentDailyBudget: perfData.daily_budget || 10,
+          metrics30d: {
+            conversions: perfData.total_conversions || 0,
+            clicks: perfData.total_clicks || 0,
+            revenue: perfData.total_value || 0,
+            spend: perfData.total_cost || 0,
+            impressions: perfData.total_clicks * 20 || 0, // Estimate if not available
+            qualityScore: 7 // Default quality score if not available
+          },
           historicalPerformance: {
             conversions: perfData.total_conversions,
             value: perfData.total_value,
@@ -356,16 +367,21 @@ export class IntegratedBidOptimizer extends EventEmitter {
     config: OptimizationConfig,
     seasonalMultiplier: number
   ): Promise<any[]> {
-    // Adjust total budget for seasonality
-    const adjustedBudget = config.constraints.totalBudget * seasonalMultiplier;
+    // Adjust total budget for seasonality, but cap at reasonable limit
+    const rawAdjustedBudget = config.constraints.totalBudget * seasonalMultiplier;
+    const adjustedBudget = Math.min(rawAdjustedBudget, config.constraints.totalBudget * 1.1); // Cap at 10% increase
 
-    // Prepare Thompson Sampling arms
+    // Prepare Thompson Sampling arms with all required fields
     const tsArms = arms.map(arm => ({
       id: arm.id,
+      name: arm.name,
+      type: arm.type,
       alpha: arm.alpha,
       beta: arm.beta,
       shape: arm.shape,
-      scale: arm.scale
+      scale: arm.scale,
+      metrics30d: arm.metrics30d,
+      currentDailyBudget: arm.currentDailyBudget
     }));
 
     // Run Thompson Sampling optimization
@@ -373,8 +389,9 @@ export class IntegratedBidOptimizer extends EventEmitter {
       tsArms,
       adjustedBudget,
       {
-        minBudget: 2,
-        maxBudget: adjustedBudget * 0.5, // No campaign gets more than 50%
+        minDailyBudget: 2,
+        maxDailyBudget: adjustedBudget * 0.5, // No campaign gets more than 50%
+        riskTolerance: config.riskTolerance,
         maxChangePercent: config.constraints.maxBudgetChange,
         explorationFloor: config.riskTolerance * 0.2 // Convert risk tolerance to exploration
       }
@@ -384,15 +401,15 @@ export class IntegratedBidOptimizer extends EventEmitter {
     return arms.map(arm => {
       const allocation = allocations.find(a => a.armId === arm.id);
       const currentBudget = arm.currentBudget;
-      const recommendedBudget = allocation?.allocation || currentBudget;
+      const recommendedBudget = allocation?.proposedDailyBudget || currentBudget;
 
       return {
         campaignId: arm.id,
         currentBudget,
         recommendedBudget,
-        confidence: allocation?.confidence || 0,
-        expectedValue: allocation?.expectedValue || 0,
-        changePercent: ((recommendedBudget - currentBudget) / currentBudget * 100)
+        confidence: allocation?.thompsonScore || 0,
+        expectedValue: allocation?.expectedImprovement || 0,
+        changePercent: currentBudget > 0 ? ((recommendedBudget - currentBudget) / currentBudget * 100) : 0
       };
     });
   }

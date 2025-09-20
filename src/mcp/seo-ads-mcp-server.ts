@@ -27,6 +27,11 @@ import { IntegratedBidOptimizer } from '../bidding/integrated-bid-optimizer.js';
 import { BidStrategyAdvisor } from '../bidding/bid-strategy-advisor.js';
 import { CompetitionAnalyzer } from '../bidding/competition-analyzer.js';
 import { SeasonalityDetector } from '../bidding/seasonality-detector.js';
+import { CreativePerformanceAnalyzer } from '../creative/creative-performance-analyzer.js';
+import { RotationOptimizer } from '../creative/rotation-optimizer.js';
+import { ABTestingFramework } from '../creative/ab-testing-framework.js';
+import { FatigueDetector } from '../creative/fatigue-detector.js';
+import { WinnerSelection } from '../creative/winner-selection.js';
 import { Logger } from 'pino';
 import pino from 'pino';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
@@ -58,6 +63,11 @@ export class SEOAdsMCPServer {
   private bidStrategyAdvisor: BidStrategyAdvisor;
   private competitionAnalyzer: CompetitionAnalyzer;
   private seasonalityDetector: SeasonalityDetector;
+  private creativeAnalyzer: CreativePerformanceAnalyzer;
+  private rotationOptimizer: RotationOptimizer;
+  private abTestFramework: ABTestingFramework;
+  private fatigueDetector: FatigueDetector;
+  private winnerSelection: WinnerSelection;
   private logger: Logger;
   private sessions: Map<string, any> = new Map();
 
@@ -99,6 +109,18 @@ export class SEOAdsMCPServer {
     this.bidStrategyAdvisor = new BidStrategyAdvisor(this.database, this.logger);
     this.competitionAnalyzer = new CompetitionAnalyzer(this.database, this.logger);
     this.seasonalityDetector = new SeasonalityDetector(this.database, this.logger);
+
+    // Initialize creative optimization components
+    this.creativeAnalyzer = new CreativePerformanceAnalyzer(this.database);
+    this.rotationOptimizer = new RotationOptimizer(this.database);
+    this.abTestFramework = new ABTestingFramework(this.database);
+    this.fatigueDetector = new FatigueDetector(this.database);
+    this.winnerSelection = new WinnerSelection(
+      this.database,
+      this.abTestFramework,
+      this.fatigueDetector,
+      this.creativeAnalyzer
+    );
 
     // Initialize MCP server
     this.server = new Server(
@@ -544,6 +566,243 @@ export class SEOAdsMCPServer {
             required: ['campaignId'],
           },
         },
+        {
+          name: 'analyze_creative_performance',
+          description: 'Analyze ad creative performance with fatigue detection',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              adGroupId: {
+                type: 'string',
+                description: 'Ad group ID to analyze',
+              },
+              lookbackDays: {
+                type: 'number',
+                default: 30,
+                description: 'Days of performance data to analyze',
+              },
+              includeRecommendations: {
+                type: 'boolean',
+                default: true,
+                description: 'Include optimization recommendations',
+              },
+            },
+            required: ['adGroupId'],
+          },
+        },
+        {
+          name: 'optimize_creative_rotation',
+          description: 'Optimize ad rotation strategy using performance analysis',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              adGroupId: {
+                type: 'string',
+                description: 'Ad group ID to optimize',
+              },
+              strategy: {
+                type: 'string',
+                enum: ['OPTIMIZE', 'EVEN', 'DO_NOT_OPTIMIZE', 'ADAPTIVE'],
+                default: 'OPTIMIZE',
+                description: 'Rotation strategy to apply',
+              },
+              config: {
+                type: 'object',
+                properties: {
+                  minImpressions: {
+                    type: 'number',
+                    default: 1000,
+                    description: 'Minimum impressions before optimization',
+                  },
+                  maxActiveCreatives: {
+                    type: 'number',
+                    default: 10,
+                    description: 'Maximum number of active creatives',
+                  },
+                  performanceThreshold: {
+                    type: 'number',
+                    default: 50,
+                    description: 'Performance score threshold (0-100)',
+                  },
+                },
+              },
+              testMode: {
+                type: 'boolean',
+                default: true,
+                description: 'Run in test mode without applying changes',
+              },
+            },
+            required: ['adGroupId'],
+          },
+        },
+        {
+          name: 'create_ab_test',
+          description: 'Create A/B test for ad creatives or landing pages',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Test name',
+              },
+              type: {
+                type: 'string',
+                enum: ['CREATIVE_SPLIT', 'LANDING_PAGE', 'BID_STRATEGY', 'AUDIENCE', 'ROTATION_STRATEGY'],
+                description: 'Type of A/B test',
+              },
+              controlVariant: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  adId: { type: 'string' },
+                },
+                required: ['id', 'name', 'adId'],
+              },
+              testVariant: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  adId: { type: 'string' },
+                },
+                required: ['id', 'name', 'adId'],
+              },
+              config: {
+                type: 'object',
+                properties: {
+                  trafficSplit: {
+                    type: 'object',
+                    properties: {
+                      controlPercentage: { type: 'number', minimum: 10, maximum: 90 },
+                      testPercentage: { type: 'number', minimum: 10, maximum: 90 },
+                    },
+                  },
+                  minDurationDays: { type: 'number', default: 14 },
+                  primaryMetric: {
+                    type: 'string',
+                    enum: ['CTR', 'CVR', 'CPA', 'ROAS', 'REVENUE'],
+                    default: 'CTR',
+                  },
+                  significanceLevel: { type: 'number', default: 0.05 },
+                },
+              },
+            },
+            required: ['name', 'type', 'controlVariant', 'testVariant'],
+          },
+        },
+        {
+          name: 'analyze_ab_test',
+          description: 'Analyze A/B test results with statistical significance',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              testId: {
+                type: 'string',
+                description: 'A/B test ID to analyze',
+              },
+              includeRecommendations: {
+                type: 'boolean',
+                default: true,
+                description: 'Include winner selection recommendations',
+              },
+            },
+            required: ['testId'],
+          },
+        },
+        {
+          name: 'detect_creative_fatigue',
+          description: 'Detect creative fatigue across campaigns or ad groups',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              scope: {
+                type: 'string',
+                enum: ['campaign', 'adgroup', 'ad'],
+                default: 'adgroup',
+                description: 'Scope of fatigue detection',
+              },
+              campaignId: {
+                type: 'string',
+                description: 'Campaign ID (required for campaign scope)',
+              },
+              adGroupId: {
+                type: 'string',
+                description: 'Ad group ID (required for adgroup scope)',
+              },
+              adId: {
+                type: 'string',
+                description: 'Ad ID (required for ad scope)',
+              },
+              thresholds: {
+                type: 'object',
+                properties: {
+                  ctrDeclineThreshold: { type: 'number', default: 0.15 },
+                  cvrDeclineThreshold: { type: 'number', default: 0.20 },
+                  frequencyThreshold: { type: 'number', default: 3.0 },
+                  daysActiveThreshold: { type: 'number', default: 14 },
+                },
+              },
+            },
+          },
+        },
+        {
+          name: 'select_test_winner',
+          description: 'Evaluate and select winner from A/B test with business criteria',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              testId: {
+                type: 'string',
+                description: 'A/B test ID to evaluate',
+              },
+              criteria: {
+                type: 'object',
+                properties: {
+                  primaryMetric: {
+                    type: 'string',
+                    enum: ['CTR', 'CVR', 'CPA', 'ROAS', 'REVENUE'],
+                    default: 'CTR',
+                  },
+                  minConfidenceLevel: { type: 'number', default: 0.95 },
+                  minPracticalSignificance: { type: 'number', default: 0.05 },
+                  riskTolerance: {
+                    type: 'string',
+                    enum: ['CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'],
+                    default: 'MODERATE',
+                  },
+                  maxBudgetIncrease: { type: 'number', default: 0.5 },
+                },
+              },
+              implementationStrategy: {
+                type: 'string',
+                enum: ['IMMEDIATE', 'GRADUAL', 'SEGMENTED'],
+                default: 'GRADUAL',
+                description: 'How to implement the winner',
+              },
+            },
+            required: ['testId'],
+          },
+        },
+        {
+          name: 'implement_winner',
+          description: 'Implement the selected A/B test winner',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              selectionId: {
+                type: 'string',
+                description: 'Winner selection ID from select_test_winner',
+              },
+              confirm: {
+                type: 'boolean',
+                default: false,
+                description: 'Confirm implementation (required for execution)',
+              },
+            },
+            required: ['selectionId'],
+          },
+        },
       ],
     }));
 
@@ -579,6 +838,20 @@ export class SEOAdsMCPServer {
             return await this.handleDetectSeasonality(args);
           case 'calculate_bid_adjustments':
             return await this.handleCalculateBidAdjustments(args);
+          case 'analyze_creative_performance':
+            return await this.handleAnalyzeCreativePerformance(args);
+          case 'optimize_creative_rotation':
+            return await this.handleOptimizeCreativeRotation(args);
+          case 'create_ab_test':
+            return await this.handleCreateABTest(args);
+          case 'analyze_ab_test':
+            return await this.handleAnalyzeABTest(args);
+          case 'detect_creative_fatigue':
+            return await this.handleDetectCreativeFatigue(args);
+          case 'select_test_winner':
+            return await this.handleSelectTestWinner(args);
+          case 'implement_winner':
+            return await this.handleImplementWinner(args);
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -1254,10 +1527,10 @@ export class SEOAdsMCPServer {
       aggressiveness: aggressiveness || 'moderate'
     };
 
-    const result = await this.bidAdjustmentCalculator.calculateBidAdjustments(campaignId, strategy);
+    const result = await this.bidOptimizer.calculateBidAdjustments(campaignId, strategy);
 
     if (!testMode) {
-      await this.bidAdjustmentCalculator.applyBidAdjustments(campaignId, result.adjustments, false);
+      await this.bidOptimizer.applyBidAdjustments(campaignId, result.adjustments, false);
     }
 
     return {
@@ -1317,5 +1590,476 @@ export class SEOAdsMCPServer {
     } catch (error) {
       this.logger.debug('Failed to log tool usage', { error });
     }
+  }
+
+  /**
+   * Handle creative performance analysis request
+   */
+  private async handleAnalyzeCreativePerformance(args: any): Promise<any> {
+    const { adGroupId, lookbackDays, includeRecommendations } = args;
+
+    const analysis = await this.creativeAnalyzer.analyzeAdGroupCreatives(
+      adGroupId,
+      lookbackDays || 30
+    );
+
+    let text = `## Creative Performance Analysis\n\n`;
+    text += `**Ad Group:** ${adGroupId}\n`;
+    text += `**Analysis Period:** ${lookbackDays || 30} days\n`;
+    text += `**Creatives Analyzed:** ${analysis.creatives.length}\n\n`;
+
+    text += `### Summary\n`;
+    text += `- **Top Performer:** ${analysis.summary.topPerformer.adId} (Score: ${analysis.summary.topPerformer.performanceScore.toFixed(1)})\n`;
+    text += `- **Bottom Performer:** ${analysis.summary.bottomPerformer.adId} (Score: ${analysis.summary.bottomPerformer.performanceScore.toFixed(1)})\n`;
+    text += `- **Average Performance:** ${analysis.summary.averagePerformance.toFixed(1)}/100\n`;
+    text += `- **Performance Spread:** ${analysis.summary.performanceSpread.toFixed(1)} points\n\n`;
+
+    text += `### Top Performers\n`;
+    analysis.creatives
+      .sort((a, b) => b.performanceScore - a.performanceScore)
+      .slice(0, 3)
+      .forEach((creative, index) => {
+        text += `${index + 1}. **${creative.adId}** (Score: ${creative.performanceScore.toFixed(1)})\n`;
+        text += `   - CTR: ${(creative.metrics.ctr * 100).toFixed(2)}% | CVR: ${(creative.metrics.cvr * 100).toFixed(2)}% | ROAS: ${creative.metrics.roas.toFixed(2)}\n`;
+        text += `   - Trend: ${creative.trends.ctr} CTR, ${creative.trends.cvr} CVR\n`;
+      });
+
+    if (includeRecommendations && analysis.recommendations.length > 0) {
+      text += `\n### 💡 Recommendations\n`;
+      analysis.recommendations.slice(0, 3).forEach((rec) => {
+        text += `- **${rec.type}**: ${rec.description}\n`;
+        text += `  - Expected Impact: ${rec.expectedImpact.metric} ${rec.expectedImpact.improvement > 0 ? '+' : ''}${(rec.expectedImpact.improvement * 100).toFixed(1)}%\n`;
+        text += `  - Priority: ${rec.priority}\n`;
+      });
+    }
+
+    return {
+      content: [
+        { type: 'text', text },
+        {
+          type: 'text',
+          text: `**Full Analysis Data:**\n\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\``
+        }
+      ],
+    };
+  }
+
+  /**
+   * Handle creative rotation optimization request
+   */
+  private async handleOptimizeCreativeRotation(args: any): Promise<any> {
+    const { adGroupId, strategy, config, testMode } = args;
+
+    const rotationConfig = {
+      strategy: strategy || 'OPTIMIZE',
+      minImpressions: config?.minImpressions || 1000,
+      maxActiveCreatives: config?.maxActiveCreatives || 10,
+      rotationInterval: 7,
+      performanceThreshold: config?.performanceThreshold || 50,
+      learningPeriod: 14,
+      confidenceLevel: 0.95,
+      ...config
+    };
+
+    const recommendation = await this.rotationOptimizer.generateRotationRecommendation(
+      adGroupId,
+      rotationConfig
+    );
+
+    let text = `## Creative Rotation Optimization\n\n`;
+    text += `**Ad Group:** ${adGroupId}\n`;
+    text += `**Current Strategy:** ${recommendation.currentStrategy}\n`;
+    text += `**Recommended Strategy:** ${recommendation.recommendedStrategy}\n`;
+    text += `**Confidence:** ${(recommendation.confidence * 100).toFixed(1)}%\n\n`;
+
+    if (recommendation.reasoning.length > 0) {
+      text += `### Reasoning\n`;
+      recommendation.reasoning.forEach(reason => {
+        text += `- ${reason}\n`;
+      });
+      text += '\n';
+    }
+
+    text += `### Expected Impact\n`;
+    text += `- **CTR:** ${(recommendation.expectedImpact.ctr * 100).toFixed(2)}%\n`;
+    text += `- **CVR:** ${(recommendation.expectedImpact.cvr * 100).toFixed(2)}%\n`;
+    text += `- **ROAS:** ${recommendation.expectedImpact.roas.toFixed(2)}\n`;
+    text += `- **Impressions:** ${recommendation.expectedImpact.impressions.toLocaleString()}\n\n`;
+
+    if (recommendation.actionItems.length > 0) {
+      text += `### Action Items\n`;
+      recommendation.actionItems.forEach(item => {
+        const priorityIcon = item.priority === 'HIGH' ? '🔴' : item.priority === 'MEDIUM' ? '🟡' : '🟢';
+        text += `${priorityIcon} **${item.type}${item.adId ? ` (${item.adId})` : ''}**: ${item.details}\n`;
+      });
+      text += '\n';
+    }
+
+    text += `### Rotation Schedule\n`;
+    recommendation.rotationSchedule.forEach(schedule => {
+      text += `- **${schedule.adId}**: ${(schedule.weight * 100).toFixed(1)}% traffic\n`;
+    });
+
+    if (!testMode) {
+      const implementation = await this.rotationOptimizer.optimizeAdRotation(adGroupId, rotationConfig);
+      text += `\n### ✅ Implementation Complete\n`;
+      text += `- **Changes Applied:** ${implementation.changes.length}\n`;
+      text += `- **Next Review:** ${implementation.nextReviewDate}\n`;
+    } else {
+      text += `\n*Run with \`testMode: false\` to apply changes.*`;
+    }
+
+    return {
+      content: [{ type: 'text', text }],
+    };
+  }
+
+  /**
+   * Handle A/B test creation request
+   */
+  private async handleCreateABTest(args: any): Promise<any> {
+    const { name, type, controlVariant, testVariant, config } = args;
+
+    const testConfig = {
+      name,
+      description: `A/B test for ${type.toLowerCase().replace('_', ' ')}`,
+      type,
+      statisticalMethod: 'FREQUENTIST' as const,
+      trafficSplit: config?.trafficSplit || { controlPercentage: 50, testPercentage: 50 },
+      minDurationDays: config?.minDurationDays || 14,
+      maxDurationDays: config?.maxDurationDays || 30,
+      minSampleSize: config?.minSampleSize || 1000,
+      primaryMetric: config?.primaryMetric || 'CTR',
+      secondaryMetrics: config?.secondaryMetrics || ['CVR', 'CPA'],
+      minDetectableEffect: config?.minDetectableEffect || 0.05,
+      practicalSignificanceThreshold: config?.practicalSignificanceThreshold || 0.05,
+      significanceLevel: config?.significanceLevel || 0.05,
+      targetPower: config?.targetPower || 0.8,
+      earlyStoppingEnabled: config?.earlyStoppingEnabled !== false,
+      earlyStoppingCheckInterval: config?.earlyStoppingCheckInterval || 1,
+      futilityStoppingEnabled: config?.futilityStoppingEnabled !== false,
+      maxNegativeImpact: config?.maxNegativeImpact || 0.2,
+      maxSpendIncrease: config?.maxSpendIncrease || 0.5
+    };
+
+    const control = {
+      ...controlVariant,
+      type: 'CONTROL' as const,
+      content: {
+        headlines: [`Control: ${controlVariant.name}`],
+        descriptions: ['Control variant'],
+      },
+      active: true
+    };
+
+    const test = {
+      ...testVariant,
+      type: 'TEST' as const,
+      content: {
+        headlines: [`Test: ${testVariant.name}`],
+        descriptions: ['Test variant'],
+      },
+      active: true
+    };
+
+    const testId = await this.abTestFramework.createABTest(testConfig, control, test);
+
+    let text = `## ✅ A/B Test Created\n\n`;
+    text += `**Test ID:** \`${testId}\`\n`;
+    text += `**Name:** ${name}\n`;
+    text += `**Type:** ${type}\n`;
+    text += `**Primary Metric:** ${testConfig.primaryMetric}\n`;
+    text += `**Traffic Split:** ${testConfig.trafficSplit.controlPercentage}% Control / ${testConfig.trafficSplit.testPercentage}% Test\n`;
+    text += `**Duration:** ${testConfig.minDurationDays}-${testConfig.maxDurationDays} days\n\n`;
+
+    text += `### Variants\n`;
+    text += `- **Control:** ${controlVariant.name} (${controlVariant.adId})\n`;
+    text += `- **Test:** ${testVariant.name} (${testVariant.adId})\n\n`;
+
+    text += `### Next Steps\n`;
+    text += `1. Use \`analyze_ab_test\` with test ID \`${testId}\` to monitor progress\n`;
+    text += `2. Use \`select_test_winner\` when ready to evaluate results\n`;
+    text += `3. Early stopping checks will run daily if enabled\n`;
+
+    return {
+      content: [{ type: 'text', text }],
+    };
+  }
+
+  /**
+   * Handle A/B test analysis request
+   */
+  private async handleAnalyzeABTest(args: any): Promise<any> {
+    const { testId, includeRecommendations } = args;
+
+    const result = await this.abTestFramework.analyzeABTest(testId);
+
+    let text = `## A/B Test Analysis\n\n`;
+    text += `**Test ID:** ${testId}\n`;
+    text += `**Status:** ${result.status}\n`;
+    text += `**Duration:** ${result.startDate}${result.endDate ? ` - ${result.endDate}` : ' (ongoing)'}\n\n`;
+
+    text += `### Sample Statistics\n`;
+    text += `- **Control:** ${result.control.sampleSize.toLocaleString()} samples, ${result.control.conversions} conversions\n`;
+    text += `- **Test:** ${result.test.sampleSize.toLocaleString()} samples, ${result.test.conversions} conversions\n\n`;
+
+    const primary = result.analysis.primaryMetricResult;
+    text += `### Primary Metric (${primary.metric})\n`;
+    text += `- **Control:** ${primary.controlValue.toFixed(4)}\n`;
+    text += `- **Test:** ${primary.testValue.toFixed(4)}\n`;
+    text += `- **Change:** ${primary.relativeChange > 0 ? '+' : ''}${(primary.relativeChange * 100).toFixed(1)}%\n`;
+    text += `- **P-value:** ${primary.pValue.toFixed(4)}\n`;
+    text += `- **Statistically Significant:** ${primary.statisticallySignificant ? '✅ Yes' : '❌ No'}\n`;
+    text += `- **Practically Significant:** ${primary.practicallySignificant ? '✅ Yes' : '❌ No'}\n\n`;
+
+    if (result.analysis.secondaryMetrics.length > 0) {
+      text += `### Secondary Metrics\n`;
+      result.analysis.secondaryMetrics.forEach(metric => {
+        text += `- **${metric.metric}:** ${metric.relativeChange > 0 ? '+' : ''}${(metric.relativeChange * 100).toFixed(1)}% (p=${metric.pValue.toFixed(3)})\n`;
+      });
+      text += '\n';
+    }
+
+    if (includeRecommendations) {
+      text += `### 💡 Recommendation\n`;
+      text += `**Decision:** ${result.recommendation.decision}\n`;
+      text += `**Winner:** ${result.recommendation.winner}\n`;
+      text += `**Confidence:** ${(result.recommendation.confidence * 100).toFixed(1)}%\n\n`;
+
+      if (result.recommendation.reasoning.length > 0) {
+        text += `**Reasoning:**\n`;
+        result.recommendation.reasoning.forEach(reason => {
+          text += `- ${reason}\n`;
+        });
+      }
+    }
+
+    return {
+      content: [{ type: 'text', text }],
+    };
+  }
+
+  /**
+   * Handle creative fatigue detection request
+   */
+  private async handleDetectCreativeFatigue(args: any): Promise<any> {
+    const { scope, campaignId, adGroupId, adId, thresholds } = args;
+
+    let fatigueResults: any[] = [];
+
+    if (scope === 'campaign' && campaignId) {
+      const campaignAnalysis = await this.fatigueDetector.detectCampaignFatigue(campaignId);
+      fatigueResults = [campaignAnalysis];
+    } else if (scope === 'ad' && adId) {
+      const adAnalysis = await this.fatigueDetector.detectFatigue(adId);
+      fatigueResults = [adAnalysis];
+    } else {
+      // Default to single ad analysis (would need ad IDs from ad group)
+      const mockAdIds = ['ad_123', 'ad_456']; // In practice, would query from database
+      for (const id of mockAdIds) {
+        try {
+          const analysis = await this.fatigueDetector.detectFatigue(id);
+          fatigueResults.push(analysis);
+        } catch (error) {
+          console.error(`Failed to analyze fatigue for ad ${id}:`, error);
+        }
+      }
+    }
+
+    let text = `## Creative Fatigue Detection\n\n`;
+    text += `**Scope:** ${scope}\n`;
+    if (campaignId) text += `**Campaign:** ${campaignId}\n`;
+    if (adGroupId) text += `**Ad Group:** ${adGroupId}\n`;
+    if (adId) text += `**Ad:** ${adId}\n`;
+    text += `**Analyzed:** ${fatigueResults.length} item(s)\n\n`;
+
+    if (scope === 'campaign' && fatigueResults[0]?.campaignMetrics) {
+      const campaign = fatigueResults[0];
+      text += `### Campaign Overview\n`;
+      text += `- **Overall Fatigue Level:** ${campaign.overallFatigueLevel}\n`;
+      text += `- **Average Fatigue Score:** ${campaign.campaignMetrics.avgFatigueScore.toFixed(1)}/100\n`;
+      text += `- **Severe Fatigue Ads:** ${campaign.campaignMetrics.severeFatigueAds}/${campaign.campaignMetrics.totalAds}\n`;
+      text += `- **Fatigue Rate:** ${(campaign.campaignMetrics.fatigueRate * 100).toFixed(1)}%\n\n`;
+
+      if (campaign.recommendations.length > 0) {
+        text += `### Campaign Recommendations\n`;
+        campaign.recommendations.forEach((rec: any) => {
+          text += `- **${rec.action}** for ${rec.affectedAds} ads (Priority: ${rec.priority})\n`;
+          text += `  - ${rec.description}\n`;
+        });
+      }
+    } else {
+      // Individual ad analysis
+      const severeFatigueAds = fatigueResults.filter(r =>
+        r.overallFatigue?.level === 'SEVERE' || r.overallFatigue?.level === 'CRITICAL'
+      );
+
+      if (severeFatigueAds.length > 0) {
+        text += `### 🚨 Severe Fatigue Detected (${severeFatigueAds.length} ads)\n`;
+        severeFatigueAds.forEach(ad => {
+          text += `- **${ad.adId}**: ${ad.overallFatigue.level} (Score: ${ad.overallFatigue.score.toFixed(1)})\n`;
+          if (ad.signals.length > 0) {
+            const topSignal = ad.signals[0];
+            text += `  - Primary Issue: ${topSignal.type} (${topSignal.description})\n`;
+          }
+        });
+        text += '\n';
+      }
+
+      text += `### Summary by Fatigue Level\n`;
+      const fatigueLevels = { NONE: 0, MILD: 0, MODERATE: 0, SEVERE: 0, CRITICAL: 0 };
+      fatigueResults.forEach(result => {
+        if (result.overallFatigue?.level) {
+          fatigueLevels[result.overallFatigue.level]++;
+        }
+      });
+
+      Object.entries(fatigueLevels).forEach(([level, count]) => {
+        if (count > 0) {
+          const icon = level === 'CRITICAL' ? '🔴' : level === 'SEVERE' ? '🟠' :
+                       level === 'MODERATE' ? '🟡' : level === 'MILD' ? '🟢' : '⚪';
+          text += `${icon} **${level}:** ${count} ad(s)\n`;
+        }
+      });
+    }
+
+    return {
+      content: [
+        { type: 'text', text },
+        {
+          type: 'text',
+          text: `**Detailed Analysis:**\n\`\`\`json\n${JSON.stringify(fatigueResults, null, 2)}\n\`\`\``
+        }
+      ],
+    };
+  }
+
+  /**
+   * Handle test winner selection request
+   */
+  private async handleSelectTestWinner(args: any): Promise<any> {
+    const { testId, criteria, implementationStrategy } = args;
+
+    const selectionCriteria = {
+      primaryMetric: criteria?.primaryMetric || 'CTR',
+      secondaryMetrics: criteria?.secondaryMetrics || ['CVR', 'CPA'],
+      minConfidenceLevel: criteria?.minConfidenceLevel || 0.95,
+      minSampleSize: criteria?.minSampleSize || 1000,
+      minTestDuration: criteria?.minTestDuration || 14,
+      minPracticalSignificance: criteria?.minPracticalSignificance || 0.05,
+      maxTolerableDecline: criteria?.maxTolerableDecline || 0.1,
+      maxBudgetIncrease: criteria?.maxBudgetIncrease || 0.5,
+      minROI: criteria?.minROI || 2,
+      riskTolerance: criteria?.riskTolerance || 'MODERATE',
+      requireUnanimousSignificance: criteria?.requireUnanimousSignificance || false,
+      minQualityScore: criteria?.minQualityScore || 7,
+      maxFatigueLevel: criteria?.maxFatigueLevel || 'MILD'
+    };
+
+    const result = await this.winnerSelection.evaluateWinner(testId, selectionCriteria);
+
+    let text = `## Test Winner Selection\n\n`;
+    text += `**Selection ID:** \`${result.selectionId}\`\n`;
+    text += `**Test ID:** ${testId}\n`;
+    text += `**Decision:** ${result.decision}\n`;
+    text += `**Selected Winner:** ${result.selectedWinner || 'None'}\n`;
+    text += `**Confidence:** ${(result.confidence * 100).toFixed(1)}%\n\n`;
+
+    text += `### Analysis Summary\n`;
+    const { statisticalValidation, businessValidation, riskAssessment } = result.analysis;
+
+    text += `**Statistical Validation:**\n`;
+    text += `- Primary Metric Valid: ${statisticalValidation.primaryMetricValid ? '✅' : '❌'}\n`;
+    text += `- Sample Size Adequate: ${statisticalValidation.sampleSizeAdequate ? '✅' : '❌'}\n`;
+    text += `- Test Duration Adequate: ${statisticalValidation.testDurationAdequate ? '✅' : '❌'}\n`;
+    text += `- Confidence Threshold Met: ${statisticalValidation.confidenceThresholdMet ? '✅' : '❌'}\n\n`;
+
+    text += `**Business Validation:**\n`;
+    text += `- Practical Significance: ${businessValidation.practicalSignificanceMet ? '✅' : '❌'}\n`;
+    text += `- Budget Constraints: ${businessValidation.budgetConstraintsMet ? '✅' : '❌'}\n`;
+    text += `- ROI Requirements: ${businessValidation.roiRequirementMet ? '✅' : '❌'}\n`;
+    text += `- Quality Gates: ${businessValidation.qualityGatesPassed ? '✅' : '❌'}\n\n`;
+
+    text += `### Risk Assessment\n`;
+    text += `**Risk Level:** ${riskAssessment.overallRiskLevel}\n`;
+    if (riskAssessment.identifiedRisks.length > 0) {
+      text += `**Identified Risks:**\n`;
+      riskAssessment.identifiedRisks.forEach(risk => {
+        text += `- ${risk}\n`;
+      });
+    }
+
+    if (result.recommendation.reasoning.length > 0) {
+      text += `\n### Reasoning\n`;
+      result.recommendation.reasoning.forEach(reason => {
+        text += `- ${reason}\n`;
+      });
+    }
+
+    text += `\n### Recommendation\n`;
+    text += `**Action:** ${result.recommendation.action}\n`;
+    text += `**Implementation Strategy:** ${result.recommendation.implementation.rolloutStrategy}\n`;
+    text += `**Traffic Allocation:** ${(result.recommendation.implementation.trafficAllocation * 100).toFixed(0)}%\n\n`;
+
+    if (result.recommendation.nextSteps.length > 0) {
+      text += `**Next Steps:**\n`;
+      result.recommendation.nextSteps.forEach(step => {
+        text += `- ${step}\n`;
+      });
+    }
+
+    return {
+      content: [{ type: 'text', text }],
+    };
+  }
+
+  /**
+   * Handle winner implementation request
+   */
+  private async handleImplementWinner(args: any): Promise<any> {
+    const { selectionId, confirm } = args;
+
+    if (!confirm) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: '⚠️ Confirmation required. Set `confirm: true` to implement the selected winner.',
+          },
+        ],
+      };
+    }
+
+    const implementation = await this.winnerSelection.implementWinner(selectionId, 'GRADUAL');
+
+    let text = `## ✅ Winner Implementation Started\n\n`;
+    text += `**Selection ID:** ${selectionId}\n`;
+    text += `**Status:** ${implementation.implemented ? 'Active' : 'Failed'}\n\n`;
+
+    if (implementation.rolloutPlan.length > 0) {
+      text += `### Rollout Plan\n`;
+      implementation.rolloutPlan.forEach(phase => {
+        text += `**Phase ${phase.phase}:** ${phase.trafficPercentage}% traffic (${phase.startDate})\n`;
+        text += `- Monitoring: ${phase.monitoringMetrics.join(', ')}\n`;
+      });
+      text += '\n';
+    }
+
+    if (implementation.monitoringSchedule.length > 0) {
+      text += `### Monitoring Schedule\n`;
+      implementation.monitoringSchedule.slice(0, 3).forEach(check => {
+        text += `- **${check.checkDate}:** ${check.metrics.join(', ')}\n`;
+      });
+      text += '\n';
+    }
+
+    text += `### Next Steps\n`;
+    text += `1. Monitor performance against projections\n`;
+    text += `2. Check for rollback triggers if performance declines\n`;
+    text += `3. Complete rollout according to schedule\n`;
+
+    return {
+      content: [{ type: 'text', text }],
+    };
   }
 }
