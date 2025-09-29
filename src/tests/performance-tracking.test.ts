@@ -37,13 +37,13 @@ describe('MetricPoller', () => {
         date TEXT NOT NULL,
         engine TEXT NOT NULL,
         campaign_id TEXT NOT NULL,
-        ad_group_id TEXT,
+        ad_group_id TEXT NOT NULL DEFAULT '',
         clicks INTEGER DEFAULT 0,
         impressions INTEGER DEFAULT 0,
         cost NUMERIC DEFAULT 0,
         conversions INTEGER DEFAULT 0,
         conversion_value NUMERIC DEFAULT 0,
-        PRIMARY KEY (date, engine, campaign_id, COALESCE(ad_group_id, ''))
+        PRIMARY KEY (date, engine, campaign_id, ad_group_id)
       );
 
       CREATE TABLE optimization_recommendations (
@@ -468,13 +468,13 @@ describe('MetricAggregator', () => {
         date TEXT NOT NULL,
         engine TEXT NOT NULL,
         campaign_id TEXT NOT NULL,
-        ad_group_id TEXT,
+        ad_group_id TEXT NOT NULL DEFAULT '',
         clicks INTEGER DEFAULT 0,
         impressions INTEGER DEFAULT 0,
         cost NUMERIC DEFAULT 0,
         conversions INTEGER DEFAULT 0,
         conversion_value NUMERIC DEFAULT 0,
-        PRIMARY KEY (date, engine, campaign_id, COALESCE(ad_group_id, ''))
+        PRIMARY KEY (date, engine, campaign_id, ad_group_id)
       );
 
       CREATE TABLE ts_arms (
@@ -643,13 +643,13 @@ describe('Integration Tests', () => {
         date TEXT NOT NULL,
         engine TEXT NOT NULL,
         campaign_id TEXT NOT NULL,
-        ad_group_id TEXT,
+        ad_group_id TEXT NOT NULL DEFAULT '',
         clicks INTEGER DEFAULT 0,
         impressions INTEGER DEFAULT 0,
         cost NUMERIC DEFAULT 0,
         conversions INTEGER DEFAULT 0,
         conversion_value NUMERIC DEFAULT 0,
-        PRIMARY KEY (date, engine, campaign_id, COALESCE(ad_group_id, ''))
+        PRIMARY KEY (date, engine, campaign_id, ad_group_id)
       );
 
       CREATE TABLE ts_arms (

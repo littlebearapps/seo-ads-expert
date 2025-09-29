@@ -55,6 +55,9 @@ export class DatabaseManager {
       // Initialize schema
       await this.initializeSchema();
 
+      // Run any pending migrations to ensure schema is up to date
+      await this.runMigrations();
+
       this.initialized = true;
       logger.info(`✅ Database initialized: ${this.config.path}`);
     } catch (error) {
@@ -83,6 +86,23 @@ export class DatabaseManager {
     this.db.pragma('temp_store = memory');
 
     logger.info('✅ Database pragmas configured');
+  }
+
+  /**
+   * Run database migrations to ensure schema is current
+   */
+  private async runMigrations(): Promise<void> {
+    try {
+      // Import MigrationRunner here to avoid circular dependencies
+      const { MigrationRunner } = await import('./migration-runner.js');
+      const runner = new MigrationRunner(this);
+
+      const result = await runner.runMigrations();
+      logger.info(`✅ Applied ${result.applied} migrations successfully`);
+    } catch (error) {
+      logger.error('❌ Failed to run migrations:', error);
+      throw error;
+    }
   }
 
   /**

@@ -7,6 +7,8 @@
  * - Multi-objective optimization with constraints
  */
 
+import { random } from '../test-utils/seeded-random.js';
+
 export interface Arm {
   id: string;
   name: string;
@@ -63,6 +65,14 @@ export class ThompsonSamplingOptimizer {
   constructor() {}
 
   /**
+   * Reset the optimizer state (for deterministic testing)
+   */
+  reset(): void {
+    // ThompsonSamplingOptimizer is stateless, so no internal state to reset
+    // This method exists for test compatibility
+  }
+
+  /**
    * Allocate budget using Thompson Sampling
    */
   allocateBudget(
@@ -73,8 +83,12 @@ export class ThompsonSamplingOptimizer {
     const allocations: AllocationResult[] = [];
     const explorationFloor = constraints.explorationFloor ?? this.DEFAULT_EXPLORATION_FLOOR;
 
+    // Apply currency caps before allocation to ensure proper proportions
+    const effectiveBudget = this.applyCurrencyCaps(totalBudget, constraints);
+
     // Track total sampled scores for normalization
     const sampledScores: Map<string, number> = new Map();
+    const explorationBonuses: Map<string, number> = new Map();
     let totalScore = 0;
 
     // Phase 1: Sample from posterior distributions
@@ -103,6 +117,7 @@ export class ThompsonSamplingOptimizer {
       const thompsonScore = expectedROAS * (1 + explorationBonus);
 
       sampledScores.set(arm.id, thompsonScore);
+      explorationBonuses.set(arm.id, explorationBonus);
       totalScore += thompsonScore;
     }
 
@@ -112,7 +127,7 @@ export class ThompsonSamplingOptimizer {
       const scoreRatio = thompsonScore / Math.max(totalScore, 0.001);
 
       // Calculate base allocation
-      let proposedBudget = totalBudget * scoreRatio;
+      let proposedBudget = effectiveBudget * scoreRatio;
 
       // Apply constraints
       proposedBudget = this.applyConstraints(
@@ -147,17 +162,42 @@ export class ThompsonSamplingOptimizer {
         confidenceInterval: this.calculateConfidenceInterval(arm, proposedBudget),
         reasoning,
         thompsonScore,
-        explorationBonus: sampledScores.get(arm.id)! / thompsonScore - 1
+        explorationBonus: explorationBonuses.get(arm.id) || 0
       });
     }
 
-    return this.normalizeAllocations(allocations, totalBudget, constraints);
+    return this.normalizeAllocations(allocations, effectiveBudget, constraints);
+  }
+
+  /**
+   * Apply currency-specific caps to total budget
+   */
+  private applyCurrencyCaps(
+    totalBudget: number,
+    constraints: BudgetConstraints
+  ): number {
+    let cappedBudget = totalBudget;
+
+    // Check each currency cap and apply the most restrictive one
+    if (constraints.daily_cap_AUD !== undefined) {
+      cappedBudget = Math.min(cappedBudget, constraints.daily_cap_AUD);
+    }
+
+    if (constraints.daily_cap_USD !== undefined) {
+      cappedBudget = Math.min(cappedBudget, constraints.daily_cap_USD);
+    }
+
+    if (constraints.daily_cap_GBP !== undefined) {
+      cappedBudget = Math.min(cappedBudget, constraints.daily_cap_GBP);
+    }
+
+    return cappedBudget;
   }
 
   /**
    * Bayesian posterior update for arm statistics
    */
-  private bayesianUpdate(arm: Arm): BayesianPosterior {
+  protected bayesianUpdate(arm: Arm): BayesianPosterior {
     // Prior parameters for conversion rate (Beta-Binomial)
     const cvr_priorAlpha = 1; // Uniform prior
     const cvr_priorBeta = 1;
@@ -180,7 +220,7 @@ export class ThompsonSamplingOptimizer {
   /**
    * Sample from Beta distribution using acceptance-rejection method
    */
-  private sampleBeta(alpha: number, beta: number): number {
+  protected sampleBeta(alpha: number, beta: number): number {
     // For numerical stability, use gamma sampling
     const gamma1 = this.sampleGamma(alpha, 1);
     const gamma2 = this.sampleGamma(beta, 1);
@@ -190,10 +230,10 @@ export class ThompsonSamplingOptimizer {
   /**
    * Sample from Gamma distribution using Marsaglia and Tsang's method
    */
-  private sampleGamma(shape: number, rate: number): number {
+  protected sampleGamma(shape: number, rate: number): number {
     if (shape < 1) {
       // Handle shape < 1 using the method from Kundu and Gupta
-      const u = Math.random();
+      const u = random();
       return this.sampleGamma(1 + shape, rate) * Math.pow(u, 1 / shape);
     }
 
@@ -207,7 +247,7 @@ export class ThompsonSamplingOptimizer {
 
       if (v <= 0) continue;
 
-      const u = Math.random();
+      const u = random();
       const xSquared = x * x;
 
       if (u < 1 - 0.0331 * xSquared * xSquared) {
@@ -224,8 +264,8 @@ export class ThompsonSamplingOptimizer {
    * Sample from standard normal distribution using Box-Muller transform
    */
   private sampleNormal(): number {
-    const u1 = Math.random();
-    const u2 = Math.random();
+    const u1 = random();
+    const u2 = random();
     return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   }
 
@@ -251,7 +291,7 @@ export class ThompsonSamplingOptimizer {
   /**
    * Apply budget constraints to proposed allocation
    */
-  private applyConstraints(
+  protected applyConstraints(
     proposedBudget: number,
     arm: Arm,
     constraints: BudgetConstraints
@@ -286,7 +326,7 @@ export class ThompsonSamplingOptimizer {
   /**
    * Calculate expected improvement from budget change
    */
-  private calculateExpectedImprovement(
+  protected calculateExpectedImprovement(
     arm: Arm,
     currentBudget: number,
     proposedBudget: number
@@ -377,7 +417,7 @@ export class ThompsonSamplingOptimizer {
   /**
    * Generate human-readable reasoning for allocation
    */
-  private generateReasoning(
+  protected generateReasoning(
     arm: Arm,
     thompsonScore: number,
     scoreRatio: number,
@@ -410,9 +450,9 @@ export class ThompsonSamplingOptimizer {
   }
 
   /**
-   * Normalize allocations to ensure they sum to total budget
+   * Normalize allocations to ensure they sum to total budget while respecting constraints
    */
-  private normalizeAllocations(
+  protected normalizeAllocations(
     allocations: AllocationResult[],
     totalBudget: number,
     constraints: BudgetConstraints
@@ -424,23 +464,64 @@ export class ThompsonSamplingOptimizer {
       return allocations; // Already normalized
     }
 
-    // Scale allocations proportionally
-    const scale = totalBudget / currentSum;
+    // Instead of proportional scaling that violates constraints,
+    // distribute the difference only among campaigns that can accept it
+    const diff = totalBudget - currentSum;
 
-    for (const allocation of allocations) {
-      allocation.proposedDailyBudget = Math.round(allocation.proposedDailyBudget * scale * 100) / 100;
-
-      // Reapply minimum constraint after scaling
-      const minBudget = constraints.min_per_campaign ?? constraints.minDailyBudget;
-      allocation.proposedDailyBudget = Math.max(allocation.proposedDailyBudget, minBudget);
+    if (Math.abs(diff) < 0.01) {
+      return allocations;
     }
 
-    // Final adjustment to match exactly
-    const finalSum = allocations.reduce((sum, a) => sum + a.proposedDailyBudget, 0);
-    if (Math.abs(finalSum - totalBudget) > 0.01 && allocations.length > 0) {
-      const diff = totalBudget - finalSum;
-      allocations[0].proposedDailyBudget += diff;
-      allocations[0].proposedDailyBudget = Math.round(allocations[0].proposedDailyBudget * 100) / 100;
+    // Find campaigns that can accept budget changes without violating constraints
+    const adjustableCampaigns = allocations.filter(allocation => {
+      // Find the original arm to get current budget
+      const currentBudget = allocation.currentDailyBudget || 0;
+
+      if (currentBudget === 0) return true; // New campaigns are fully adjustable
+
+      const maxChangePct = constraints.maxChangePercent ?? this.DEFAULT_MAX_CHANGE_PCT;
+      const maxIncrease = currentBudget * (1 + maxChangePct / 100);
+      const maxDecrease = currentBudget * (1 - maxChangePct / 100);
+
+      if (diff > 0) {
+        // Need to increase: check if campaign can accept more budget
+        return allocation.proposedDailyBudget < maxIncrease;
+      } else {
+        // Need to decrease: check if campaign can give up budget
+        return allocation.proposedDailyBudget > maxDecrease;
+      }
+    });
+
+    if (adjustableCampaigns.length === 0) {
+      // No campaigns can be adjusted, return as-is
+      return allocations;
+    }
+
+    // Distribute the difference among adjustable campaigns
+    const adjustmentPerCampaign = diff / adjustableCampaigns.length;
+
+    for (const allocation of adjustableCampaigns) {
+      const currentBudget = allocation.currentDailyBudget || 0;
+      let newBudget = allocation.proposedDailyBudget + adjustmentPerCampaign;
+
+      // Reapply constraints after adjustment
+      if (currentBudget > 0) {
+        const maxChangePct = constraints.maxChangePercent ?? this.DEFAULT_MAX_CHANGE_PCT;
+        const maxIncrease = currentBudget * (1 + maxChangePct / 100);
+        const maxDecrease = currentBudget * (1 - maxChangePct / 100);
+
+        newBudget = Math.min(newBudget, maxIncrease);
+        newBudget = Math.max(newBudget, maxDecrease);
+      }
+
+      // Apply min/max constraints
+      const minBudget = constraints.min_per_campaign ?? constraints.minDailyBudget;
+      const maxBudget = constraints.maxDailyBudget;
+
+      newBudget = Math.max(newBudget, minBudget);
+      newBudget = Math.min(newBudget, maxBudget);
+
+      allocation.proposedDailyBudget = Math.round(newBudget * 100) / 100;
     }
 
     return allocations;
