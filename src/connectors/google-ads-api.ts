@@ -593,6 +593,96 @@ export class GoogleAdsApiClient {
     }));
   }
 
+  // Phase 3A.4: Mutation Methods
+  async createCampaign(
+    customerId: string,
+    campaign: {
+      name: string;
+      budgetMicros: number;
+      status?: 'ENABLED' | 'PAUSED';
+      channelType?: string;
+    }
+  ): Promise<string> {
+    if (!this.isAuthenticated) {
+      throw new Error('Not authenticated');
+    }
+
+    // For now, return mock campaign ID since full mutation implementation
+    // requires google-ads-api package which isn't in the current setup
+    const campaignId = `campaign_${Date.now()}`;
+    logger.info(`Mock: Created campaign ${campaign.name} with ID ${campaignId}`);
+    return campaignId;
+  }
+
+  async updateCampaign(
+    customerId: string,
+    campaignId: string,
+    updates: {
+      name?: string;
+      status?: 'ENABLED' | 'PAUSED' | 'REMOVED';
+      budgetMicros?: number;
+    }
+  ): Promise<void> {
+    if (!this.isAuthenticated) {
+      throw new Error('Not authenticated');
+    }
+
+    // Mock implementation - would use google-ads-api mutate operation in production
+    logger.info(`Mock: Updated campaign ${campaignId}`, updates);
+  }
+
+  async getPerformanceMetrics(
+    customerId: string,
+    startDate: Date,
+    endDate: Date,
+    currency: string = 'USD'
+  ): Promise<{
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    cost: number;
+  }> {
+    const dateRange = {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
+    };
+
+    const query = new GAQLBuilder()
+      .select(
+        'metrics.impressions',
+        'metrics.clicks',
+        'metrics.conversions',
+        'metrics.cost_micros'
+      )
+      .from('campaign')
+      .where(`segments.date BETWEEN "${dateRange.startDate}" AND "${dateRange.endDate}"`)
+      .build();
+
+    try {
+      const response = await this.executeQuery(
+        customerId,
+        query,
+        (data) => data
+      );
+
+      // Aggregate metrics
+      const totals = response.results.reduce((acc, row: any) => ({
+        impressions: acc.impressions + (row.metrics?.impressions || 0),
+        clicks: acc.clicks + (row.metrics?.clicks || 0),
+        conversions: acc.conversions + (row.metrics?.conversions || 0),
+        cost: acc.cost + (Number(row.metrics?.cost_micros || 0) / 1_000_000)
+      }), { impressions: 0, clicks: 0, conversions: 0, cost: 0 });
+
+      // Currency conversion would go here if currency !== 'USD'
+      // For now, assume USD
+
+      return totals;
+    } catch (error) {
+      logger.error('Failed to fetch performance metrics:', error);
+      throw error;
+    }
+  }
+
   async reconcile(planned: any, customerId: string): Promise<ReconciliationReport> {
     const report: ReconciliationReport = {
       customerId,
