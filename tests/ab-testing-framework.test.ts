@@ -295,7 +295,7 @@ describe('A/B Testing Framework - Existing Implementation', () => {
       };
 
       const similarity = rsaVariantGenerator.checkSimilarity(variant1, variant2);
-      
+
       expect(similarity).toBeDefined();
       expect(similarity.score).toBeGreaterThan(0);
       expect(similarity.score).toBeLessThan(1);
@@ -393,11 +393,12 @@ describe('A/B Testing Framework - Existing Implementation', () => {
         await experimentManager.saveExperiment(completed);
       }
 
-      // Check that experiment was saved
-      const experimentsDir = path.join('plans', 'test-product', 'experiments');
-      const files = await fs.readdir(experimentsDir).catch(() => []);
-      
-      expect(files.length).toBeGreaterThan(0);
+      // Check that experiment was saved to database
+      const allExperiments = await experimentManager.listExperiments();
+      const savedExperiment = allExperiments.find(e => e.id === experiment.id);
+
+      expect(savedExperiment).toBeDefined();
+      expect(savedExperiment?.status).toBe('completed');
     });
   });
 });
