@@ -11,12 +11,14 @@ const logger = pino({
 
 /**
  * Comprehensive Authentication Testing Suite
- * 
+ *
  * Tests all Google API authentication methods with live credentials
  * to ensure proper access and permissions.
+ *
+ * NOTE: Skipped in CI/environments without credentials
  */
 
-describe('Google APIs Authentication Integration Tests', () => {
+describe.skipIf(!process.env.GOOGLE_ADS_DEVELOPER_TOKEN)('Google APIs Authentication Integration Tests', () => {
   let auth: any;
   let projectId: string;
   
