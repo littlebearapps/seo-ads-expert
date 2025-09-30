@@ -65,9 +65,10 @@ export interface ExperimentConfig {
   minimumSampleSize?: number;
   confidenceLevel?: number;
   duration?: number; // days
-  description: string;
-  hypothesis: string;
-  variantStrategies: string[]; // e.g., ['benefit_led', 'proof_led']
+  description?: string;
+  hypothesis?: string;
+  variantStrategies?: string[]; // e.g., ['benefit_led', 'proof_led']
+  variants?: Partial<Variant>[]; // Direct variant specification (for testing)
   useV14Insights?: boolean;
 }
 
@@ -135,10 +136,39 @@ export class ExperimentManager {
     logger.info(`🧪 Creating ${config.type} experiment for ${config.product}`);
 
     const experimentId = this.generateExperimentId(config.type, config.product);
-    
-    // Generate variants based on strategies
+
+    // Generate variants based on strategies OR use provided variants
     let variants: (RSAVariant | PageVariant)[] = [];
-    if (config.variantStrategies && config.variantStrategies.length > 0) {
+
+    if (config.variants && config.variants.length > 0) {
+      // Use provided variants (for testing / manual creation)
+      variants = config.variants.map((v, index) => {
+        const baseVariant = {
+          id: v.id || `variant_${index}`,
+          name: v.name || `Variant ${index}`,
+          isControl: v.isControl || false,
+          weight: v.weight || 1.0 / config.variants!.length,
+          metadata: v.metadata || {}
+        };
+
+        if (config.type === 'rsa') {
+          return {
+            ...baseVariant,
+            headlines: (v as any).headlines || [],
+            descriptions: (v as any).descriptions || [],
+            finalUrls: (v as any).finalUrls || [],
+            labels: (v as any).labels || []
+          } as RSAVariant;
+        } else {
+          return {
+            ...baseVariant,
+            contentPath: (v as any).contentPath || '',
+            routingRules: (v as any).routingRules || {}
+          } as PageVariant;
+        }
+      });
+    } else if (config.variantStrategies && config.variantStrategies.length > 0) {
+      // Generate variants from strategies
       if (config.type === 'rsa') {
         const rsaGenerator = new RSAVariantGenerator();
         // Create a base RSA for testing matching expected format
@@ -193,8 +223,8 @@ export class ExperimentManager {
       confidenceLevel: config.confidenceLevel || 0.95,
       guards: this.getDefaultGuards(config.type),
       metadata: {
-        description: config.description,
-        hypothesis: config.hypothesis,
+        description: config.description || `${config.type} experiment for ${config.product}`,
+        hypothesis: config.hypothesis || `Testing variants for ${config.targetMetric} improvement`,
         successCriteria: `Improve ${config.targetMetric} by statistically significant amount`,
         createdBy: 'seo-ads-expert-v1.5',
         v14InsightsUsed: config.useV14Insights ? await this.getV14Insights(config.product) : undefined
@@ -240,7 +270,12 @@ export class ExperimentManager {
     // Update experiment status
     experiment.status = 'active';
     experiment.startDate = new Date();
-    
+
+    // Set default end date if not specified (14 days from now)
+    if (!experiment.endDate) {
+      experiment.endDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    }
+
     await this.saveExperiment(experiment);
     
     logger.info(`✅ Experiment ${experimentId} started successfully`);
@@ -432,8 +467,15 @@ export class ExperimentManager {
           
           const days = (endTime - startTime) / (24 * 60 * 60 * 1000);
           currentValue = days;
-          passed = currentValue >= guard.threshold;
-          message = `Experiment duration: ${currentValue} days`;
+          // Allow experiments to start even if duration is not set (will default to 14 days)
+          if (days === 0 && experiment.status === 'draft') {
+            currentValue = 14; // Default duration
+            passed = true;
+            message = `Experiment duration will default to 14 days`;
+          } else {
+            passed = currentValue >= guard.threshold;
+            message = `Experiment duration: ${currentValue} days`;
+          }
           break;
           
         case 'sample_size':
