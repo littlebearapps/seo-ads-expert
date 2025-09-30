@@ -19,13 +19,17 @@ describe('A/B Testing Framework - Existing Implementation', () => {
   let testDbPath: string;
 
   beforeEach(async () => {
-    // Create test database
+    // Clean up any previous test artifacts
     testDbPath = path.join(process.cwd(), 'data', 'test-ab-framework.db');
+    await fs.unlink(testDbPath).catch(() => {}); // Delete if exists
+
+    // Create fresh test database
     db = new DatabaseManager({ path: testDbPath });
     await db.initialize();
 
-    // Create test experiments directory
+    // Create test experiments directory (clean slate)
     const testExperimentsDir = path.join(process.cwd(), 'test-experiments');
+    await fs.rm(testExperimentsDir, { recursive: true, force: true }).catch(() => {});
     await fs.mkdir(testExperimentsDir, { recursive: true });
 
     // Initialize components with correct constructor parameters
@@ -229,43 +233,43 @@ describe('A/B Testing Framework - Existing Implementation', () => {
   });
 
   describe('Variant Generators', () => {
-    it('should generate RSA variants', () => {
+    it('should generate RSA variants', async () => {
       const baseRSA = {
-        adGroupId: 'test-ag',
-        adGroupName: 'Test AG',
-        headlines: ['Original H1', 'Original H2', 'Original H3'],
-        descriptions: ['Original D1', 'Original D2'],
-        path1: 'test',
-        path2: 'path',
-        finalUrl: 'https://example.com'
+        id: 'test-ag',
+        name: 'Test AG',
+        product: 'test-product',
+        keywords: ['keyword1', 'keyword2'],
+        currentHeadlines: ['Original H1', 'Original H2', 'Original H3'],
+        currentDescriptions: ['Original D1', 'Original D2'],
+        landingPageUrl: 'https://example.com',
+        useCase: 'general'
       };
 
-      const variants = rsaVariantGenerator.generateVariants(baseRSA, 'diverse');
+      const variants = await rsaVariantGenerator.generateVariants(baseRSA, 'benefit_led');
 
       expect(variants).toBeDefined();
       expect(Array.isArray(variants)).toBe(true);
+      expect(variants.length).toBeGreaterThan(0);
       if (variants.length > 0) {
         expect(variants[0].headlines.length).toBeGreaterThanOrEqual(3);
         expect(variants[0].descriptions.length).toBeGreaterThanOrEqual(2);
       }
     });
 
-    it('should generate landing page variants', () => {
+    it('should generate landing page variants', async () => {
       const basePage = {
-        landingPage: '/landing',
-        headline: 'Original Headline',
-        subheadline: 'Original Subheadline',
-        cta: 'Original CTA',
-        features: ['Feature 1', 'Feature 2'],
-        testimonials: [],
+        path: '/landing',
+        headlines: ['Original Headline'],
+        proofBlocks: [],
         faqs: [],
-        proofPoints: []
+        socialProof: []
       };
 
-      const variants = lpVariantGenerator.generateVariants(basePage, 'conversion_focused');
+      const variants = await lpVariantGenerator.generateVariants(basePage, 'benefit_led');
 
       expect(variants).toBeDefined();
       expect(Array.isArray(variants)).toBe(true);
+      expect(variants.length).toBeGreaterThan(0);
       if (variants.length > 0) {
         expect(variants[0].headline).toBeDefined();
         expect(variants[0].cta).toBeDefined();

@@ -345,16 +345,30 @@ export class ExperimentManager {
       // Try to load from database first
       const dbExperiment = await experimentRepository.loadExperiment(experimentId);
       if (dbExperiment) {
-        return dbExperiment;
+        return this.ensureDateObjects(dbExperiment);
       }
-      
+
       // Fall back to JSON registry for backward compatibility
       const registry = await this.loadRegistry();
-      return registry.experiments.find(e => e.id === experimentId) || null;
+      const experiment = registry.experiments.find(e => e.id === experimentId) || null;
+      return experiment ? this.ensureDateObjects(experiment) : null;
     } catch (error) {
       logger.error('❌ Failed to get experiment:', error);
       return null;
     }
+  }
+
+  /**
+   * Ensure dates are Date objects (handle string dates from JSON/DB)
+   */
+  private ensureDateObjects(experiment: Experiment): Experiment {
+    return {
+      ...experiment,
+      startDate: experiment.startDate instanceof Date ? experiment.startDate : new Date(experiment.startDate),
+      endDate: experiment.endDate ?
+        (experiment.endDate instanceof Date ? experiment.endDate : new Date(experiment.endDate)) :
+        undefined
+    };
   }
 
   /**
@@ -367,7 +381,8 @@ export class ExperimentManager {
   }): Promise<Experiment[]> {
     try {
       // Use database as primary source
-      return await experimentRepository.listExperiments(filters);
+      const experiments = await experimentRepository.listExperiments(filters);
+      return experiments.map(e => this.ensureDateObjects(e));
     } catch (error) {
       logger.error('❌ Failed to list experiments:', error);
       return [];
