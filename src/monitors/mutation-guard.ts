@@ -216,19 +216,34 @@ export class MutationGuard extends PerformanceMonitor {
       return await this.executeWithCircuitBreaker('mutation_validation', async () => {
         // 1. Budget validation
         await this.validateBudget(mutation, result);
-        
+
+        // 1a. Budget change validation
+        this.validateBudgetChange(mutation, result);
+
         // 2. Landing page validation
         await this.validateLandingPages(mutation, result);
-        
+
         // 3. Device targeting validation
         this.validateDeviceTargeting(mutation, result);
-        
+
+        // 3a. Device modifier validation
+        this.validateDeviceModifiers(mutation, result);
+
         // 4. Bid limit validation
         this.validateBidLimits(mutation, result);
-        
+
+        // 4a. Bid range validation
+        this.validateBidRanges(mutation, result);
+
         // 5. Negative keyword validation
         this.validateNegativeKeywords(mutation, result);
-        
+
+        // 5a. Keyword quality validation
+        this.validateKeywordQuality(mutation, result);
+
+        // 5b. Keyword relevance validation
+        this.validateKeywordRelevance(mutation, result);
+
         // 6. Risk assessment
         this.assessRisk(mutation, result);
 
@@ -301,6 +316,147 @@ export class MutationGuard extends PerformanceMonitor {
   }
 
   /**
+   * Validate budget changes for sudden increases
+   */
+  private validateBudgetChange(mutation: Mutation, result: GuardrailResult): void {
+    const budget = mutation.changes.budget as number;
+    const oldBudget = (mutation as any).oldBudget as number | undefined;
+
+    if (budget && oldBudget && budget > oldBudget) {
+      const increasePercent = ((budget - oldBudget) / oldBudget) * 100;
+
+      if (increasePercent > 500) { // 5x increase
+        result.warnings.push(
+          `Large budget increase: ${increasePercent.toFixed(0)}% increase from $${oldBudget} to $${budget}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Validate URL format before health check
+   */
+  private validateUrlFormat(url: string): { valid: boolean; message?: string } {
+    try {
+      const parsed = new URL(url);
+
+      // Check protocol
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        return { valid: false, message: 'URL must use HTTP or HTTPS protocol' };
+      }
+
+      // Check for valid hostname
+      if (!parsed.hostname || parsed.hostname.length === 0) {
+        return { valid: false, message: 'URL must have a valid hostname' };
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, message: 'Invalid URL format' };
+    }
+  }
+
+  /**
+   * Validate device modifier ranges
+   */
+  private validateDeviceModifiers(mutation: Mutation, result: GuardrailResult): void {
+    const modifiers = (mutation.changes as any).deviceModifiers as Record<string, number> | undefined;
+
+    if (modifiers) {
+      for (const [device, modifier] of Object.entries(modifiers)) {
+        if (modifier < 0) {
+          result.violations.push({
+            type: 'device_modifier',
+            severity: 'error',
+            message: `Device modifier for ${device} cannot be negative: ${modifier}`,
+            field: 'deviceModifiers'
+          });
+        } else if (modifier > 3.0) {
+          result.violations.push({
+            type: 'device_modifier',
+            severity: 'error',
+            message: `Device modifier for ${device} exceeds maximum (3.0): ${modifier}`,
+            field: 'deviceModifiers'
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Validate bid ranges (not just limits)
+   */
+  private validateBidRanges(mutation: Mutation, result: GuardrailResult): void {
+    const bid = (mutation as any).bid as number | undefined;
+
+    if (bid !== undefined) {
+      const MIN_BID = 0.05; // $0.05 minimum
+      const MAX_BID = 50.00; // $50 maximum
+
+      if (bid < MIN_BID) {
+        result.violations.push({
+          type: 'bid_range',
+          severity: 'error',
+          message: `Bid too low: $${bid.toFixed(2)} is below minimum $${MIN_BID.toFixed(2)}`,
+          field: 'bid'
+        });
+      } else if (bid > MAX_BID) {
+        result.violations.push({
+          type: 'bid_range',
+          severity: 'error',
+          message: `Bid too high: $${bid.toFixed(2)} exceeds maximum $${MAX_BID.toFixed(2)}`,
+          field: 'bid'
+        });
+      }
+    }
+  }
+
+  /**
+   * Validate keyword quality scores
+   */
+  private validateKeywordQuality(mutation: Mutation, result: GuardrailResult): void {
+    if (mutation.resource === 'keyword') {
+      const keyword = mutation.changes as any;
+      const qualityScore = keyword.qualityScore as number | undefined;
+
+      if (qualityScore !== undefined && qualityScore < 5) {
+        result.warnings.push(
+          `Low keyword quality score (${qualityScore}/10) for "${keyword.text}"`
+        );
+      }
+    }
+  }
+
+  /**
+   * Validate keyword relevance to ad group theme
+   */
+  private validateKeywordRelevance(mutation: Mutation, result: GuardrailResult): void {
+    if (mutation.resource === 'keyword' && mutation.type === 'CREATE') {
+      const keyword = (mutation.changes as any).text as string;
+      const adGroupTheme = (mutation as any).adGroupTheme as string | undefined;
+
+      if (adGroupTheme && keyword) {
+        // Simple relevance check: keyword should contain some words from theme
+        const keywordWords = keyword.toLowerCase().split(/\s+/);
+        const themeWords = adGroupTheme.toLowerCase().split(/\s+/);
+
+        const hasRelevance = keywordWords.some(kw =>
+          themeWords.some(theme => kw.includes(theme) || theme.includes(kw))
+        );
+
+        if (!hasRelevance) {
+          result.violations.push({
+            type: 'keyword_relevance',
+            severity: 'error',
+            message: `Keyword "${keyword}" appears irrelevant to ad group theme "${adGroupTheme}"`,
+            field: 'keyword.text'
+          });
+        }
+      }
+    }
+  }
+
+  /**
    * Validate landing pages
    */
   private async validateLandingPages(mutation: Mutation, result: GuardrailResult): Promise<void> {
@@ -314,8 +470,38 @@ export class MutationGuard extends PerformanceMonitor {
       return;
     }
 
-    const healthChecks = await this.landingPageValidator.checkHealth(urls);
-    
+    // Validate URL format first
+    for (const url of urls) {
+      const formatCheck = this.validateUrlFormat(url);
+      if (!formatCheck.valid) {
+        result.violations.push({
+          type: 'landing_page_format',
+          severity: 'error',
+          message: `Invalid URL format for ${url}: ${formatCheck.message}`,
+          field: 'finalUrls'
+        });
+        continue; // Skip health check for invalid URLs
+      }
+
+      // Check HTTPS requirement (warning, not blocking)
+      // Exempt localhost/test environments from HTTPS requirement
+      const isLocalhost = url.startsWith('http://localhost') ||
+                         url.startsWith('http://127.0.0.1');
+
+      if (!url.startsWith('https://') && !isLocalhost && this.guardrailConfig.landingPageValidation.checkSSL) {
+        // Add as warning instead of violation to allow deployment with HTTP in test environments
+        result.warnings.push(`Not using HTTPS for landing page: ${url} (recommended for production)`);
+      }
+    }
+
+    // Only check health for valid URLs
+    const validUrls = urls.filter(url => this.validateUrlFormat(url).valid);
+    if (validUrls.length === 0) {
+      return;
+    }
+
+    const healthChecks = await this.landingPageValidator.checkHealth(validUrls);
+
     for (const check of healthChecks) {
       if (!check.isHealthy) {
         result.violations.push({
@@ -610,7 +796,76 @@ export class MutationGuard extends PerformanceMonitor {
   setEnforcementLevel(level: 'soft' | 'hard'): void {
     this.guardrailConfig.budgetLimits.enforcementLevel = level;
     this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
-    
+
     logger.info(`Budget enforcement level set to: ${level}`);
+  }
+
+  // ========================================
+  // Batch Validation & Custom Rules
+  // ========================================
+
+  private customRules = new Map<string, {
+    id: string;
+    name: string;
+    validate: (mutation: any) => {passed: boolean, message?: string};
+    severity: 'warning' | 'error' | 'critical';
+  }>();
+
+  async validateMutations(mutations: Array<any>): Promise<Array<any>> {
+    const results: any[] = [];
+    const conflictMap = new Map<string, any[]>();
+
+    // Detect conflicts (same resource/campaign modified multiple times)
+    for (const mutation of mutations) {
+      const key = `${mutation.customerId}:${mutation.resource}:${mutation.entityId || mutation.campaignId || ''}`;
+      if (!conflictMap.has(key)) conflictMap.set(key, []);
+      conflictMap.get(key)!.push(mutation);
+    }
+
+    // Validate each mutation
+    for (const mutation of mutations) {
+      const result = await this.validateMutation(mutation);
+
+      // Check for conflicts
+      const key = `${mutation.customerId}:${mutation.resource}:${mutation.entityId || mutation.campaignId || ''}`;
+      const conflicts = conflictMap.get(key) || [];
+      if (conflicts.length > 1) {
+        result.violations.push({
+          type: 'conflict',
+          severity: 'error',
+          message: `Conflicting mutations detected for ${mutation.resource} ${mutation.entityId || mutation.campaignId}`
+        });
+        result.passed = false;
+      }
+
+      // Apply custom rules
+      for (const rule of this.customRules.values()) {
+        const ruleResult = rule.validate(mutation);
+        if (!ruleResult.passed) {
+          result.violations.push({
+            type: rule.id,
+            severity: rule.severity,
+            message: ruleResult.message || `Custom rule violation: ${rule.name}`
+          });
+          if (rule.severity === 'error' || rule.severity === 'critical') {
+            result.passed = false;
+          }
+        }
+      }
+
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  addCustomRule(rule: {
+    id: string;
+    name: string;
+    validate: (mutation: any) => {passed: boolean, message?: string};
+    severity: 'warning' | 'error' | 'critical';
+  }): void {
+    this.customRules.set(rule.id, rule);
+    logger.info(`Custom rule added: ${rule.id}`, { name: rule.name, severity: rule.severity });
   }
 }

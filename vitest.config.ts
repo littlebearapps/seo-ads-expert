@@ -5,7 +5,12 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts', 'tests/**/*test*.ts', 'src/tests/**/*.test.ts', 'src/**/*.test.ts'],
-    exclude: ['node_modules/**', 'dist/**'],
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      '**/tests/test-helpers.ts',      // Helper utilities, not tests
+      '**/tests/helpers/test-setup.ts'  // Global setup, not tests
+    ],
     testTimeout: 10000, // Reduced to 10 seconds - tests should be faster
     hookTimeout: 5000, // Reduced to 5 seconds for hooks
     pool: 'threads', // Use threads for better performance (forks are slower)

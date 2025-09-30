@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DatabaseManager } from '../src/database/database-manager.js';
 import { ExperimentAlertIntegration } from '../src/experiments/alert-integration.js';
 import { ExperimentManager } from '../src/experiments/experiment-manager.js';
+import * as fs from 'fs/promises';
 
 describe('ExperimentAlertIntegration', () => {
   let db: DatabaseManager;
@@ -9,19 +10,27 @@ describe('ExperimentAlertIntegration', () => {
   let experimentManager: ExperimentManager;
   const testDbPath = 'data/test-alert-integration.db';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Initialize database
-    db = new DatabaseManager(testDbPath);
-    db.initialize(); // Initialize the database connection
+    db = new DatabaseManager({ path: testDbPath });
+    await db.initialize(); // Initialize the database connection
     integration = new ExperimentAlertIntegration(db, 'test-experiments');
     experimentManager = new ExperimentManager('test-experiments');
 
     // Create necessary tables
     const database = db.getDb();
 
+    // Drop and recreate tables for clean test state
+    database.exec(`DROP TABLE IF EXISTS experiments`);
+    database.exec(`DROP TABLE IF EXISTS experiment_measurements`);
+    database.exec(`DROP TABLE IF EXISTS experiment_alerts`);
+    database.exec(`DROP TABLE IF EXISTS alerts_history`);
+    database.exec(`DROP TABLE IF EXISTS alerts_state`);
+    database.exec(`DROP TABLE IF EXISTS fact_search_terms`);
+
     // Create experiments table
     database.exec(`
-      CREATE TABLE IF NOT EXISTS experiments (
+      CREATE TABLE experiments (
         id TEXT PRIMARY KEY,
         product TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -33,9 +42,9 @@ describe('ExperimentAlertIntegration', () => {
       )
     `);
 
-    // Create experiment_measurements table
+    // Create experiment_measurements table with variant_id
     database.exec(`
-      CREATE TABLE IF NOT EXISTS experiment_measurements (
+      CREATE TABLE experiment_measurements (
         experiment_id TEXT NOT NULL,
         variant_id TEXT NOT NULL,
         date TEXT NOT NULL,
@@ -50,7 +59,7 @@ describe('ExperimentAlertIntegration', () => {
 
     // Create experiment_alerts table
     database.exec(`
-      CREATE TABLE IF NOT EXISTS experiment_alerts (
+      CREATE TABLE experiment_alerts (
         experiment_id TEXT NOT NULL,
         alert_type TEXT NOT NULL,
         severity TEXT NOT NULL,
@@ -64,7 +73,7 @@ describe('ExperimentAlertIntegration', () => {
 
     // Create alerts tables for AlertManager
     database.exec(`
-      CREATE TABLE IF NOT EXISTS alerts_history (
+      CREATE TABLE alerts_history (
         alert_id TEXT PRIMARY KEY,
         seen_at TEXT DEFAULT CURRENT_TIMESTAMP,
         payload_json TEXT NOT NULL
@@ -72,7 +81,7 @@ describe('ExperimentAlertIntegration', () => {
     `);
 
     database.exec(`
-      CREATE TABLE IF NOT EXISTS alerts_state (
+      CREATE TABLE alerts_state (
         alert_id TEXT PRIMARY KEY,
         status TEXT DEFAULT 'open',
         snooze_until TEXT,
@@ -83,7 +92,7 @@ describe('ExperimentAlertIntegration', () => {
 
     // Create fact_search_terms table for AlertManager entity queries
     database.exec(`
-      CREATE TABLE IF NOT EXISTS fact_search_terms (
+      CREATE TABLE fact_search_terms (
         product TEXT,
         campaign TEXT,
         ad_group TEXT,
@@ -92,9 +101,10 @@ describe('ExperimentAlertIntegration', () => {
     `);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Clean up
     db.close();
+    await fs.unlink(testDbPath).catch(() => {});
   });
 
   describe('monitorExperiments', () => {

@@ -201,20 +201,20 @@ export class EntityExtractor {
     const normalized = new Map<string, Entity>();
 
     for (const entity of entities) {
-      const canonical = this.normalizeText(entity.canonical);
+      const normalizedKey = this.normalizeText(entity.canonical);
 
-      if (normalized.has(canonical)) {
+      if (normalized.has(normalizedKey)) {
         // Merge with existing entity
-        const existing = normalized.get(canonical)!;
+        const existing = normalized.get(normalizedKey)!;
         existing.variants = [...new Set([...existing.variants, ...entity.variants])];
         existing.frequency += entity.frequency;
         existing.sources = [...existing.sources, ...entity.sources];
         existing.importance = Math.max(existing.importance, entity.importance);
       } else {
-        normalized.set(canonical, {
+        normalized.set(normalizedKey, {
           ...entity,
-          canonical,
-          variants: entity.variants.map(v => this.normalizeText(v))
+          canonical: normalizedKey, // Use normalized form for consistent deduplication
+          variants: [...new Set([...entity.variants, this.normalizeText(entity.canonical)])]
         });
       }
     }
