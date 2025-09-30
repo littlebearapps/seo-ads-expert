@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DatabaseManager } from '../src/database/database-manager.js';
+import { DatabaseManager, databaseManager } from '../src/database/database-manager.js';
 import { ExperimentManager } from '../src/experiments/experiment-manager.js';
 import { RSAVariantGenerator, LandingPageVariantGenerator } from '../src/experiments/variant-generator.js';
 import { ExperimentRepository } from '../src/database/experiment-repository.js';
@@ -27,6 +27,13 @@ describe('A/B Testing Framework - Existing Implementation', () => {
     db = new DatabaseManager({ path: testDbPath });
     await db.initialize();
 
+    // IMPORTANT: Clean up the experiments database used by experimentRepository
+    // The repository uses a singleton database manager pointing to experiments/experiments.db
+    databaseManager.close(); // Close singleton before deleting its database
+    const experimentsDbPath = path.join(process.cwd(), 'experiments', 'experiments.db');
+    await fs.unlink(experimentsDbPath).catch(() => {});
+    // Database manager will reinitialize on next use
+
     // Create test experiments directory (clean slate)
     const testExperimentsDir = path.join(process.cwd(), 'test-experiments');
     await fs.rm(testExperimentsDir, { recursive: true, force: true }).catch(() => {});
@@ -36,7 +43,7 @@ describe('A/B Testing Framework - Existing Implementation', () => {
     experimentManager = new ExperimentManager(testExperimentsDir);
     rsaVariantGenerator = new RSAVariantGenerator();
     lpVariantGenerator = new LandingPageVariantGenerator();
-    
+
     // Initialize the experiment manager
     await experimentManager.initialize();
   });

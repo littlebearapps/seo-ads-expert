@@ -516,8 +516,12 @@ export class ExperimentManager {
    * Save experiment (public method for CLI)
    */
   async saveExperiment(experiment: Experiment): Promise<void> {
+    // Save to database (primary storage)
+    await experimentRepository.saveExperiment(experiment);
+
+    // Also save to JSON registry for backward compatibility
     const registry = await this.loadRegistry();
-    
+
     // Update or add experiment
     const index = registry.experiments.findIndex(e => e.id === experiment.id);
     if (index >= 0) {
@@ -525,9 +529,9 @@ export class ExperimentManager {
     } else {
       registry.experiments.push(experiment);
     }
-    
+
     registry.metadata.lastUpdated = new Date().toISOString();
-    
+
     await fs.writeFile(this.registryPath, JSON.stringify(registry, null, 2));
   }
 

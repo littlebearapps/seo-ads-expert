@@ -65,6 +65,21 @@ export class RSAVariantGenerator {
   constructor(private embeddingService?: EmbeddingService) {}
 
   /**
+   * Wrapper method for backward compatibility with tests
+   */
+  generateVariants(baseAd: AdGroup, strategy: VariantStrategy = 'benefit_led'): Promise<RSAVariant[]> {
+    return this.generateRSAVariants(baseAd, [strategy]);
+  }
+
+  /**
+   * Wrapper method for backward compatibility with tests - synchronous version
+   */
+  checkSimilarity(variant1: RSAVariant, variant2: RSAVariant): { score: number; isTooSimilar: boolean } {
+    const score = this.calculateSimilarity(variant1, variant2);
+    return { score, isTooSimilar: score > this.similarityThreshold };
+  }
+
+  /**
    * Generate default headlines when none exist
    */
   private generateDefaultHeadlines(adGroup: AdGroup): string[] {
@@ -495,6 +510,21 @@ export class RSAVariantGenerator {
  * Landing Page Variant Generator
  */
 export class LandingPageVariantGenerator {
+  /**
+   * Wrapper method for backward compatibility with tests
+   */
+  generateVariants(basePage: PageContent, strategy: VariantStrategy = 'benefit_led'): Promise<PageVariant[]> {
+    return this.generatePageVariants(basePage, strategy);
+  }
+
+  /**
+   * Wrapper method for backward compatibility with tests
+   */
+  checkSimilarity(variant1: PageVariant, variant2: PageVariant): { score: number; isTooSimilar: boolean } {
+    const score = this.calculatePageSimilarity(variant1, variant2);
+    return { score, isTooSimilar: score > 0.9 };
+  }
+
   /**
    * Calculate similarity between two page variants
    */
