@@ -28,6 +28,26 @@
       "env": {
         "MCP_LANG": "en"
       }
+    },
+    "zen": {
+      "command": "bash",
+      "args": ["-c", "export PYTHON_DOTENV_DISABLED=1 && set -a && source /Users/nathanschram/Library/Mobile\\ Documents/com~apple~CloudDocs/claude-code-tools/mcp/zen/instances/instB/.env && set +a && exec /Users/nathanschram/Library/Mobile\\ Documents/com~apple~CloudDocs/claude-code-tools/mcp/zen-mcp-server/zen-mcp-server"],
+      "cwd": "/Users/nathanschram/Library/Mobile Documents/com~apple~CloudDocs/claude-code-tools/mcp/zen/instances/instB",
+      "env": {
+        "ZEN_INSTANCE_NAME": "zen-seo-ads-expert",
+        "DEFAULT_MODEL": "gpt-5",
+        "ZEN_PORT": "7512",
+        "ZEN_DISABLED": "0",
+        "ZEN_MAX_OUTPUT_TOKENS": "1024",
+        "ZEN_MAX_INPUT_TOKENS": "12000",
+        "ZEN_MAX_RETRIES": "1",
+        "ZEN_ENABLE_SAFE_CONTINUATION": "1",
+        "ZEN_DAILY_SOFT_BUDGET_USD": "2.50",
+        "ZEN_MINUTES_RATE_LIMIT": "60",
+        "OPENAI_ALLOWED_MODELS": "gpt-5",
+        "LOG_LEVEL": "INFO",
+        "DISABLED_TOOLS": "analyze,refactor,testgen,secaudit,docgen,tracer"
+      }
     }
   }
 }

@@ -63,6 +63,34 @@
 **Platform**: Node.js CLI Tool with Thompson Sampling budget optimizer
 **Status**: ✅ v2.0 TEST-READY | All 54 tests passing (100% coverage)
 
+## 🎯 NEXT TASK (IMPORTANT - 2025-09-30)
+
+**🚀 START HERE**: `EXECUTION_START_HERE.md` ⭐
+
+**What**: Execute comprehensive test remediation plan (181 failing tests → 100% pass rate)
+
+**Why**: All test failures have been forensically analyzed, validated by GPT-5 (two rounds), and mapped to 8-phase execution plan with 12 surgical adjustments applied.
+
+**Quick Start for New Claude Code Session**:
+1. Read `EXECUTION_START_HERE.md` (5 minutes) - Your complete execution guide
+2. Review `docs/OPTION_A_COMPREHENSIVE_FIX_PLAN.md` (main plan) - 2,100 lines, all fixes detailed with code examples
+3. Start Phase 0: Shared Utilities (1.5 hours) - Build infrastructure (date-adapter, time-source, test fixtures)
+4. Execute Phases 1-7 systematically (50-60 hours total) - Follow quality gates after each phase
+
+**All Documents Ready for Execution**:
+- ✅ `EXECUTION_START_HERE.md` - Quick start guide with first steps and success criteria
+- ✅ `docs/OPTION_A_COMPREHENSIVE_FIX_PLAN.md` - Complete 8-phase plan (GPT-5 validated, all adjustments applied)
+- ✅ `docs/GPT5_VALIDATION_SUMMARY.md` - Full GPT-5 validation record with strategic insights
+- ✅ `docs/GPT5_SURGICAL_ADJUSTMENTS_CHECKLIST.md` - All 12 GPT-5 adjustments tracked and applied
+
+**Estimated Time**: 50-60 hours (7-10 working days)
+**Current Test Status** (2025-09-30):
+- Total: 1,002 tests
+- Passing: 816 (81.5%)
+- Failing: 181 (18.5%)
+- v2.0 Core: 66/66 (100%) ✅ Production-ready
+**Target**: 1,002/1,002 passing (100%)
+
 ## 🔧 Technical Stack
 
 **APIs Integrated** ✅:
@@ -293,6 +321,15 @@
 
 ---
 
+## 📁 Git Repository Configuration
+
+**Git Directory**: `/Users/nathanschram/GitHub/seo-ads-expert.git`
+- Main repository moved from GitMeta to GitHub folder (2025-09-29)
+- Worktrees configured at `.worktrees/dev/` and `.worktrees/test/`
+- Remote: `https://github.com/littlebearapps/seo-ads-expert.git`
+
+---
+
 **Token Count**: ~950 (Optimized for Claude Code)
-**Last Updated**: 2025-01-20
+**Last Updated**: 2025-09-29
 **Version**: 2.0 - INTELLIGENT BUDGET OPTIMIZER TESTS COMPLETE ✅

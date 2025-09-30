@@ -1,11 +1,79 @@
 # Claude Code Session Context
 
+## 📁 Git Repository Location
+**Git Directory**: `/Users/nathanschram/GitHub/seo-ads-expert.git`
+- Migrated from GitMeta to GitHub folder (2025-09-29)
+- Worktrees: `.worktrees/dev/` and `.worktrees/test/`
+- Remote: `https://github.com/littlebearapps/seo-ads-expert.git`
+
 ## 🎉 Project Stage - V2.0 INTELLIGENT BUDGET OPTIMIZER TESTS COMPLETE
 
-**Current Phase**: ✅ V2.0 TEST-READY
-**Progress**: 100% test coverage - All 54 tests passing across guardrails, bid strategies, and creative optimization!
-**Last Session**: 2025-01-20
-**Session Goal**: ✅ ACHIEVED - Fixed all test failures with graceful database fallbacks and interface alignment
+**Current Phase**: ✅ V2.0 TEST-READY → 🔄 TEST REMEDIATION IN PROGRESS
+**Progress**: v2.0 Core 100% (66/66) | Overall 81.5% (816/1,002)
+**Last Session**: 2025-09-30
+**Session Goal**: Thompson Sampling fixes + Comprehensive analysis + Zen MCP reconnection ✅
+
+## ✅ THIS SESSION COMPLETED (2025-09-30)
+
+1. **Thompson Sampling Fixes** ✅
+   - Fixed 3 statistical tolerance tests (`src/tests/thompson-sampling.test.ts:216,294,363`)
+   - v2.0 Core now 100% passing (66/66 tests)
+   - Documented in `docs/FINAL_TEST_STATUS.md`
+
+2. **Comprehensive Test Analysis** ✅
+   - Used Error Investigator agent for forensic analysis of all 181 failures
+   - Categorized into 16 distinct failure types with root causes
+   - Created 7-phase execution plan (45-56 hours total)
+   - Documented in `docs/OPTION_A_COMPREHENSIVE_FIX_PLAN.md` (45 pages)
+
+3. **MutationGuard Enhancements** ✅
+   - Added 7 new validation methods (`src/monitors/mutation-guard.ts:303-504`)
+   - Budget change, URL format, device modifiers, bid ranges, keyword quality/relevance, enhanced landing pages
+
+4. **Zen MCP Reconnection** ✅
+   - Fixed missing zen server configuration in `.mcp.json`
+   - Points to instB (zen-seo-ads-expert, Port 7512, projectB workspace)
+   - Updated `/claude-code-tools/CLAUDE.md` and `.claude-context`
+   - Documented in `ZEN_MCP_RECONNECTION.md`
+
+## ⚠️ NEXT TASK (READY FOR NEW SESSION - 2025-09-30)
+
+**🚀 START HERE FOR NEW CLAUDE CODE SESSION**: `EXECUTION_START_HERE.md` ⭐
+
+**Why This Document**:
+- Complete execution guide with first steps
+- All document filepaths listed
+- Phase-by-phase breakdown with time estimates
+- Quality gates and success criteria
+- Commit message templates
+
+**Quick Start**:
+1. Read `EXECUTION_START_HERE.md` (5 minutes) - Your roadmap
+2. Review `docs/OPTION_A_COMPREHENSIVE_FIX_PLAN.md` (main plan) - 2,100 lines of detailed fixes
+3. Start Phase 0: Shared Utilities (1.5 hours) - Infrastructure first
+4. Execute Phases 1-7 systematically (50-60 hours) - Follow quality gates
+
+**All Documents Ready for Execution**:
+- ✅ `EXECUTION_START_HERE.md` - Quick start guide (NEW)
+- ✅ `docs/OPTION_A_COMPREHENSIVE_FIX_PLAN.md` - Complete 8-phase plan (GPT-5 validated)
+- ✅ `docs/GPT5_VALIDATION_SUMMARY.md` - GPT-5 validation record with insights
+- ✅ `docs/GPT5_SURGICAL_ADJUSTMENTS_CHECKLIST.md` - All 12 adjustments applied
+- ✅ `CLAUDE.md` - Updated with execution pointers
+- ✅ `.claude-context` - This file, with session history
+
+**Plan Characteristics**:
+- **8 Phases**: Phase 0 (infrastructure) → Phases 1-7 (systematic fixes)
+- **Estimated Time**: 50-60 hours (7-10 working days) with 10-15% buffer
+- **Target**: 100% test pass rate (1,002/1,002 tests)
+- **GPT-5 Validated**: Two rounds of validation with 12 surgical adjustments
+- **Forensically Analyzed**: All 181 failures categorized with root causes
+
+**Status**:
+- ✅ Zen MCP reconnected (instB, Port 7512)
+- ✅ Plan complete with GPT-5 adjustments
+- ✅ Execution guide created
+- ✅ All documents ready
+- 🎯 Ready for mechanical execution in new session
 
 ## ✅ Major Accomplishments
 
