@@ -138,6 +138,7 @@ export class MonitoringDashboard extends EventEmitter {
         logger.error('Dashboard refresh failed:', error);
       }
     }, this.config.refreshInterval);
+    this.refreshTimer?.unref?.();  // Prevent blocking test exit
 
     logger.info(`Dashboard monitoring started with ${this.config.refreshInterval}ms interval`);
   }

@@ -60,12 +60,98 @@ All 181 failures have been forensically analyzed and categorized into 16 distinc
 
 ## 8-Phase Execution Plan (Revised)
 
-### Phase 0: Shared Utilities (1.5 hours, foundation) 🔧
+### Phase 0: Shared Utilities + Critical Fixes (2.0 hours, foundation) 🔧⚡
 
-**Goal**: Create reusable utilities to prevent rework and test flake across all phases
-**Risk**: None - pure infrastructure
+**Goal**: Fix test suite hangs + create reusable utilities to prevent rework and test flake across all phases
+**Risk**: None - pure infrastructure + critical bug fixes
 **Dependencies**: None
-**Impact**: Reduces Phase 2-7 time by eliminating duplicate work
+**Impact**: Eliminates 2-minute test timeouts + reduces Phase 2-7 time by eliminating duplicate work
+
+#### 0.0 CRITICAL: Fix Test Suite Hangs (30 minutes) ⚡ **DO FIRST**
+
+**Issue**: Tests timeout after 2 minutes due to unreferenced setInterval timers keeping Node.js event loop alive.
+
+**Root Cause**: MetricPoller, MonitoringDashboard, and MemoryAwareProcessor create setInterval timers without calling .unref(), preventing test suite from exiting cleanly. Combined with vitest isolate:false, leaked timers accumulate across tests.
+
+**Fix Strategy**: Add .unref() to all setInterval calls + enable test isolation
+
+##### 0.0.1 Add .unref() to MetricPoller (5 min)
+**File**: `src/tracking/performance-tracker.ts:106-109`
+
+```typescript
+this.intervalId = setInterval(async () => {
+  await this.poll();
+}, this.intervalMs);
+this.intervalId?.unref?.();  // ← ADD THIS LINE - allows process exit
+```
+
+##### 0.0.2 Add .unref() to MonitoringDashboard (5 min)
+**File**: `src/experiments/monitoring-dashboard.ts:134-141`
+
+```typescript
+this.refreshTimer = setInterval(async () => {
+  try {
+    await this.refreshAllExperiments();
+  } catch (error) {
+    logger.error('Dashboard refresh failed:', error);
+  }
+}, this.config.refreshInterval);
+this.refreshTimer?.unref?.();  // ← ADD THIS LINE - prevents blocking test exit
+```
+
+##### 0.0.3 Add .unref() to MemoryAwareProcessor (5 min)
+**File**: `src/utils/memory-aware-processor.ts:288-295`
+
+```typescript
+this.memoryCheckInterval = setInterval(() => {
+  const memoryUsage = process.memoryUsage();
+  const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+
+  if (heapUsedMB > this.maxMemoryMB * 0.9) {
+    logger.warn(`Critical memory usage: ${heapUsedMB.toFixed(2)}MB / ${this.maxMemoryMB}MB`);
+  }
+}, 1000);
+this.memoryCheckInterval?.unref?.();  // ← ADD THIS LINE - prevents blocking test exit
+```
+
+##### 0.0.4 Enable Vitest Test Isolation (5 min)
+**File**: `vitest.config.ts:18`
+
+```typescript
+// BEFORE:
+isolate: false, // Don't isolate tests - share context for better performance
+
+// AFTER:
+isolate: true, // Isolate tests - prevent state/timer leaks (CRITICAL for reliability)
+```
+
+##### 0.0.5 Add Event Listener Cleanup (10 min)
+**File**: `src/tests/performance-tracking.test.ts`
+
+Add to afterEach hooks:
+```typescript
+afterEach(() => {
+  poller?.removeAllListeners();  // ← ADD for hygiene
+  poller?.stop();
+  database?.close();
+});
+
+// Around line 338:
+afterEach(() => {
+  tracker?.removeAllListeners();  // ← ADD for hygiene
+  tracker?.stopAllTracking();
+  database?.close();
+});
+```
+
+**Verification**:
+```bash
+npm test  # Should complete in <30 seconds instead of timing out
+```
+
+**Expected Outcome**: ✅ Test suite runs cleanly without 2-minute hangs
+
+---
 
 #### 0.1 Date Adapter Module (45 minutes)
 **Files**: `src/utils/date-adapter.ts`

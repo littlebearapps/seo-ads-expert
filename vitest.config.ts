@@ -15,7 +15,7 @@ export default defineConfig({
         minThreads: 1
       }
     },
-    isolate: false, // Don't isolate tests - share context for better performance
+    isolate: true, // Isolate tests - prevent state/timer leaks (CRITICAL for reliability)
     maxConcurrency: 4, // Run up to 4 test suites in parallel
     // Fix ESM module loading issues
     server: {

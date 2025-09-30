@@ -106,6 +106,7 @@ export class MetricPoller extends EventEmitter {
     this.intervalId = setInterval(async () => {
       await this.poll();
     }, this.intervalMs);
+    this.intervalId?.unref?.();  // Allow process exit if this is the only active handle
   }
 
   /**

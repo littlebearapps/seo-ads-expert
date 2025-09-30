@@ -75,6 +75,7 @@ describe('MetricPoller', () => {
   });
 
   afterEach(() => {
+    poller?.removeAllListeners();  // Clean up event listeners for hygiene
     poller.stop();
     database.close();
   });
@@ -336,6 +337,7 @@ describe('RealTimePerformanceTracker', () => {
   });
 
   afterEach(() => {
+    tracker?.removeAllListeners();  // Clean up event listeners for hygiene
     tracker.stopAllTracking();
     database.close();
   });
@@ -680,6 +682,7 @@ describe('Integration Tests', () => {
   });
 
   afterEach(() => {
+    tracker?.removeAllListeners();  // Clean up event listeners for hygiene
     tracker.stopAllTracking();
     database.close();
   });

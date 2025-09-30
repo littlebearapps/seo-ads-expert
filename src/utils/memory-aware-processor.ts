@@ -293,6 +293,7 @@ export class MemoryAwareProcessor {
         logger.warn(`Critical memory usage: ${heapUsedMB.toFixed(2)}MB / ${this.maxMemoryMB}MB`);
       }
     }, 1000);
+    this.memoryCheckInterval?.unref?.();  // Prevent blocking test exit
   }
 
   /**
