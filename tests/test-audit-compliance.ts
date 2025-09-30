@@ -352,7 +352,14 @@ describe('Audit & Compliance System (Task 6)', () => {
         logApprovalDecision: vi.fn().mockResolvedValue(undefined),
         logAutoApproval: vi.fn().mockResolvedValue(undefined),
         logApprovalCancellation: vi.fn().mockResolvedValue(undefined),
-        logApprovalExpiration: vi.fn().mkResolvedValue(undefined)
+        logApprovalExpiration: vi.fn().mockResolvedValue(undefined),
+        getAuditLogs: vi.fn().mockResolvedValue([]),
+        generateSummary: vi.fn().mockResolvedValue({
+          totalActions: 0,
+          byAction: {},
+          byUser: {},
+          byResult: {}
+        })
       };
 
       workflow = new ApprovalWorkflow();
@@ -545,10 +552,19 @@ describe('Audit & Compliance System (Task 6)', () => {
       });
 
       it('should prevent duplicate approvals from same user', async () => {
-        await workflow.processApproval(testRequest.id, 'manager', 'APPROVED');
+        // Use HIGH severity request that requires 2 approvals
+        const highSeverityChanges = {
+          customerId: '123-456-7890',
+          product: 'test-product',
+          mutations: [{ type: 'UPDATE_BUDGET', budget: 8000 }], // HIGH severity
+          metadata: {}
+        };
+
+        const highRequest = await workflow.submitForApproval(highSeverityChanges, 'user1');
+        await workflow.processApproval(highRequest.id, 'senior_manager', 'APPROVED');
 
         await expect(
-          workflow.processApproval(testRequest.id, 'manager', 'APPROVED')
+          workflow.processApproval(highRequest.id, 'senior_manager', 'APPROVED')
         ).rejects.toThrow('has already voted');
       });
 
@@ -748,7 +764,7 @@ describe('Audit & Compliance System (Task 6)', () => {
         const changes = {
           customerId: '123-456-7890',
           product: 'test-product',
-          mutations: [{ type: 'UPDATE_BUDGET', budget: 1000 }], // Would be HIGH with new thresholds
+          mutations: [{ type: 'UPDATE_BUDGET', budget: 2500 }], // HIGH with new thresholds (>= 2000)
           metadata: {}
         };
 
