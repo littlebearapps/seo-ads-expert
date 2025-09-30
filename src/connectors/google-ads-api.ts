@@ -329,6 +329,40 @@ export class GoogleAdsApiClient {
     }
   }
 
+  // Phase 3A.2: Authentication Methods
+  getOAuthConfig(): OAuth2Config | undefined {
+    return this.config ? {
+      clientId: this.config.clientId,
+      clientSecret: this.config.clientSecret,
+      refreshToken: this.config.refreshToken,
+      developerToken: this.config.developerToken
+    } : undefined;
+  }
+
+  async refreshAccessToken(): Promise<string> {
+    const config = this.getOAuthConfig();
+    if (!config?.refreshToken) {
+      throw new Error('Refresh token not configured');
+    }
+
+    try {
+      const { credentials } = await this.oauth2Client.refreshAccessToken();
+      if (!credentials.access_token) {
+        throw new Error('No access token returned from refresh');
+      }
+      return credentials.access_token;
+    } catch (error) {
+      logger.error('Failed to refresh access token:', error);
+      throw new Error('Failed to refresh access token');
+    }
+  }
+
+  isValidCustomerId(customerId: string): boolean {
+    // Format: 123-456-7890 OR 1234567890
+    return /^\d{3}-\d{3}-\d{4}$/.test(customerId) ||
+           /^\d{10}$/.test(customerId);
+  }
+
   private getCacheKey(request: ApiRequest): string {
     return crypto.createHash('sha256')
       .update(JSON.stringify({
