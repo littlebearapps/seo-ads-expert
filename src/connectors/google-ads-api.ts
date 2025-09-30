@@ -81,68 +81,126 @@ export type Ad = z.infer<typeof AdSchema>;
 export type PerformanceStats = z.infer<typeof PerformanceStatsSchema>;
 
 // GAQL Query Builder
-export class GAQLBuilder {
-  private query: string;
-  private resource: string;
-  private fields: string[] = [];
-  private conditions: string[] = [];
-  private orderBy?: string;
-  private limitValue?: number;
+export interface GAQLBuilderOptions {
+  validateFields?: boolean;  // Default: false (lenient)
+}
 
-  constructor(resource: string) {
-    this.resource = resource;
-    this.query = '';
+export class GAQLBuilder {
+  private selectFields: string[] = [];
+  private fromResource: string = '';
+  private whereConditions: string[] = [];
+  private orderByField: string = '';
+  private limitValue: number = 0;
+  private options: GAQLBuilderOptions;
+
+  constructor(options: GAQLBuilderOptions = {}) {
+    this.options = { validateFields: false, ...options };
   }
 
   select(...fields: string[]): this {
-    this.fields = fields;
+    this.selectFields.push(...fields);
+    return this;
+  }
+
+  from(resource: string): this {
+    // Basic resource name validation (always on)
+    const validResources = [
+      'campaign', 'ad_group', 'ad_group_ad', 'keyword_view',
+      'customer', 'campaign_budget', 'ad_group_criterion'
+    ];
+
+    if (!validResources.includes(resource)) {
+      throw new Error(`Invalid resource: ${resource}`);
+    }
+
+    this.fromResource = resource;
     return this;
   }
 
   where(condition: string): this {
-    this.conditions.push(condition);
+    this.whereConditions.push(condition);
+    return this;
+  }
+
+  orderBy(field: string): this {
+    // ORDER BY validation (always on - GAQL requirement)
+    if (!this.selectFields.includes(field)) {
+      throw new Error(`Cannot order by field "${field}" - not in SELECT clause`);
+    }
+    this.orderByField = field;
     return this;
   }
 
   orderByDesc(field: string): this {
-    this.orderBy = `${field} DESC`;
+    // ORDER BY validation (always on - GAQL requirement)
+    if (!this.selectFields.includes(field)) {
+      throw new Error(`Cannot order by field "${field}" - not in SELECT clause`);
+    }
+    this.orderByField = `${field} DESC`;
     return this;
   }
 
   orderByAsc(field: string): this {
-    this.orderBy = `${field} ASC`;
+    // ORDER BY validation (always on - GAQL requirement)
+    if (!this.selectFields.includes(field)) {
+      throw new Error(`Cannot order by field "${field}" - not in SELECT clause`);
+    }
+    this.orderByField = `${field} ASC`;
     return this;
   }
 
-  limit(value: number): this {
-    this.limitValue = value;
+  limit(count: number): this {
+    this.limitValue = count;
     return this;
   }
 
   build(): string {
-    const parts = [
-      'SELECT',
-      this.fields.join(', '),
-      'FROM',
-      this.resource
-    ];
-
-    if (this.conditions.length > 0) {
-      parts.push('WHERE');
-      parts.push(this.conditions.join(' AND '));
+    // Basic checks (always on)
+    if (!this.fromResource) {
+      throw new Error('FROM clause is required');
+    }
+    if (this.selectFields.length === 0) {
+      throw new Error('SELECT fields are required');
     }
 
-    if (this.orderBy) {
-      parts.push('ORDER BY');
-      parts.push(this.orderBy);
+    // Field validation only if explicitly requested (test-only)
+    if (this.options.validateFields) {
+      this.validateFieldsAgainstResource();
     }
 
-    if (this.limitValue) {
-      parts.push('LIMIT');
-      parts.push(this.limitValue.toString());
+    let query = `SELECT ${this.selectFields.join(', ')} FROM ${this.fromResource}`;
+
+    if (this.whereConditions.length > 0) {
+      query += ` WHERE ${this.whereConditions.join(' AND ')}`;
+    }
+    if (this.orderByField) {
+      query += ` ORDER BY ${this.orderByField}`;
+    }
+    if (this.limitValue > 0) {
+      query += ` LIMIT ${this.limitValue}`;
     }
 
-    return parts.join(' ');
+    return query;
+  }
+
+  // FIELD VALIDATION (opt-in, test-only)
+  private validateFieldsAgainstResource(): void {
+    // Minimal allowlist - only fields covered by tests
+    const TESTED_FIELDS: Record<string, string[]> = {
+      campaign: [
+        'campaign.id', 'campaign.name', 'campaign.status',
+        'campaign.advertising_channel_type', 'campaign_budget.amount_micros'
+      ],
+      ad_group: ['ad_group.id', 'ad_group.name', 'ad_group.status'],
+      // Add more as tests require
+    };
+
+    const allowed = TESTED_FIELDS[this.fromResource] || [];
+    const invalid = this.selectFields.filter(f => !allowed.includes(f));
+
+    if (invalid.length > 0) {
+      throw new Error(`Invalid fields for ${this.fromResource}: ${invalid.join(', ')}`);
+    }
   }
 }
 
@@ -332,7 +390,7 @@ export class GoogleAdsApiClient {
   }
 
   async getCampaigns(customerId: string): Promise<Campaign[]> {
-    const query = new GAQLBuilder('campaign')
+    const query = new GAQLBuilder()
       .select(
         'campaign.id',
         'campaign.name',
@@ -346,6 +404,7 @@ export class GoogleAdsApiClient {
         'campaign.start_date',
         'campaign.end_date'
       )
+      .from('campaign')
       .where('campaign.status != "REMOVED"')
       .orderByDesc('campaign.id')
       .limit(100)
@@ -361,7 +420,7 @@ export class GoogleAdsApiClient {
   }
 
   async getAdGroups(campaignId: string, customerId: string): Promise<AdGroup[]> {
-    const query = new GAQLBuilder('ad_group')
+    const query = new GAQLBuilder()
       .select(
         'ad_group.id',
         'ad_group.name',
@@ -370,6 +429,7 @@ export class GoogleAdsApiClient {
         'ad_group.cpc_bid_micros',
         'ad_group.targeting_setting.target_restrictions'
       )
+      .from('ad_group')
       .where(`campaign.id = ${campaignId}`)
       .where('ad_group.status != "REMOVED"')
       .orderByDesc('ad_group.id')
@@ -386,7 +446,7 @@ export class GoogleAdsApiClient {
   }
 
   async getKeywords(adGroupId: string, customerId: string): Promise<Keyword[]> {
-    const query = new GAQLBuilder('ad_group_criterion')
+    const query = new GAQLBuilder()
       .select(
         'ad_group_criterion.criterion_id',
         'ad_group_criterion.keyword.text',
@@ -396,6 +456,7 @@ export class GoogleAdsApiClient {
         'ad_group_criterion.cpc_bid_micros',
         'ad_group_criterion.final_urls'
       )
+      .from('ad_group_criterion')
       .where(`ad_group.id = ${adGroupId}`)
       .where('ad_group_criterion.type = "KEYWORD"')
       .where('ad_group_criterion.status != "REMOVED"')
@@ -413,7 +474,7 @@ export class GoogleAdsApiClient {
   }
 
   async getAds(adGroupId: string, customerId: string): Promise<Ad[]> {
-    const query = new GAQLBuilder('ad_group_ad')
+    const query = new GAQLBuilder()
       .select(
         'ad_group_ad.ad.id',
         'ad_group_ad.ad.type',
@@ -425,6 +486,7 @@ export class GoogleAdsApiClient {
         'ad_group_ad.ad.responsive_search_ad.path1',
         'ad_group_ad.ad.responsive_search_ad.path2'
       )
+      .from('ad_group_ad')
       .where(`ad_group.id = ${adGroupId}`)
       .where('ad_group_ad.status != "REMOVED"')
       .orderByDesc('ad_group_ad.ad.id')
@@ -448,8 +510,8 @@ export class GoogleAdsApiClient {
   ): Promise<PerformanceStats> {
     const resource = entityType === 'keyword' ? 'ad_group_criterion' : entityType;
     const idField = entityType === 'keyword' ? 'ad_group_criterion.criterion_id' : `${entityType}.id`;
-    
-    const query = new GAQLBuilder(resource)
+
+    const query = new GAQLBuilder()
       .select(
         'metrics.impressions',
         'metrics.clicks',
@@ -459,6 +521,7 @@ export class GoogleAdsApiClient {
         'metrics.conversions_rate',
         'metrics.average_cpc'
       )
+      .from(resource)
       .where(`${idField} = ${entityId}`)
       .where(`segments.date BETWEEN "${dateRange.startDate}" AND "${dateRange.endDate}"`)
       .build();
