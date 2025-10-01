@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { getDatabase, closeDatabase } from '../src/database.js';
 import { CrawlOrchestrator } from '../src/crawl/orchestrator.js';
 import { SitemapGenerator } from '../src/sitemap/sitemap-generator.js';
 import { HealthAnalyzer } from '../src/health/health-analyzer.js';
@@ -14,11 +13,80 @@ describe('v1.9 Integration Tests', () => {
   let db: Database.Database;
 
   beforeAll(async () => {
-    db = await getDatabase();
+    // Use isolated in-memory database to avoid singleton race conditions
+    db = new Database(':memory:');
+
+    // Initialize v1.9 tables
+    db.exec(`
+      CREATE TABLE crawl_sessions (
+        session_id TEXT PRIMARY KEY,
+        start_url TEXT NOT NULL,
+        start_time DATETIME,
+        end_time DATETIME,
+        pages_discovered INTEGER DEFAULT 0,
+        pages_crawled INTEGER DEFAULT 0,
+        errors TEXT
+      );
+
+      CREATE TABLE crawl_pages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL UNIQUE,
+        canonical_url TEXT,
+        status INTEGER,
+        title TEXT,
+        meta_description TEXT,
+        h1 TEXT,
+        word_count INTEGER,
+        noindex INTEGER NOT NULL DEFAULT 0,
+        nofollow INTEGER NOT NULL DEFAULT 0,
+        robots_allowed INTEGER NOT NULL DEFAULT 1,
+        depth INTEGER,
+        section TEXT,
+        content_hash TEXT,
+        response_time INTEGER,
+        content_type TEXT,
+        images_count INTEGER,
+        internal_links_count INTEGER,
+        external_links_count INTEGER,
+        h1_count INTEGER,
+        h2_count INTEGER,
+        h3_count INTEGER,
+        schema_types TEXT,
+        og_title TEXT,
+        og_description TEXT,
+        og_image TEXT,
+        og_type TEXT,
+        last_crawled DATETIME DEFAULT CURRENT_TIMESTAMP,
+        crawl_session_id TEXT,
+        FOREIGN KEY (crawl_session_id) REFERENCES crawl_sessions(session_id)
+      );
+
+      CREATE TABLE crawl_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_url TEXT NOT NULL,
+        to_url TEXT NOT NULL,
+        anchor_text TEXT,
+        link_type TEXT,
+        context TEXT,
+        crawl_session_id TEXT,
+        FOREIGN KEY (from_url) REFERENCES crawl_pages(url),
+        FOREIGN KEY (to_url) REFERENCES crawl_pages(url),
+        FOREIGN KEY (crawl_session_id) REFERENCES crawl_sessions(session_id)
+      );
+
+      CREATE INDEX idx_crawl_links_from ON crawl_links(from_url);
+      CREATE INDEX idx_crawl_links_to ON crawl_links(to_url);
+      CREATE INDEX idx_pages_status_noindex ON crawl_pages(status, noindex);
+      CREATE INDEX idx_pages_section ON crawl_pages(section);
+      CREATE INDEX idx_links_type ON crawl_links(link_type);
+      CREATE INDEX idx_crawl_session ON crawl_pages(crawl_session_id);
+      CREATE INDEX idx_links_session ON crawl_links(crawl_session_id);
+    `);
   });
 
   afterAll(() => {
-    closeDatabase();
+    // Close isolated database connection
+    db.close();
   });
 
   describe('CLI Consolidation', () => {

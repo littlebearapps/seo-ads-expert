@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { getDatabase, closeDatabase } from '../src/database.js';
 import { SitemapGenerator } from '../src/sitemap/sitemap-generator.js';
 import { XMLParser } from 'fast-xml-parser';
 import Database from 'better-sqlite3';
@@ -14,7 +13,55 @@ describe('Sitemap Generator', () => {
   let generator: SitemapGenerator;
 
   beforeAll(async () => {
-    db = await getDatabase();
+    // Use isolated in-memory database to avoid singleton race conditions
+    db = new Database(':memory:');
+
+    // Initialize required tables
+    db.exec(`
+      CREATE TABLE crawl_sessions (
+        session_id TEXT PRIMARY KEY,
+        start_url TEXT NOT NULL,
+        start_time DATETIME,
+        end_time DATETIME,
+        pages_discovered INTEGER DEFAULT 0,
+        pages_crawled INTEGER DEFAULT 0,
+        errors TEXT
+      );
+
+      CREATE TABLE crawl_pages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL UNIQUE,
+        canonical_url TEXT,
+        status INTEGER,
+        title TEXT,
+        meta_description TEXT,
+        h1 TEXT,
+        word_count INTEGER,
+        noindex INTEGER NOT NULL DEFAULT 0,
+        nofollow INTEGER NOT NULL DEFAULT 0,
+        robots_allowed INTEGER NOT NULL DEFAULT 1,
+        depth INTEGER,
+        section TEXT,
+        content_hash TEXT,
+        response_time INTEGER,
+        content_type TEXT,
+        images_count INTEGER,
+        internal_links_count INTEGER,
+        external_links_count INTEGER,
+        h1_count INTEGER,
+        h2_count INTEGER,
+        h3_count INTEGER,
+        schema_types TEXT,
+        og_title TEXT,
+        og_description TEXT,
+        og_image TEXT,
+        og_type TEXT,
+        last_crawled DATETIME DEFAULT CURRENT_TIMESTAMP,
+        crawl_session_id TEXT,
+        FOREIGN KEY (crawl_session_id) REFERENCES crawl_sessions(session_id)
+      );
+    `);
+
     generator = new SitemapGenerator(db);
 
     // Insert test crawl session and pages
@@ -50,10 +97,8 @@ describe('Sitemap Generator', () => {
   });
 
   afterAll(() => {
-    // Clean up test data
-    db.prepare("DELETE FROM crawl_pages WHERE crawl_session_id = 'test_sitemap_session'").run();
-    db.prepare("DELETE FROM crawl_sessions WHERE session_id = 'test_sitemap_session'").run();
-    closeDatabase();
+    // Close isolated database connection
+    db.close();
   });
 
   describe('Basic Generation', () => {
