@@ -10,15 +10,29 @@ const logger = pino({
 });
 
 /**
- * Comprehensive Authentication Testing Suite
+ * End-to-End Authentication Testing Suite
  *
- * Tests all Google API authentication methods with live credentials
- * to ensure proper access and permissions.
+ * Full integration tests with REAL Google APIs (OAuth2 + Ads API + Analytics).
+ * These tests make actual network calls and validate complete authentication flows.
  *
- * NOTE: Skipped in CI/environments without credentials
+ * WHEN TO RUN:
+ * - Nightly scheduled CI runs
+ * - Pre-deployment validation
+ * - Manual verification after credential changes
+ *
+ * NOT run in PR CI (uses auth-contract.test.ts instead for fast feedback)
+ *
+ * REQUIRES:
+ * - E2E_AUTH=1 environment flag
+ * - Valid Google API credentials in .env
+ * - Network access to Google APIs
+ *
+ * See tests/auth-contract.test.ts for fast CI-friendly auth tests
  */
 
-describe.skipIf(!process.env.GOOGLE_ADS_DEVELOPER_TOKEN)('Google APIs Authentication Integration Tests', () => {
+const shouldRunE2E = process.env.E2E_AUTH === '1' && process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+
+describe.skipIf(!shouldRunE2E)('Google APIs E2E Authentication Tests', () => {
   let auth: any;
   let projectId: string;
   

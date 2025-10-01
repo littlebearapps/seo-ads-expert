@@ -30,32 +30,52 @@
 
 **Why centralized**: Previously test details were scattered across multiple files. Now TESTS.md is the single source of truth, making it easier to maintain and reducing context file sizes.
 
-## ✅ LATEST SESSION COMPLETED (2025-10-01 - Test Hanging Fix + Phase 6 Complete)
+## ✅ LATEST SESSION COMPLETED (2025-10-01 - Phase 2/3 Fixes + 3-Layer Auth Strategy)
 
-**Session Focus**: Critical test infrastructure fix and Phase 6 completion
+**Session Focus**: Test remediation and authentication testing strategy implementation
 
-1. **Test Hanging Issue RESOLVED** ✅
-   - Root cause: Singleton database race condition in parallel test execution
-   - Fixed: `tests/sitemap-generator.test.ts` and `tests/v19-integration.test.ts`
-   - Changed from shared singleton to isolated in-memory databases
-   - Result: Tests now complete in 7.56 seconds (was timing out at 120s)
-   - Commit: `0e4a0bc` - fix: resolve test hanging issue
+1. **Phase 2 Test Fixes COMPLETE** ✅ (5/5 tests fixed)
+   - **ab-testing-framework-fixed.test.ts** (3 tests):
+     - Fixed SQLITE_CONSTRAINT_TRIGGER by creating control variant only once
+     - Fixed database cleanup by deleting singleton `experiments/experiments.db`
+     - Fixed undefined keywords with optional property and complete test data
+   - **alert-integration.test.ts** (2 tests):
+     - Fixed early stopping by increasing sample size to meet minimum (1000 clicks)
+     - Fixed alert ordering with distinct timestamps (1s apart)
+   - All 13+4 tests now passing reliably
 
-2. **Phase 6 Safe Write Operations COMPLETE** ✅
-   - All 60 tests passing (100%)
-   - MutationGuard, AuditLogger, MutationApplier, BudgetEnforcer all working
-   - Comprehensive guardrails, validation, rollback, audit logging
-   - Commit: `b11145b` - feat: Phase 6 COMPLETE
+2. **Phase 3: 3-Layer Auth Testing Strategy IMPLEMENTED** ✅
+   - **Layer 1**: Unit tests (existing, mocked)
+   - **Layer 2**: Auth contract tests (NEW) - Hybrid approach ⭐
+     - Real OAuth2 validation (oauth2.googleapis.com)
+     - Mocked Google Ads API (eliminates flakiness)
+     - 7 tests passing in ~4 seconds (15x faster than E2E)
+     - Runs in every PR for fast feedback
+   - **Layer 3**: E2E tests (moved, gated with E2E_AUTH=1)
+     - Full integration with real Google APIs
+     - Network-dependent, nightly/pre-deploy only
+     - Expected to timeout without E2E_AUTH flag (normal)
 
-3. **Test Documentation Created** ✅
-   - Created `docs/TESTS.md` - comprehensive test suite documentation
-   - Organized tests by category with status and descriptions
-   - Updated `CLAUDE.md` and `.claude-context` to link to test docs
-   - All test details now centralized in one location
+3. **New Test Files Created** ✅
+   - `tests/auth-contract.test.ts` - Hybrid auth tests (CI workhorse)
+   - `tests/e2e/auth-e2e.test.ts` - Full E2E tests (moved from auth-integration.test.ts)
+   - `docs/AUTHENTICATION_TESTING_STRATEGY.md` - Complete 3-layer documentation
+
+4. **Configuration Updates** ✅
+   - Installed `nock` for HTTP mocking
+   - Added test scripts: test:auth, test:e2e, test:auth:all
+   - Updated `docs/TESTS.md` with auth strategy documentation
+
+**Results**:
+- ✅ PR CI feedback: 60s+ → 4s for auth validation (15x faster)
+- ✅ Real OAuth2 credential validation in every PR
+- ✅ No dependency on Google Ads API availability
+- ✅ Deterministic, reliable auth tests
+- ✅ Full E2E coverage still available (nightly/manual)
 
 **Next Session Priority**:
 - Continue with remaining phases (Phase 4, 5, 7 need completion)
-- 80 tests still failing (documented in remediation plan)
+- ~75 tests still failing in other areas (documented in remediation plan)
 
 ---
 

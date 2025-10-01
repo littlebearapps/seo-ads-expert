@@ -201,11 +201,21 @@ export class ExperimentManager {
           faqs: [],
           proofPoints: []
         };
+
         // Generate variants for each strategy
+        // FIX: Only create control variant once to avoid weight overflow
+        const allVariants = await lpGenerator.generatePageVariants(basePage, config.variantStrategies[0] as any);
+        variants.push(allVariants[0]); // Add control variant
+
+        // Generate test variants for all strategies
         for (const strategy of config.variantStrategies) {
           const strategyVariants = await lpGenerator.generatePageVariants(basePage, strategy as any);
-          variants.push(...strategyVariants);
+          variants.push(strategyVariants[1]); // Add only test variant (skip control)
         }
+
+        // Adjust weights to sum to 1.0
+        const totalVariants = variants.length;
+        variants.forEach(v => v.weight = 1.0 / totalVariants);
       }
     }
     

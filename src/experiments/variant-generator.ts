@@ -218,7 +218,8 @@ export class RSAVariantGenerator {
   ): Promise<string[]> {
     const product = adGroup.product;
     const useCase = adGroup.useCase;
-    const keywords = adGroup.keywords.slice(0, 3); // Top 3 keywords
+    // FIX: Make keywords optional with default empty array
+    const keywords = (adGroup.keywords || []).slice(0, 3); // Top 3 keywords
 
     const templates = this.getHeadlineTemplates(strategy);
     const headlines: string[] = [];

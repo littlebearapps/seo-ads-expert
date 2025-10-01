@@ -146,7 +146,7 @@ export class AuditLogger {
       id: this.generateId(),
       timestamp: params.timestamp,
       user: params.user,
-      action: params.mutation.type || 'mutation', // Use mutation type as action
+      action: 'mutation', // Always use 'mutation' (specific type stored in mutation.type)
       resource: params.mutation.resource,
       entityId: params.mutation.entityId,
       customerId: params.mutation.customerId,

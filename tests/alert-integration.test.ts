@@ -129,9 +129,10 @@ describe('ExperimentAlertIntegration', () => {
       );
 
       // Insert measurements showing variant performing worse
+      // FIX: Increase sample size to meet minimumSampleSize requirement (1000)
       const measurements = [
-        { variant_id: 'control', impressions: 10000, clicks: 500, conversions: 50, cost: 250, conversion_rate: 0.10 },
-        { variant_id: 'variant_a', impressions: 10000, clicks: 500, conversions: 20, cost: 250, conversion_rate: 0.04 }
+        { variant_id: 'control', impressions: 20000, clicks: 1000, conversions: 100, cost: 500, conversion_rate: 0.10 },
+        { variant_id: 'variant_a', impressions: 20000, clicks: 1000, conversions: 40, cost: 500, conversion_rate: 0.04 }
       ];
 
       const insertMeasurement = database.prepare(`
@@ -274,6 +275,10 @@ describe('ExperimentAlertIntegration', () => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
+      // FIX: Insert alerts with different timestamps to ensure deterministic ordering
+      const now = new Date();
+      const earlier = new Date(now.getTime() - 1000); // 1 second earlier
+
       insertAlert.run(
         'exp_test',
         'anomaly',
@@ -281,7 +286,7 @@ describe('ExperimentAlertIntegration', () => {
         'Test alert message',
         JSON.stringify({ control: 0.05, variant: 0.03 }),
         'Check implementation',
-        new Date().toISOString()
+        earlier.toISOString()
       );
 
       insertAlert.run(
@@ -291,7 +296,7 @@ describe('ExperimentAlertIntegration', () => {
         'Winner found',
         JSON.stringify({ control: 0.05, variant: 0.08 }),
         'Declare winner',
-        new Date().toISOString()
+        now.toISOString()
       );
 
       // Retrieve alerts

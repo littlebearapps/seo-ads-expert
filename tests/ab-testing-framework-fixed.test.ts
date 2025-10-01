@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DatabaseManager } from '../src/database/database-manager.js';
+import { DatabaseManager, databaseManager } from '../src/database/database-manager.js';
 import { ExperimentManager } from '../src/experiments/experiment-manager.js';
 import { RSAVariantGenerator, LandingPageVariantGenerator } from '../src/experiments/variant-generator.js';
 import { ExperimentRepository } from '../src/database/experiment-repository.js';
@@ -20,8 +20,28 @@ describe('A/B Testing Framework - Fixed Implementation', () => {
   let testExperimentsDir: string;
 
   beforeEach(async () => {
+    // FIX: Close singleton database manager to reset state between tests
+    if (databaseManager.isInitialized()) {
+      databaseManager.close();
+    }
+
     // Create test database
     testDbPath = path.join(process.cwd(), 'data', 'test-ab-framework.db');
+
+    // FIX: Delete existing test databases to avoid stale data accumulation
+    try {
+      await fs.unlink(testDbPath);
+    } catch (error) {
+      // File doesn't exist, that's fine
+    }
+
+    // FIX: Also delete the singleton database used by experimentRepository
+    try {
+      await fs.unlink(path.join(process.cwd(), 'experiments', 'experiments.db'));
+    } catch (error) {
+      // File doesn't exist, that's fine
+    }
+
     db = new DatabaseManager({ path: testDbPath });
     await db.initialize();
 
@@ -40,8 +60,16 @@ describe('A/B Testing Framework - Fixed Implementation', () => {
 
   afterEach(async () => {
     await db.close();
+
+    // Close singleton database manager
+    if (databaseManager.isInitialized()) {
+      databaseManager.close();
+    }
+
     await fs.unlink(testDbPath).catch(() => {});
+    await fs.unlink(path.join(process.cwd(), 'experiments', 'experiments.db')).catch(() => {});
     await fs.rm(testExperimentsDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(path.join(process.cwd(), 'experiments'), { recursive: true, force: true }).catch(() => {});
   });
 
   describe('ExperimentManager - Fixed', () => {
@@ -229,8 +257,12 @@ describe('A/B Testing Framework - Fixed Implementation', () => {
       const baseRSA = {
         adGroupId: 'test-ag',
         adGroupName: 'Test AG',
-        headlines: ['Original H1', 'Original H2', 'Original H3'],
-        descriptions: ['Original D1', 'Original D2'],
+        product: 'test-product',
+        useCase: 'general',
+        keywords: ['keyword1', 'keyword2', 'keyword3'], // FIX: Add required keywords property
+        currentHeadlines: ['Original H1', 'Original H2', 'Original H3'],
+        currentDescriptions: ['Original D1', 'Original D2'],
+        landingPageUrl: 'https://example.com',
         path1: 'test',
         path2: 'path',
         finalUrl: 'https://example.com'

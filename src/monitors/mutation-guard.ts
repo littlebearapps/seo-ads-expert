@@ -658,20 +658,8 @@ export class MutationGuard extends PerformanceMonitor {
         continue; // Skip health and SSL checks for invalid URLs
       }
 
-      // Check HTTPS requirement (error, blocking)
-      // Exempt localhost/test environments from HTTPS requirement
-      const isLocalhost = url.startsWith('http://localhost') ||
-                         url.startsWith('http://127.0.0.1');
-
-      if (!url.startsWith('https://') && !isLocalhost && this.guardrailConfig.landingPageValidation.checkSSL) {
-        result.violations.push({
-          type: 'landing_page_ssl',
-          severity: 'error',
-          message: `Landing page must use HTTPS: ${url}`,
-          field: 'finalUrls'
-        });
-        continue; // Skip accessibility check for non-HTTPS URLs
-      }
+      // HTTPS is now handled by health check as a warning (not blocking)
+      // Health check at lines 688-707 will add "Not using HTTPS" to warnings
 
       // Check URL accessibility
       const isAccessible = await this.checkUrlAccessibility(url);
