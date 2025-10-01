@@ -87,14 +87,14 @@ export class ContentCalendarGenerator {
 
   async generateCalendar(intelligence: StrategicIntelligence): Promise<ContentCalendar> {
     // Sort opportunities by strategic value
-    const rankedOpportunities = this.rankOpportunitiesForContent(intelligence.opportunities);
-    
+    const rankedOpportunities = this.rankOpportunitiesForContent(intelligence);
+
     // Generate content schedule
     const calendar = await this.createContentSchedule(rankedOpportunities);
-    
+
     // Create weekly breakdown
     const weeklyBreakdown = this.generateWeeklyBreakdown(calendar);
-    
+
     // Calculate metadata
     const metadata = this.calculateMetadata(calendar);
 
@@ -105,27 +105,55 @@ export class ContentCalendarGenerator {
     };
   }
 
-  private rankOpportunitiesForContent(opportunities: OpportunityItem[]): OpportunityItem[] {
-    return opportunities
-      .filter(opp => opp.opportunity_type !== 'defensive_play') // Skip defensive content
-      .sort((a, b) => {
-        // Multi-factor content ranking
-        const aScore = this.calculateContentScore(a);
-        const bScore = this.calculateContentScore(b);
-        return bScore - aScore;
-      })
-      .slice(0, this.config.weeks * this.config.piecesPerWeek); // Take only what we can produce
+  private rankOpportunitiesForContent(intelligence: StrategicIntelligence): any[] {
+    // Defensive programming: Extract opportunities from priority matrix
+    let allOpportunities: any[] = [];
+
+    try {
+      if (intelligence.priority_matrix) {
+        allOpportunities = [
+          ...(intelligence.priority_matrix.immediate_actions || []),
+          ...(intelligence.priority_matrix.quarter_1_roadmap || []),
+          ...(intelligence.priority_matrix.quarter_2_roadmap || []),
+          ...(intelligence.priority_matrix.long_term_strategic || [])
+        ];
+      }
+
+      // Fallback: if no opportunities found, return empty array
+      if (allOpportunities.length === 0) {
+        console.warn('⚠️ No opportunities found in strategic intelligence');
+        return [];
+      }
+
+      return allOpportunities
+        .filter(opp => {
+          // Defensive check: ensure opp exists and has required properties
+          return opp && opp.source_type && opp.source_type !== 'defensive_play';
+        })
+        .sort((a, b) => {
+          // Multi-factor content ranking
+          const aScore = this.calculateContentScore(a);
+          const bScore = this.calculateContentScore(b);
+          return bScore - aScore;
+        })
+        .slice(0, this.config.weeks * this.config.piecesPerWeek); // Take only what we can produce
+    } catch (error) {
+      console.warn('⚠️ Error ranking opportunities for content:', error);
+      return [];
+    }
   }
 
-  private calculateContentScore(opportunity: OpportunityItem): number {
-    // Base opportunity score
-    let score = opportunity.impact_score;
-    
-    // Content-specific factors
-    score *= this.getContentMultiplier(opportunity.query);
-    score *= this.getSeasonalMultiplier(opportunity.query);
+  private calculateContentScore(opportunity: any): number {
+    // Defensive programming: provide defaults for missing properties
+    let score = opportunity.impact_potential || 0;
+
+    const query = opportunity.query || '';
+
+    // Content-specific factors with null checks
+    score *= this.getContentMultiplier(query);
+    score *= this.getSeasonalMultiplier(query);
     score *= this.getCompetitiveMultiplier(opportunity);
-    
+
     return score;
   }
 
@@ -164,14 +192,14 @@ export class ContentCalendarGenerator {
     return 1.0;
   }
 
-  private getCompetitiveMultiplier(opportunity: OpportunityItem): number {
-    // Boost opportunities where we have competitive advantage
-    if (opportunity.confidence_score > 0.8) return 1.2;
-    if (opportunity.roi_12_month > 200) return 1.15;
+  private getCompetitiveMultiplier(opportunity: any): number {
+    const confidence = opportunity.confidence_score || 0;
+    // Note: roi_12_month doesn't exist on UnifiedOpportunity, so remove that check
+    if (confidence > 0.8) return 1.2;
     return 1.0;
   }
 
-  private async createContentSchedule(opportunities: OpportunityItem[]): Promise<ContentCalendarEntry[]> {
+  private async createContentSchedule(opportunities: any[]): Promise<ContentCalendarEntry[]> {
     const calendar: ContentCalendarEntry[] = [];
     const startDate = startOfWeek(this.config.startDate, { weekStartsOn: 1 }); // Monday start
     

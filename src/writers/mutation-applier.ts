@@ -628,10 +628,19 @@ export class MutationApplier {
    * Estimate cost of a mutation
    */
   private estimateCost(mutation: any): number {
-    if (mutation.changes.budgetMicros) {
+    // Handle legacy format (mutation.budget, mutation.estimatedCost)
+    if (mutation.estimatedCost) {
+      return mutation.estimatedCost;
+    }
+    if (mutation.budget) {
+      return mutation.budget;
+    }
+
+    // Handle normalized format (mutation.changes.*)
+    if (mutation.changes?.budgetMicros) {
       return Number(BigInt(mutation.changes.budgetMicros) / 1000000n);
     }
-    if (mutation.changes.cpcBidMicros) {
+    if (mutation.changes?.cpcBidMicros) {
       // Estimate based on expected clicks
       const estimatedClicks = 100; // Would use historical data
       return Number(BigInt(mutation.changes.cpcBidMicros) / 1000000n) * estimatedClicks;

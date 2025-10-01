@@ -42,6 +42,47 @@ Follow the plan exactly as written. After each phase:
 
 ---
 
+## ⚠️ INVESTIGATION REQUIRED: Test Execution Performance
+
+**Status**: 🔍 NEEDS INVESTIGATION BY CLAUDE CODE/GPT-5
+**Discovered**: 2025-09-30 during codebase analysis
+**Impact**: Tests appear to hang or run extremely slowly (2+ minutes, timing out)
+
+### Observed Symptoms
+- Test suite execution hangs/runs indefinitely when running `npm test`
+- Tests may be timing out after 2 minutes
+- Could indicate lingering timers, open handles, or infinite loops
+- May validate the need for Phase 0 time source implementation
+
+### Investigation Tasks
+Before starting Phase 0, consider investigating:
+1. **Check for lingering timers**: Run `npm test` and monitor for setTimeout/setInterval leaks
+2. **Check for open database handles**: Look for unclosed SQLite connections
+3. **Check for infinite loops**: Review test execution patterns for blocking operations
+4. **Review recent changes**: Check if recent commits introduced timer/async issues
+
+### Recommended Approach
+**Option A**: Investigate first, then execute Phase 0-7
+- Spend 30-60 minutes investigating root cause
+- May identify quick fixes that accelerate overall execution
+- Use `mcp__zen__debug` tool for systematic investigation
+
+**Option B**: Proceed with Phase 0 immediately
+- Phase 0 creates time source infrastructure that may resolve issues
+- Can investigate if problems persist after Phase 0
+- Faster path to visible progress
+
+### Next Steps for Claude Code
+When you encounter this note:
+1. Acknowledge the test performance issue
+2. Recommend investigation strategy to user
+3. Get user approval on Option A (investigate) vs Option B (proceed with Phase 0)
+4. Use debug tools if investigating (zen debug, test profiling, etc.)
+
+**Note**: This investigation note will be removed once the issue is understood and documented.
+
+---
+
 ## 📁 Essential Documents (All in This Directory)
 
 ### Primary Execution Documents

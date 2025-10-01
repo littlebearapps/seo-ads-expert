@@ -441,31 +441,46 @@ export class StrategicOrchestrator {
   
   private async collectSearchTermsOpportunities(): Promise<UnifiedOpportunity[]> {
     if (!this.config.data_sources.search_terms_csv) return [];
-    
+
     try {
       const searchTerms = await this.searchTermsAnalyzer.parseSearchTermsReport(this.config.data_sources.search_terms_csv);
       const wasteAnalysis = this.searchTermsAnalyzer.analyzeWaste(searchTerms);
-      
-      return wasteAnalysis.wasteTerms.map((term, index) => ({
+
+      // Defensive programming: Check if waste analysis has expected properties
+      if (!wasteAnalysis) {
+        console.warn('⚠️ Waste analysis returned undefined');
+        return [];
+      }
+
+      // Combine all waste categories since wasteTerms doesn't exist
+      const allWasteTerms = [
+        ...(wasteAnalysis.highCostNoConvert || []),
+        ...(wasteAnalysis.lowCtrHighImpressions || []),
+        ...(wasteAnalysis.poorQualityIndicators || [])
+      ];
+
+      // Null check before mapping
+      return allWasteTerms.map((term, index) => ({
         source_type: 'waste_reduction' as const,
         opportunity_id: `waste_${index}`,
-        query: term.searchTerm,
-        market: 'US', // Default for search terms data
-        
+        query: term.term, // Use 'term' property instead of 'searchTerm'
+        market: 'US',
+
         waste_context: {
-          monthly_waste: term.wastePotential,
-          conversion_rate: term.conversionRate,
-          suggested_negatives: wasteAnalysis.suggestedNegatives.filter(neg => 
-            neg.pattern && term.searchTerm.toLowerCase().includes(neg.pattern.toLowerCase())
-          ).map(neg => neg.pattern).slice(0, 3)
+          monthly_waste: term.wastePotential || 0,
+          conversion_rate: term.conversionRate || 0,
+          suggested_negatives: (wasteAnalysis.negativeRecommendations || [])
+            .filter(neg => neg.pattern && term.term.toLowerCase().includes(neg.pattern.toLowerCase()))
+            .map(neg => neg.pattern)
+            .slice(0, 3)
         },
-        
-        confidence_score: Math.min(term.confidence / 100, 1),
-        impact_potential: Math.min((term.wastePotential / 50) * 10, 10), // Scale waste to 0-10
-        implementation_effort: term.suggestedNegatives?.length > 0 ? 2 : 3, // Low effort for negatives
-        
-        data_freshness: 1, // Search terms are usually daily
-        cross_analyzer_correlation: 0.8 // Search terms data is generally reliable
+
+        confidence_score: Math.min((term.confidence || 0) / 100, 1),
+        impact_potential: Math.min(((term.wastePotential || 0) / 50) * 10, 10),
+        implementation_effort: 2, // Low effort for negatives
+
+        data_freshness: 1,
+        cross_analyzer_correlation: 0.8
       }));
     } catch (error) {
       console.warn('⚠️ Failed to collect search terms opportunities:', error);
@@ -550,27 +565,42 @@ export class StrategicOrchestrator {
       // Get recent SERP volatility analysis (last 7 days)
       const serpAnalysis = await this.serpDriftAnalyzer.analyzeDriftPatterns(7);
       const opportunities: UnifiedOpportunity[] = [];
-      
-      serpAnalysis.responses?.forEach((response, index) => {
+
+      // Defensive programming: Check if serpAnalysis and responses exist
+      if (!serpAnalysis || !serpAnalysis.responses) {
+        console.warn('⚠️ SERP analysis returned no responses');
+        return [];
+      }
+
+      serpAnalysis.responses.forEach((response, index) => {
+        // Defensive checks for nested properties
+        if (!response || !response.change) {
+          console.warn(`⚠️ SERP response ${index} missing change object`);
+          return; // Skip this response
+        }
+
+        const query = response.change.query || `serp_opportunity_${index}`;
+        const market = response.change.market || 'US';
+
         opportunities.push({
           source_type: 'serp_volatility',
           opportunity_id: `serp_${index}`,
-          query: response.change.query,
-          market: response.change.market || 'US',
-          
+          query: query,
+          market: market,
+
           serp_context: {
-            volatility_score: response.change.volatility.overall,
-            opportunity_type: response.type,
+            volatility_score: response.change.volatility?.overall || 0,
+            opportunity_type: response.type || 'unknown',
             competitor_movements: response.change.competitorMovements?.length || 0,
             new_features: response.change.newFeatures || []
           },
-          
-          confidence_score: response.confidence,
-          impact_potential: response.confidence * 8, // Scale confidence to impact
-          implementation_effort: this.mapSerpUrgencyToEffort(response.urgency),
-          
-          data_freshness: 1, // SERP data is real-time
-          cross_analyzer_correlation: 0.7 // SERP data can be noisy
+
+          confidence_score: response.confidence || 0.5,
+          impact_potential: (response.confidence || 0.5) * 8,
+          implementation_effort: this.mapSerpUrgencyToEffort(response.urgency || 'medium'),
+
+          data_freshness: 1,
+          cross_analyzer_correlation: 0.7
         });
       });
       
@@ -832,12 +862,26 @@ export class StrategicOrchestrator {
   
   private async generateCompetitiveIntelligence(intelligence: StrategicIntelligence) {
     try {
+      // Extract opportunities from priority matrix instead of non-existent opportunities property
+      const allOpportunities = [
+        ...(intelligence.priority_matrix?.immediate_actions || []),
+        ...(intelligence.priority_matrix?.quarter_1_roadmap || []),
+        ...(intelligence.priority_matrix?.quarter_2_roadmap || []),
+        ...(intelligence.priority_matrix?.long_term_strategic || [])
+      ];
+
+      // Defensive check
+      if (allOpportunities.length === 0) {
+        console.warn('⚠️ No opportunities available for competitive intelligence');
+        return undefined;
+      }
+
       // Mock SERP data for competitive analysis
-      const mockSerpData = intelligence.opportunities.slice(0, 20).map(opp => ({
-        keyword: opp.keyword,
-        search_volume: opp.monthly_search_volume,
+      const mockSerpData = allOpportunities.slice(0, 20).map(opp => ({
+        keyword: opp.query || 'unknown',
+        search_volume: 1000, // Default since monthly_search_volume doesn't exist
         results: [
-          { position: 1, url: 'https://competitor1.com/page', domain: 'competitor1.com', 
+          { position: 1, url: 'https://competitor1.com/page', domain: 'competitor1.com',
             title: 'Competitor 1 Content', description: 'Leading solution for...' },
           { position: 2, url: 'https://competitor2.com/page', domain: 'competitor2.com',
             title: 'Competitor 2 Content', description: 'Premium tool for...' },

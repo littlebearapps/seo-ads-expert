@@ -12,17 +12,31 @@ export class SoftwareApplicationTemplate implements SchemaTemplate {
     const schema: JsonLD = {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
-      name: this.applyClaims(data.name),
+      name: this.applyClaims(data.displayName || data.name),
       description: this.applyClaims(data.description),
       applicationCategory: data.applicationCategory || 'BrowserApplication',
       operatingSystem: data.operatingSystem || 'Any',
-      url: data.url,
+      url: data.url || data.website,
       offers: {
         '@type': 'Offer',
         price: data.price || '0',
         priceCurrency: data.currency || 'USD'
       }
     };
+
+    // Add version if provided (both version and softwareVersion for compatibility)
+    if (data.version) {
+      schema.softwareVersion = data.version;
+      schema.version = data.version; // Some tests/validators expect this
+    }
+
+    // Add author if provided
+    if (data.author) {
+      schema.author = {
+        '@type': 'Organization',
+        name: data.author
+      };
+    }
 
     // Add rating if available
     if (data.ratingValue && data.ratingCount) {

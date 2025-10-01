@@ -25,7 +25,7 @@ export const AuditLogEntrySchema = z.object({
     userAgent: z.string().optional(),
     sessionId: z.string().optional(),
     correlationId: z.string().optional()
-  }).optional(),
+  }).passthrough().optional(),
   changes: z.object({
     before: z.any().optional(),
     after: z.any().optional(),
@@ -253,6 +253,132 @@ export class AuditLogger {
       }
     };
 
+    await this.writeEntry(entry);
+  }
+
+  /**
+   * Log an approval request
+   */
+  async logApprovalRequest(params: {
+    requestId: string;
+    requestedBy: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    changeType: string;
+    timestamp: string;
+  }): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: this.generateId(),
+      timestamp: params.timestamp,
+      user: params.requestedBy,
+      action: 'configuration',
+      resource: `approval-request-${params.changeType}`,
+      entityId: params.requestId,
+      result: 'success',
+      metadata: {
+        sessionId: this.sessionId,
+        severity: params.severity,
+        changeType: params.changeType
+      }
+    };
+    await this.writeEntry(entry);
+  }
+
+  /**
+   * Log an approval decision
+   */
+  async logApprovalDecision(params: {
+    requestId: string;
+    approver: string;
+    decision: 'APPROVED' | 'REJECTED';
+    comment?: string;
+    timestamp: string;
+  }): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: this.generateId(),
+      timestamp: params.timestamp,
+      user: params.approver,
+      action: 'configuration',
+      resource: 'approval-decision',
+      entityId: params.requestId,
+      result: params.decision === 'APPROVED' ? 'success' : 'failed',
+      metadata: {
+        sessionId: this.sessionId,
+        decision: params.decision,
+        comment: params.comment
+      }
+    };
+    await this.writeEntry(entry);
+  }
+
+  /**
+   * Log an auto-approval
+   */
+  async logAutoApproval(params: {
+    requestId: string;
+    requestedBy: string;
+    reason: string;
+    timestamp: string;
+  }): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: this.generateId(),
+      timestamp: params.timestamp,
+      user: params.requestedBy,
+      action: 'configuration',
+      resource: 'approval-auto',
+      entityId: params.requestId,
+      result: 'success',
+      metadata: {
+        sessionId: this.sessionId,
+        reason: params.reason
+      }
+    };
+    await this.writeEntry(entry);
+  }
+
+  /**
+   * Log an approval cancellation
+   */
+  async logApprovalCancellation(params: {
+    requestId: string;
+    cancelledBy: string;
+    reason?: string;
+    timestamp: string;
+  }): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: this.generateId(),
+      timestamp: params.timestamp,
+      user: params.cancelledBy,
+      action: 'configuration',
+      resource: 'approval-cancellation',
+      entityId: params.requestId,
+      result: 'success',
+      metadata: {
+        sessionId: this.sessionId,
+        reason: params.reason
+      }
+    };
+    await this.writeEntry(entry);
+  }
+
+  /**
+   * Log an approval expiration
+   */
+  async logApprovalExpiration(params: {
+    requestId: string;
+    expiredAt: string;
+  }): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: this.generateId(),
+      timestamp: params.expiredAt,
+      user: 'system',
+      action: 'configuration',
+      resource: 'approval-expiration',
+      entityId: params.requestId,
+      result: 'success',
+      metadata: {
+        sessionId: this.sessionId
+      }
+    };
     await this.writeEntry(entry);
   }
 

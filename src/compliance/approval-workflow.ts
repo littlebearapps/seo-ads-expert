@@ -290,7 +290,16 @@ export class ApprovalWorkflow {
    */
   private determineSeverity(changes: PlannedChanges): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
     const impact = this.estimateImpact(changes);
-    
+
+    // Check structural changes first (highest priority)
+    const hasStructuralChanges = changes.mutations.some(m =>
+      m.type === 'DELETE_CAMPAIGN' ||
+      m.type === 'DELETE_AD_GROUP'
+    );
+    if (hasStructuralChanges) {
+      return 'HIGH';
+    }
+
     // Check budget thresholds
     if (impact.budgetChange) {
       if (impact.budgetChange >= this.policy.budgetThresholds.critical) {
@@ -302,15 +311,6 @@ export class ApprovalWorkflow {
       if (impact.budgetChange >= this.policy.budgetThresholds.medium) {
         return 'MEDIUM';
       }
-    }
-
-    // Check structural changes
-    const hasStructuralChanges = changes.mutations.some(m => 
-      m.type === 'DELETE_CAMPAIGN' || 
-      m.type === 'DELETE_AD_GROUP'
-    );
-    if (hasStructuralChanges) {
-      return 'HIGH';
     }
 
     // Check number of affected entities

@@ -264,14 +264,14 @@ export class AdvancedValidator {
       validate: (changes: PlannedChanges) => {
         const campaigns = new Set<string>();
         const orphanedAdGroups: string[] = [];
-        
+
         // First pass: collect campaigns
         for (const mutation of changes.mutations) {
           if (mutation.type === 'CREATE_CAMPAIGN') {
             campaigns.add(mutation.campaignId!);
           }
         }
-        
+
         // Second pass: check ad groups have campaigns
         for (const mutation of changes.mutations) {
           if (mutation.type === 'CREATE_AD_GROUP' && mutation.campaignId) {
@@ -280,11 +280,11 @@ export class AdvancedValidator {
             }
           }
         }
-        
+
         return {
           passed: orphanedAdGroups.length === 0,
           message: orphanedAdGroups.length > 0
-            ? `Ad groups without parent campaigns: ${orphanedAdGroups.join(', ')}`
+            ? `Orphaned ad groups detected without parent campaigns: ${orphanedAdGroups.join(', ')}`
             : undefined,
           data: { orphanedAdGroups }
         };
@@ -435,23 +435,23 @@ export class AdvancedValidator {
     // Run each enabled rule
     for (const rule of this.rules.values()) {
       if (!rule.enabled) continue;
-      
+
       result.totalRules++;
-      
+
       try {
         const ruleResult = await rule.validate(changes);
-        
+
         if (ruleResult.passed) {
           result.passed++;
         } else {
           result.failed++;
-          
+
           const issue = {
             rule: rule.name,
             message: ruleResult.message || `Rule ${rule.name} failed`,
             category: rule.category
           };
-          
+
           switch (rule.severity) {
             case 'WARNING':
               result.warnings.push(issue);

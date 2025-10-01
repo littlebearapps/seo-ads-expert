@@ -21,6 +21,13 @@
     "mcp:dev": "NODE_ENV=development tsx src/mcp/index.ts",
     "mcp:prod": "NODE_ENV=production tsx src/mcp/index.ts",
     "test": "vitest",
+    "test:ci": "vitest run --pool=forks --poolOptions.forks.singleFork=true --reporter=verbose",
+    "test:clean": "rm -rf data/test-*.db test-experiments-* coverage .vitest && rm -f data/*.db-wal data/*.db-shm",
+    "test:unit": "vitest run tests/",
+    "test:integration": "vitest run src/tests/",
+    "test:core": "vitest run src/tests/thompson-sampling.test.ts src/tests/guardrails.test.ts src/tests/bid-strategies.test.ts src/tests/creative-optimization.test.ts",
+    "test:health": "node scripts/test-health-report.js",
+    "pretest": "npm run test:clean",
     "test:mcp": "vitest src/tests/mcp-server.test.ts",
     "test:guardrails": "vitest src/tests/guardrails.test.ts",
     "type-check": "tsc --noEmit"

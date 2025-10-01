@@ -174,7 +174,7 @@ export class PerformancePredictor {
     const confidence = this.calculateConfidence(changes, history);
     
     // Generate recommendations
-    const recommendations = this.generateRecommendations(impact, riskFactors);
+    const recommendations = this.generateRecommendations(changes, impact, riskFactors);
 
     const prediction: PerformancePrediction = {
       timestamp: new Date().toISOString(),
@@ -517,14 +517,23 @@ export class PerformancePredictor {
     }
 
     // Large structural changes
-    const structuralChanges = changes.mutations.filter(m => 
-      m.type === 'DELETE_CAMPAIGN' || m.type === 'DELETE_AD_GROUP'
-    );
-    if (structuralChanges.length > 0) {
+    const campaignDeletions = changes.mutations.filter(m => m.type === 'DELETE_CAMPAIGN');
+    const adGroupDeletions = changes.mutations.filter(m => m.type === 'DELETE_AD_GROUP');
+
+    if (campaignDeletions.length > 0) {
       risks.push({
-        factor: 'Structural Changes',
+        factor: 'Campaign Deletion',
+        severity: 'HIGH',
+        description: `${campaignDeletions.length} campaign deletion(s) will significantly impact performance`,
+        mitigation: 'Review campaign performance before deletion and prepare backup campaigns'
+      });
+    }
+
+    if (adGroupDeletions.length > 0) {
+      risks.push({
+        factor: 'Ad Group Deletion',
         severity: 'MEDIUM',
-        description: `${structuralChanges.length} structural changes may disrupt performance`,
+        description: `${adGroupDeletions.length} ad group deletion(s) may disrupt performance`,
         mitigation: 'Implement changes gradually and monitor closely'
       });
     }
@@ -626,10 +635,19 @@ export class PerformancePredictor {
    * Generate recommendations
    */
   private generateRecommendations(
+    changes: PlannedChanges,
     impact: PerformancePrediction['impact'],
     risks: PerformancePrediction['riskFactors']
   ): string[] {
     const recommendations: string[] = [];
+
+    // Keyword quality recommendations
+    const lowQualityKeywords = changes.mutations.filter(m =>
+      m.type === 'ADD_KEYWORD' && m.keyword?.score && m.keyword.score < 50
+    );
+    if (lowQualityKeywords.length > 0) {
+      recommendations.push(`⚠️ ${lowQualityKeywords.length} low-quality keyword(s) detected - consider improving keyword relevance and quality scores`);
+    }
 
     // Positive impact recommendations
     if (impact.roas.percentage > 20) {
@@ -664,7 +682,7 @@ export class PerformancePredictor {
     }
 
     recommendations.push('📋 Monitor performance for first 48 hours after implementation');
-    
+
     return recommendations;
   }
 

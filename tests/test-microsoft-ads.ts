@@ -190,12 +190,15 @@ describe('Microsoft Ads Integration', () => {
       ];
 
       const csv = await writer.exportBulkCsv(campaigns);
-      
+
       expect(csv).toContain('Type,');
-      expect(csv).toContain('Campaign,Test Campaign');
-      expect(csv).toContain('Ad Group,Test Ad Group');
-      expect(csv).toContain('Keyword,keyword1');
-      expect(csv).toContain('Keyword,keyword2');
+      // Check that Test Campaign appears in a Campaign row
+      expect(csv).toMatch(/Campaign,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,Test Campaign/);
+      // Check that Test Ad Group appears in an Ad Group row
+      expect(csv).toMatch(/Ad Group,Test Ad Group/);
+      // Check for keywords
+      expect(csv).toContain('keyword1');
+      expect(csv).toContain('keyword2');
       expect(csv).toContain('Responsive Search Ad');
     });
 

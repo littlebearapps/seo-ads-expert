@@ -111,6 +111,20 @@ export class AnomalyDetector {
     });
 
     this.addRule({
+      id: 'conversion-rate-decline',
+      name: 'Conversion Rate Trend Decline',
+      metric: 'conversionRate',
+      type: 'TREND',
+      parameters: {
+        trendPeriod: 10,
+        minimumDecline: 20  // 20% decline threshold
+      },
+      enabled: true,
+      severity: 'HIGH',
+      description: 'Detects declining conversion rate trends'
+    });
+
+    this.addRule({
       id: 'quality-score-decline',
       name: 'Quality Score Decline',
       metric: 'qualityScore',
@@ -221,8 +235,55 @@ export class AnomalyDetector {
       series.shift();
     }
 
-    // Trigger anomaly detection for this metric
-    this.detectAnomaliesForMetric(metric);
+    // Trigger anomaly detection for this metric (run synchronously for immediate detection)
+    this.detectAnomaliesForMetricSync(metric);
+  }
+
+  /**
+   * Synchronous wrapper for anomaly detection (for immediate detection in tests/sync contexts)
+   */
+  private detectAnomaliesForMetricSync(metric: string): void {
+    const series = this.timeSeriesData.get(metric);
+    if (!series || series.length < 3) return;
+
+    // Run all applicable rules synchronously
+    for (const rule of this.detectionRules.values()) {
+      if (rule.metric === metric && rule.enabled) {
+        const anomaly = this.applyDetectionRuleSync(rule, series);
+        if (anomaly) {
+          this.addAnomaly(anomaly);
+        }
+      }
+    }
+  }
+
+  /**
+   * Synchronous version of rule application
+   */
+  private applyDetectionRuleSync(
+    rule: DetectionRule,
+    series: TimeSeriesData[]
+  ): Anomaly | null {
+    const current = series[series.length - 1];
+
+    try {
+      switch (rule.type) {
+        case 'THRESHOLD':
+          return this.applyThresholdRule(rule, series, current);
+        case 'STATISTICAL':
+          return this.applyStatisticalRule(rule, series, current);
+        case 'TREND':
+          return this.applyTrendRule(rule, series, current);
+        case 'SEASONAL':
+          return this.applySeasonalRule(rule, series, current);
+        default:
+          logger.warn('Unknown rule type', { type: rule.type });
+          return null;
+      }
+    } catch (error: any) {
+      logger.error(`Error applying rule ${rule.id}:`, error);
+      return null;
+    }
   }
 
   /**

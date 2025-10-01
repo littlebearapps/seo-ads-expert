@@ -163,7 +163,7 @@ describe('Enhanced Validation & Safety Suite', () => {
       const result = await validator.validate(changes);
 
       expect(result.overallStatus).toBe('BLOCKED');
-      expect(result.critical.some(c => c.message.includes('orphaned'))).toBe(true);
+      expect(result.critical.some(c => c.message.toLowerCase().includes('orphaned'))).toBe(true);
     });
 
     it('should validate bid ranges', async () => {

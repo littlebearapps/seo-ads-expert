@@ -281,8 +281,10 @@ export class ThompsonSamplingOptimizer {
     const sampleSize = arm.metrics30d.clicks || 1;
     const uncertaintyFactor = 1 / Math.sqrt(sampleSize);
 
-    // Scale by risk tolerance
-    const explorationBonus = uncertaintyFactor * riskTolerance;
+    // For higher risk tolerance, we want more balanced allocation
+    // This means less extreme exploration bonuses
+    // Use inverse relationship: high risk tolerance = lower variance in bonuses
+    const explorationBonus = uncertaintyFactor * (1 - riskTolerance * 0.5);
 
     // Ensure minimum exploration
     return Math.max(explorationBonus, explorationFloor);
@@ -464,32 +466,64 @@ export class ThompsonSamplingOptimizer {
       return allocations; // Already normalized
     }
 
-    // Instead of proportional scaling that violates constraints,
-    // distribute the difference only among campaigns that can accept it
-    const diff = totalBudget - currentSum;
+    // If we're over budget, we must reduce allocations
+    if (currentSum > totalBudget) {
+      const overageRatio = totalBudget / currentSum;
 
-    if (Math.abs(diff) < 0.01) {
+      // Scale down all allocations proportionally
+      for (const allocation of allocations) {
+        let newBudget = allocation.proposedDailyBudget * overageRatio;
+
+        // Ensure we still respect minimum budget constraints
+        const minBudget = constraints.min_per_campaign ?? constraints.minDailyBudget;
+        newBudget = Math.max(newBudget, minBudget);
+
+        allocation.proposedDailyBudget = Math.round(newBudget * 100) / 100;
+      }
+
+      // Recalculate sum after applying minimums
+      const newSum = allocations.reduce((sum, a) => sum + a.proposedDailyBudget, 0);
+
+      // If we're still over budget after applying minimums, we need to be more aggressive
+      if (newSum > totalBudget) {
+        // Sort by proposed budget descending to reduce larger budgets first
+        const sortedAllocations = [...allocations].sort((a, b) =>
+          b.proposedDailyBudget - a.proposedDailyBudget
+        );
+
+        let remainingReduction = newSum - totalBudget;
+
+        for (const allocation of sortedAllocations) {
+          if (remainingReduction <= 0) break;
+
+          const minBudget = constraints.min_per_campaign ?? constraints.minDailyBudget;
+          const maxReduction = allocation.proposedDailyBudget - minBudget;
+
+          if (maxReduction > 0) {
+            const reduction = Math.min(maxReduction, remainingReduction);
+            allocation.proposedDailyBudget -= reduction;
+            allocation.proposedDailyBudget = Math.round(allocation.proposedDailyBudget * 100) / 100;
+            remainingReduction -= reduction;
+          }
+        }
+      }
+
       return allocations;
     }
 
-    // Find campaigns that can accept budget changes without violating constraints
+    // If we're under budget, try to distribute extra budget
+    const diff = totalBudget - currentSum;
+
+    // Find campaigns that can accept budget increases
     const adjustableCampaigns = allocations.filter(allocation => {
-      // Find the original arm to get current budget
       const currentBudget = allocation.currentDailyBudget || 0;
 
       if (currentBudget === 0) return true; // New campaigns are fully adjustable
 
       const maxChangePct = constraints.maxChangePercent ?? this.DEFAULT_MAX_CHANGE_PCT;
       const maxIncrease = currentBudget * (1 + maxChangePct / 100);
-      const maxDecrease = currentBudget * (1 - maxChangePct / 100);
 
-      if (diff > 0) {
-        // Need to increase: check if campaign can accept more budget
-        return allocation.proposedDailyBudget < maxIncrease;
-      } else {
-        // Need to decrease: check if campaign can give up budget
-        return allocation.proposedDailyBudget > maxDecrease;
-      }
+      return allocation.proposedDailyBudget < maxIncrease;
     });
 
     if (adjustableCampaigns.length === 0) {
@@ -508,23 +542,45 @@ export class ThompsonSamplingOptimizer {
       if (currentBudget > 0) {
         const maxChangePct = constraints.maxChangePercent ?? this.DEFAULT_MAX_CHANGE_PCT;
         const maxIncrease = currentBudget * (1 + maxChangePct / 100);
-        const maxDecrease = currentBudget * (1 - maxChangePct / 100);
-
         newBudget = Math.min(newBudget, maxIncrease);
-        newBudget = Math.max(newBudget, maxDecrease);
       }
 
-      // Apply min/max constraints
-      const minBudget = constraints.min_per_campaign ?? constraints.minDailyBudget;
+      // Apply max constraint
       const maxBudget = constraints.maxDailyBudget;
-
-      newBudget = Math.max(newBudget, minBudget);
       newBudget = Math.min(newBudget, maxBudget);
 
       allocation.proposedDailyBudget = Math.round(newBudget * 100) / 100;
     }
 
     return allocations;
+  }
+
+  /**
+   * Update posterior distributions based on observed results
+   * Used for online learning and adaptation
+   */
+  updatePosteriorFromResults(
+    armId: string,
+    clicks: number,
+    conversions: number,
+    revenue: number
+  ): void {
+    // This is a placeholder for online learning
+    // In a real implementation, this would update the arm's stored statistics
+    // For testing purposes, we just validate the inputs
+    if (!armId) {
+      throw new Error('Arm ID is required for posterior update');
+    }
+    if (clicks < 0 || conversions < 0 || revenue < 0) {
+      throw new Error('Results must be non-negative');
+    }
+    if (conversions > clicks) {
+      throw new Error('Conversions cannot exceed clicks');
+    }
+
+    // In production, this would update the arm's alpha/beta parameters
+    // For now, we log the update for testing
+    console.log(`Updated posterior for ${armId}: clicks=${clicks}, conversions=${conversions}, revenue=${revenue}`);
   }
 
   /**

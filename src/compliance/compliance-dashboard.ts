@@ -223,13 +223,14 @@ export class ComplianceDashboard {
     let criticalOperations = 0;
 
     for (const log of logs) {
-      if (log.action?.includes('budget') || log.action?.includes('bid')) {
+      const action = log.action?.toLowerCase() || '';
+      if (action.includes('budget') || action.includes('bid')) {
         budgetChanges++;
       }
-      if (log.action?.includes('export') || log.action?.includes('download')) {
+      if (action.includes('export') || action.includes('download')) {
         dataExports++;
       }
-      if (log.action?.includes('delete') || log.action?.includes('rollback')) {
+      if (action.includes('delete') || action.includes('rollback')) {
         criticalOperations++;
       }
     }
@@ -273,8 +274,8 @@ export class ComplianceDashboard {
       return 'Budget change exceeds $10,000 limit';
     }
 
-    // Check working hours (example: 9 AM - 6 PM)
-    const hour = new Date(log.timestamp).getHours();
+    // Check working hours (example: 9 AM - 6 PM UTC)
+    const hour = new Date(log.timestamp).getUTCHours();
     if (hour < 9 || hour > 18) {
       return 'Change made outside business hours';
     }
