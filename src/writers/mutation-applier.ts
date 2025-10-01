@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { GoogleAdsApiClient } from '../connectors/google-ads-api.js';
 import { MutationGuard, Mutation, GuardrailResult } from '../monitors/mutation-guard.js';
 import { AuditLogger } from '../monitors/audit-logger.js';
+import { BudgetEnforcer } from '../monitors/budget-enforcer.js';
 import { PerformanceMonitor } from '../monitors/performance.js';
 
 const logger = pino({
@@ -280,14 +281,22 @@ export class MutationBuilder {
 export class MutationApplier {
   private googleAdsClient: GoogleAdsApiClient;
   private mutationGuard: MutationGuard;
+  private budgetEnforcer: BudgetEnforcer;
   private auditLogger: AuditLogger;
   private performanceMonitor: PerformanceMonitor;
   private rollbackStack: Array<{ id: string; mutations: Mutation[]; timestamp: string }> = [];
+  private rollbackPlans: Map<string, Mutation[]> = new Map();
 
-  constructor() {
-    this.googleAdsClient = new GoogleAdsApiClient();
-    this.mutationGuard = new MutationGuard();
-    this.auditLogger = new AuditLogger();
+  constructor(
+    guard?: MutationGuard,
+    enforcer?: BudgetEnforcer,
+    logger?: AuditLogger,
+    client?: GoogleAdsApiClient
+  ) {
+    this.mutationGuard = guard || new MutationGuard();
+    this.budgetEnforcer = enforcer || new BudgetEnforcer();
+    this.auditLogger = logger || new AuditLogger();
+    this.googleAdsClient = client || new GoogleAdsApiClient();
     this.performanceMonitor = new PerformanceMonitor();
   }
 
@@ -369,7 +378,8 @@ export class MutationApplier {
         estimatedCost: this.estimateCost(mutationData)
       };
 
-      const guardrailResult = await this.mutationGuard.validateMutation(mutation);
+      const results = await this.mutationGuard.validateMutations([mutation]);
+      const guardrailResult = results[0];
       result.guardrailResults.push(guardrailResult);
 
       if (!guardrailResult.passed) {
@@ -452,8 +462,9 @@ export class MutationApplier {
 
       // Validate with guardrails unless skipped
       if (!options.skipGuardrails) {
-        const guardrailResult = await this.mutationGuard.validateMutation(mutation);
-        
+        const results = await this.mutationGuard.validateMutations([mutation]);
+        const guardrailResult = results[0];
+
         if (!guardrailResult.passed) {
           result.skipped.push({
             mutation: mutationData,
