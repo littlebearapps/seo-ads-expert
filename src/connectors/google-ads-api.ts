@@ -180,7 +180,19 @@ export class GAQLBuilder {
       query += ` LIMIT ${this.limitValue}`;
     }
 
+    // Reset builder state after building query (allows reuse)
+    this.reset();
+
     return query;
+  }
+
+  // Reset builder state for reuse
+  private reset(): void {
+    this.selectFields = [];
+    this.fromResource = '';
+    this.whereConditions = [];
+    this.orderByField = '';
+    this.limitValue = 0;
   }
 
   // FIELD VALIDATION (opt-in, test-only)
@@ -1109,11 +1121,83 @@ export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
     super();
     // Override isAuthenticated to always be true for mocking
     (this as any).isAuthenticated = true;
+    // Set mock config to pass configuration checks
+    (this as any).config = {
+      clientId: 'mock-client-id',
+      clientSecret: 'mock-client-secret',
+      refreshToken: 'mock-refresh-token',
+      developerToken: 'mock-developer-token'
+    };
+    // Add mock customer IDs
+    (this as any).customerIds = ['123-456-7890'];
+  }
+
+  // Override authenticate to bypass real OAuth
+  async authenticate(): Promise<void> {
+    (this as any).isAuthenticated = true;
+  }
+
+  // Override executeQuery to bypass authentication and use mock data
+  protected async executeQuery<T>(
+    customerId: string,
+    query: string,
+    parseResponse: (data: any) => T[]
+  ): Promise<any> {
+    logger.info(`Mock executeQuery: ${query}`);
+
+    // Simulate different query responses based on query content
+    let mockResults: any[] = [];
+
+    if (query.includes('FROM campaign')) {
+      mockResults = [
+        {
+          campaign: {
+            id: '123',
+            name: 'Test Campaign',
+            status: 'ENABLED',
+            resourceName: `customers/${customerId}/campaigns/123`
+          }
+        }
+      ];
+    } else if (query.includes('FROM ad_group')) {
+      mockResults = [
+        {
+          ad_group: {
+            id: '456',
+            name: 'Test Ad Group',
+            status: 'ENABLED'
+          }
+        }
+      ];
+    } else if (query.includes('FROM keyword_view')) {
+      mockResults = [
+        {
+          keyword: {
+            id: '789',
+            text: 'test keyword',
+            matchType: 'EXACT'
+          }
+        }
+      ];
+    }
+
+    const parsedResults = parseResponse ? parseResponse(mockResults) : mockResults;
+
+    return {
+      results: parsedResults,
+      totalResults: parsedResults.length
+    };
   }
 
   // Override makeApiCall to return mock data
   protected async makeApiCall(endpoint: string, payload: any): Promise<any> {
     logger.info(`Mock API call to ${endpoint}`, { payload });
+
+    // Check for custom mock response first
+    const customResponse = this.mockResponses.get(endpoint);
+    if (customResponse) {
+      return customResponse;
+    }
 
     // Return mock data based on endpoint
     if (endpoint === 'mutate') {
@@ -1151,7 +1235,8 @@ export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
               campaign: {
                 id: '123',
                 name: 'Test Campaign',
-                status: 'ENABLED'
+                status: 'ENABLED',
+                resourceName: `customers/${payload.customerId}/campaigns/123`
               }
             }
           ]
