@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { GoogleAdsApiClient, GAQLBuilder } from '../src/connectors/google-ads-api.js';
+import { GoogleAdsApiClient, GAQLBuilder, MockGoogleAdsApiClient } from '../src/connectors/google-ads-api.js';
 import { CampaignReconciler } from '../src/analyzers/campaign-reconciler.js';
 
 // Mock dependencies
@@ -12,7 +12,12 @@ describe('Google Ads API Integration (Task 1)', () => {
     let client: GoogleAdsApiClient;
 
     beforeEach(() => {
-      client = new GoogleAdsApiClient();
+      // Use MockGoogleAdsApiClient if credentials not available
+      if (process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
+        client = new GoogleAdsApiClient();
+      } else {
+        client = new MockGoogleAdsApiClient();
+      }
     });
 
     afterEach(() => {
@@ -143,7 +148,7 @@ describe('Google Ads API Integration (Task 1)', () => {
         (client as any).makeApiCall = vi.fn()
           .mockRejectedValueOnce(new Error('ECONNRESET'))
           .mockRejectedValueOnce(new Error('ECONNRESET'))
-          .mkResolvedValueOnce({ results: [] });
+          .mockResolvedValueOnce({ results: [] });
 
         const result = await client.getCampaigns('123-456-7890');
         expect(result).toBeDefined();
@@ -291,7 +296,7 @@ describe('Google Ads API Integration (Task 1)', () => {
       });
 
       it('should handle malformed responses', async () => {
-        (client as any).makeApiCall = vi.fn().mkResolvedValue(null);
+        (client as any).makeApiCall = vi.fn().mockResolvedValue(null);
 
         const result = await client.getCampaigns('123-456-7890');
         expect(Array.isArray(result)).toBe(true);
