@@ -47,3 +47,39 @@ plans/*/*/
 
 # Git worktrees (prevent tools from recursing into them)
 .worktrees/
+
+# Database files (runtime data, not source code)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+experiments/*.db
+experiments/*.json
+
+# Audit logs (runtime generated, 90-day retention)
+audit/*.jsonl
+
+# Test output and results
+test-output/
+test-results.json
+coverage/
+
+# Vitest cache
+.vitest/
+
+# Temporary test files (one-off debugging scripts in root)
+test-*.js
+test-*.ts
+test-*.mjs
+test-*.cjs
+debug-*.js
+simple-test*.ts
+
+# MacOS file duplicates (created by Finder when conflicts occur)
+*" 2".*
+* 2.*
+
+# Session-specific Claude context (but keep .claude-context.md)
+.claude-context
+
+# TypeScript build info
+*.tsbuildinfo
