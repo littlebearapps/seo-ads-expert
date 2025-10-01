@@ -475,6 +475,7 @@ export class AuditLogger {
     user?: string;
     resource?: string;
     action?: string;
+    result?: string;
   }): Promise<AuditLogEntry[]> {
     const logs: AuditLogEntry[] = [];
     const start = new Date(params.startDate);
@@ -497,7 +498,8 @@ export class AuditLogger {
             if (params.user && entry.user !== params.user) continue;
             if (params.resource && entry.resource !== params.resource) continue;
             if (params.action && entry.action !== params.action) continue;
-            
+            if (params.result && entry.result !== params.result) continue;
+
             logs.push(entry);
           } catch (error) {
             logger.warn(`Failed to parse audit log entry: ${line}`);
@@ -631,15 +633,15 @@ export class AuditLogger {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
-      
+
       const files = readdirSync(this.auditPath);
       let deletedCount = 0;
-      
+
       for (const file of files) {
         if (file.startsWith('audit-') && file.endsWith('.jsonl')) {
           const dateStr = file.replace('audit-', '').replace('.jsonl', '');
           const fileDate = new Date(dateStr);
-          
+
           if (fileDate < cutoffDate) {
             const filePath = join(this.auditPath, file);
             existsSync(filePath) && unlinkSync(filePath);
@@ -647,13 +649,28 @@ export class AuditLogger {
           }
         }
       }
-      
+
       if (deletedCount > 0) {
         logger.info(`Cleaned up ${deletedCount} old audit log files`);
       }
     } catch (error) {
       logger.warn('Failed to clean old audit logs', error);
     }
+  }
+
+  /**
+   * Set retention policy (number of days to keep logs)
+   */
+  setRetentionPolicy(days: number): void {
+    this.retentionDays = days;
+    logger.info(`Retention policy set to ${days} days`);
+  }
+
+  /**
+   * Manually trigger cleanup of old logs
+   */
+  async cleanupOldLogs(): Promise<void> {
+    this.cleanOldLogs();
   }
 
   /**
@@ -691,9 +708,34 @@ export class AuditLogger {
   /**
    * Export audit logs to CSV
    */
+  /**
+   * Export logs to a string format
+   */
+  async exportLogs(startDate: string, endDate: string, format: string): Promise<string> {
+    const logs = await this.getAuditLogs({ startDate, endDate });
+
+    if (format === 'csv') {
+      const headers = ['timestamp', 'user', 'action', 'result', 'resource', 'error'];
+      const rows = logs.map(log => [
+        log.timestamp,
+        log.user,
+        log.action,
+        log.result,
+        log.resource || '',
+        log.error || ''
+      ]);
+
+      return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    } else if (format === 'json') {
+      return JSON.stringify(logs, null, 2);
+    } else {
+      throw new Error(`Unsupported export format: ${format}`);
+    }
+  }
+
   async exportToCSV(startDate: string, endDate: string, outputPath: string): Promise<void> {
     const logs = await this.getAuditLogs({ startDate, endDate });
-    
+
     const headers = ['ID', 'Timestamp', 'User', 'Action', 'Resource', 'Result', 'Error'];
     const rows = logs.map(log => [
       log.id,
@@ -704,10 +746,10 @@ export class AuditLogger {
       log.result,
       log.error || ''
     ]);
-    
+
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
     writeFileSync(outputPath, csv);
-    
+
     logger.info(`Exported ${logs.length} audit log entries to ${outputPath}`);
   }
 }

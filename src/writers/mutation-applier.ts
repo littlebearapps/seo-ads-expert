@@ -56,6 +56,8 @@ export const MutationResultSchema = z.object({
   })),
   rollbackAvailable: z.boolean(),
   rollbackId: z.string().optional(),
+  rolledBack: z.boolean().optional(),
+  rollbackPlan: z.array(z.any()).optional(),
   summary: z.object({
     total: z.number(),
     succeeded: z.number(),
@@ -69,7 +71,7 @@ export type MutationResult = z.infer<typeof MutationResultSchema>;
 // Dry run result schema
 export const DryRunResultSchema = z.object({
   canProceed: z.boolean(),
-  guardrailResults: z.array(GuardrailResult),
+  guardrailResults: z.array(z.any()),
   preview: z.object({
     before: z.record(z.any()),
     after: z.record(z.any()),
@@ -488,6 +490,7 @@ export class MutationApplier {
           logger.info('Initiating auto-rollback due to failure');
           await this.rollback(rollbackMutations);
           result.success = false;
+          result.rolledBack = true;
           return result;
         }
       }
@@ -503,6 +506,7 @@ export class MutationApplier {
       });
       result.rollbackAvailable = true;
       result.rollbackId = rollbackId;
+      result.rollbackPlan = rollbackMutations;
     }
 
     result.success = result.summary.failed === 0;
@@ -622,6 +626,14 @@ export class MutationApplier {
 
     result.success = result.summary.failed === 0;
     return result;
+  }
+
+  /**
+   * Execute a rollback by ID
+   * Public wrapper around rollback() for external use
+   */
+  async executeRollback(rollbackId: string): Promise<MutationResult> {
+    return await this.rollback(rollbackId);
   }
 
   /**
