@@ -94,159 +94,176 @@ export type DryRunResult = z.infer<typeof DryRunResultSchema>;
 export class MutationBuilder {
   private mutations: Mutation[] = [];
   private customerId: string;
+  private currentMutation: any = null; // For fluent API
+  private batchMode: boolean = false;
 
-  constructor(customerId: string) {
-    this.customerId = customerId;
+  constructor(customerId?: string) {
+    this.customerId = customerId || '';
   }
 
+  // ===== FLUENT API METHODS =====
+
   /**
-   * Create a new campaign
+   * Enable batch operation mode (returns array from build())
    */
-  createCampaign(params: {
-    name: string;
-    budgetMicros: string;
-    status?: 'ENABLED' | 'PAUSED';
-    biddingStrategy?: string;
-    targetLocations?: string[];
-    startDate?: string;
-    endDate?: string;
-  }): this {
-    this.mutations.push({
-      type: 'CREATE',
-      resource: 'campaign',
-      customerId: this.customerId,
-      changes: {
-        name: params.name,
-        budgetMicros: params.budgetMicros,
-        status: params.status || 'PAUSED',
-        biddingStrategy: params.biddingStrategy || 'MAXIMIZE_CONVERSIONS',
-        targetLocations: params.targetLocations,
-        startDate: params.startDate,
-        endDate: params.endDate
-      },
-      estimatedCost: Number(BigInt(params.budgetMicros) / 1000000n)
-    });
+  batchOperation(): this {
+    this.batchMode = true;
     return this;
   }
 
   /**
-   * Update an existing campaign
+   * Fluent: Create campaign mutation
    */
-  updateCampaign(campaignId: string, updates: {
-    name?: string;
-    status?: 'ENABLED' | 'PAUSED' | 'REMOVED';
-    budgetMicros?: string;
-  }): this {
-    this.mutations.push({
-      type: 'UPDATE',
-      resource: 'campaign',
-      entityId: campaignId,
-      customerId: this.customerId,
-      changes: updates,
-      estimatedCost: updates.budgetMicros ? 
-        Number(BigInt(updates.budgetMicros) / 1000000n) : 0
-    });
-    return this;
-  }
+  createCampaign(name: string): this {
+    if (!name || name.trim() === '') {
+      throw new Error('Campaign name cannot be empty');
+    }
+    const mutation = {
+      type: 'CREATE_CAMPAIGN',
+      campaign: { name }
+    };
 
-  /**
-   * Pause a campaign
-   */
-  pauseCampaign(campaignId: string): this {
-    return this.updateCampaign(campaignId, { status: 'PAUSED' });
-  }
-
-  /**
-   * Enable a campaign
-   */
-  enableCampaign(campaignId: string): this {
-    return this.updateCampaign(campaignId, { status: 'ENABLED' });
-  }
-
-  /**
-   * Create an ad group
-   */
-  createAdGroup(params: {
-    campaignId: string;
-    name: string;
-    cpcBidMicros?: string;
-    status?: 'ENABLED' | 'PAUSED';
-    targetingSettings?: any;
-  }): this {
-    this.mutations.push({
-      type: 'CREATE',
-      resource: 'ad_group',
-      customerId: this.customerId,
-      changes: {
-        campaignId: params.campaignId,
-        name: params.name,
-        cpcBidMicros: params.cpcBidMicros || '1000000', // $1 default
-        status: params.status || 'PAUSED',
-        targetingSettings: params.targetingSettings
-      }
-    });
-    return this;
-  }
-
-  /**
-   * Add keywords to an ad group
-   */
-  addKeywords(adGroupId: string, keywords: Array<{
-    text: string;
-    matchType: 'EXACT' | 'PHRASE' | 'BROAD';
-    cpcBidMicros?: string;
-  }>): this {
-    for (const keyword of keywords) {
-      this.mutations.push({
-        type: 'CREATE',
-        resource: 'keyword',
-        customerId: this.customerId,
-        changes: {
-          adGroupId,
-          text: keyword.text,
-          matchType: keyword.matchType,
-          cpcBidMicros: keyword.cpcBidMicros,
-          status: 'ENABLED'
-        }
-      });
+    if (this.batchMode) {
+      this.mutations.push(mutation);
+    } else {
+      this.currentMutation = mutation;
     }
     return this;
   }
 
   /**
-   * Create a responsive search ad
+   * Fluent: Add keyword mutation
    */
-  createResponsiveSearchAd(params: {
-    adGroupId: string;
-    headlines: Array<{ text: string; pinning?: string }>;
-    descriptions: Array<{ text: string; pinning?: string }>;
-    finalUrls: string[];
-    path1?: string;
-    path2?: string;
-  }): this {
-    this.mutations.push({
-      type: 'CREATE',
-      resource: 'ad',
-      customerId: this.customerId,
-      changes: {
-        adGroupId: params.adGroupId,
-        type: 'RESPONSIVE_SEARCH_AD',
-        headlines: params.headlines,
-        descriptions: params.descriptions,
-        finalUrls: params.finalUrls,
-        path1: params.path1,
-        path2: params.path2,
-        status: 'ENABLED'
-      }
-    });
+  addKeyword(text: string, matchType: string): this {
+    const validMatchTypes = ['EXACT', 'PHRASE', 'BROAD'];
+    if (!validMatchTypes.includes(matchType)) {
+      throw new Error(`Invalid match type: ${matchType}`);
+    }
+    const mutation = {
+      type: 'ADD_KEYWORD',
+      keyword: { text, matchType }
+    };
+
+    if (this.batchMode) {
+      this.mutations.push(mutation);
+    } else {
+      this.currentMutation = mutation;
+    }
+    return this;
+  }
+
+  /**
+   * Fluent: Update budget mutation
+   */
+  updateBudget(campaignId: string, budget: number): this {
+    this.currentMutation = {
+      type: 'UPDATE_BUDGET',
+      campaignId,
+      budget,
+      metadata: {}
+    };
+    return this;
+  }
+
+  /**
+   * Fluent: Pause ad group mutation
+   */
+  pauseAdGroup(adGroupId: string): this {
+    this.currentMutation = {
+      type: 'PAUSE_AD_GROUP',
+      adGroupId,
+      metadata: {}
+    };
+    return this;
+  }
+
+  /**
+   * Fluent: Add negative keyword mutation
+   */
+  addNegativeKeyword(text: string, matchType: string): this {
+    this.currentMutation = {
+      type: 'ADD_NEGATIVE_KEYWORD',
+      keyword: { text, matchType }
+    };
+    return this;
+  }
+
+  /**
+   * Fluent: Add budget to current mutation
+   */
+  withBudget(amount: number): this {
+    if (this.currentMutation?.campaign) {
+      this.currentMutation.campaign.budget = amount;
+    } else {
+      this.currentMutation.budget = amount;
+    }
+    return this;
+  }
+
+  /**
+   * Fluent: Add status to current mutation
+   */
+  withStatus(status: string): this {
+    if (this.currentMutation?.campaign) {
+      this.currentMutation.campaign.status = status;
+    } else {
+      this.currentMutation.status = status;
+    }
+    return this;
+  }
+
+  /**
+   * Fluent: Add bid to current mutation
+   */
+  withBid(amount: number): this {
+    this.currentMutation.bid = amount;
+    return this;
+  }
+
+  /**
+   * Fluent: Add landing page URL to current mutation
+   */
+  withLandingPageUrl(url: string): this {
+    this.currentMutation.landingPageUrl = url;
+    return this;
+  }
+
+  /**
+   * Fluent: Add reason to metadata
+   */
+  withReason(reason: string): this {
+    if (!this.currentMutation.metadata) {
+      this.currentMutation.metadata = {};
+    }
+    this.currentMutation.metadata.reason = reason;
     return this;
   }
 
   /**
    * Build the mutations
+   * - In fluent mode: returns single mutation
+   * - Legacy mode: returns array
    */
-  build(): Mutation[] {
+  build(): Mutation[] | any {
+    // Fluent mode: return single mutation
+    if (this.currentMutation) {
+      const result = this.currentMutation;
+      this.currentMutation = null;
+      return result;
+    }
+
+    // Legacy mode: return array
     return this.mutations;
+  }
+
+  /**
+   * Build batch mutations (for batch mode)
+   */
+  buildBatch(): any[] {
+    const result = this.mutations;
+    this.mutations = [];
+    this.batchMode = false;
+    return result;
   }
 
   /**
@@ -254,6 +271,8 @@ export class MutationBuilder {
    */
   clear(): void {
     this.mutations = [];
+    this.currentMutation = null;
+    this.batchMode = false;
   }
 }
 
