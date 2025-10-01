@@ -1292,6 +1292,11 @@ export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
 
   // Phase 3B.2: Override createBudget with state tracking
   async createBudget(customerId: string, budget: BudgetInput): Promise<MutationResult> {
+    // Validate input (same as real client)
+    if (!budget.name || budget.name.trim() === '') {
+      throw new Error('Budget name cannot be empty');
+    }
+
     const id = Math.random().toString(36).substring(2, 15);
     const resourceName = `customers/${customerId}/campaignBudgets/${id}`;
 
@@ -1311,6 +1316,11 @@ export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
 
   // Phase 3B.2: Override createCampaign with budget validation
   async createCampaign(customerId: string, campaign: CampaignInput): Promise<MutationResult> {
+    // Validate input (same as real client)
+    if (!campaign.name || campaign.name.trim() === '') {
+      throw new Error('Campaign name cannot be empty');
+    }
+
     // IMPORTANT: Validate budget exists if budgetResourceName provided
     if (campaign.budgetResourceName && !this.createdResources.has(campaign.budgetResourceName)) {
       throw new Error(`Budget ${campaign.budgetResourceName} not found. Create budget first.`);
@@ -1336,6 +1346,14 @@ export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
 
   // Phase 3B.2: Override createAdGroup with campaign validation
   async createAdGroup(customerId: string, adGroup: AdGroupInput): Promise<MutationResult> {
+    // Validate input (same as real client)
+    if (!adGroup.name || adGroup.name.trim() === '') {
+      throw new Error('Ad group name cannot be empty');
+    }
+    if (!adGroup.campaignResourceName) {
+      throw new Error('Campaign resource name is required');
+    }
+
     // IMPORTANT: Validate campaign exists
     if (adGroup.campaignResourceName && !this.createdResources.has(adGroup.campaignResourceName)) {
       throw new Error(`Campaign ${adGroup.campaignResourceName} not found. Create campaign first.`);
