@@ -54,6 +54,10 @@ export const AuditSummarySchema = z.object({
   }),
   totalActions: z.number(),
   actionBreakdown: z.record(z.number()),
+  byAction: z.record(z.number()), // Alias for actionBreakdown
+  byUser: z.record(z.number()),
+  byResult: z.record(z.number()),
+  securityEvents: z.number(),
   successRate: z.number(),
   totalMutations: z.number(),
   totalRollbacks: z.number(),
@@ -518,28 +522,42 @@ export class AuditLogger {
    */
   async generateSummary(startDate: string, endDate: string): Promise<AuditSummary> {
     const logs = await this.getAuditLogs({ startDate, endDate });
-    
+
     const actionBreakdown: Record<string, number> = {};
     const resourceCounts: Record<string, number> = {};
+    const userCounts: Record<string, number> = {};
+    const resultCounts: Record<string, number> = {};
     const users = new Set<string>();
     const errors: Array<{ timestamp: string; action: string; error: string }> = [];
     let totalCostChange = 0;
     let successCount = 0;
     let mutationCount = 0;
     let rollbackCount = 0;
+    let securityEventCount = 0;
 
     for (const entry of logs) {
       // Count by action
       actionBreakdown[entry.action] = (actionBreakdown[entry.action] || 0) + 1;
-      
+
+      // Count by user
+      userCounts[entry.user] = (userCounts[entry.user] || 0) + 1;
+
+      // Count by result
+      resultCounts[entry.result] = (resultCounts[entry.result] || 0) + 1;
+
+      // Count security events
+      if (entry.resource === 'security' || entry.action === 'security_event') {
+        securityEventCount++;
+      }
+
       // Count by resource
       if (entry.resource) {
         resourceCounts[entry.resource] = (resourceCounts[entry.resource] || 0) + 1;
       }
-      
+
       // Track users
       users.add(entry.user);
-      
+
       // Track errors
       if (entry.result === 'failed' && entry.error) {
         errors.push({
@@ -548,12 +566,12 @@ export class AuditLogger {
           error: entry.error
         });
       }
-      
+
       // Track success rate
       if (entry.result === 'success') {
         successCount++;
       }
-      
+
       // Track mutations and rollbacks
       if (entry.action === 'mutation') {
         mutationCount++;
@@ -579,6 +597,10 @@ export class AuditLogger {
       },
       totalActions: logs.length,
       actionBreakdown,
+      byAction: actionBreakdown, // Alias
+      byUser: userCounts,
+      byResult: resultCounts,
+      securityEvents: securityEventCount,
       successRate: logs.length > 0 ? (successCount / logs.length) * 100 : 0,
       totalMutations: mutationCount,
       totalRollbacks: rollbackCount,
@@ -586,6 +608,103 @@ export class AuditLogger {
       activeUsers: Array.from(users),
       topResources,
       errors: errors.slice(0, 50) // Limit to 50 most recent errors
+    };
+  }
+
+  /**
+   * Detect suspicious patterns for a user
+   */
+  async detectSuspiciousPatterns(userId: string): Promise<Array<{ type: string; count: number; timeframe: string }>> {
+    const patterns: Array<{ type: string; count: number; timeframe: string }> = [];
+
+    // Get logs for the last 24 hours
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const logs = await this.getAuditLogs({
+      startDate,
+      endDate,
+      user: userId
+    });
+
+    // Detect multiple failures
+    const failedActions = logs.filter(l => l.result === 'failed');
+    if (failedActions.length >= 5) {
+      patterns.push({
+        type: 'MULTIPLE_FAILURES',
+        count: failedActions.length,
+        timeframe: '24h'
+      });
+    }
+
+    // Detect rapid-fire actions
+    if (logs.length >= 20) {
+      patterns.push({
+        type: 'HIGH_FREQUENCY',
+        count: logs.length,
+        timeframe: '24h'
+      });
+    }
+
+    // Detect unusual delete operations
+    const deleteActions = logs.filter(l => l.action.includes('DELETE') || l.action.includes('REMOVE'));
+    if (deleteActions.length >= 3) {
+      patterns.push({
+        type: 'MULTIPLE_DELETES',
+        count: deleteActions.length,
+        timeframe: '24h'
+      });
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Get user activity summary
+   */
+  async getUserActivity(userId: string, days: number): Promise<{
+    totalActions: number;
+    mostFrequentActions: Array<{ action: string; count: number }>;
+    timeDistribution: Record<string, number>;
+    riskScore: number;
+  }> {
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const logs = await this.getAuditLogs({
+      startDate,
+      endDate,
+      user: userId
+    });
+
+    // Count actions
+    const actionCounts: Record<string, number> = {};
+    const hourDistribution: Record<string, number> = {};
+
+    for (const log of logs) {
+      actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+
+      // Track hour distribution
+      const hour = new Date(log.timestamp).getHours();
+      hourDistribution[hour] = (hourDistribution[hour] || 0) + 1;
+    }
+
+    // Get most frequent actions
+    const mostFrequentActions = Object.entries(actionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([action, count]) => ({ action, count }));
+
+    // Calculate risk score (0-100)
+    const failureRate = logs.filter(l => l.result === 'failed').length / Math.max(logs.length, 1);
+    const actionFrequency = logs.length / days;
+    const riskScore = Math.min(100, (failureRate * 50) + (actionFrequency > 10 ? 25 : 0) + (logs.length > 100 ? 25 : 0));
+
+    return {
+      totalActions: logs.length,
+      mostFrequentActions,
+      timeDistribution: hourDistribution,
+      riskScore
     };
   }
 
