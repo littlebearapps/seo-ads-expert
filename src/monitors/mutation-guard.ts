@@ -523,7 +523,13 @@ export class MutationGuard extends PerformanceMonitor {
    * Validate bid ranges (not just limits)
    */
   private validateBidRanges(mutation: Mutation, result: GuardrailResult): void {
-    const bid = (mutation as any).bid as number | undefined;
+    // Check normalized format (mutation.changes.bid)
+    let bid = mutation.changes?.bid as number | undefined;
+
+    // Also check old format (mutation.bid) for backward compatibility
+    if (bid === undefined) {
+      bid = (mutation as any).bid as number | undefined;
+    }
 
     if (bid !== undefined) {
       const MIN_BID = 0.05; // $0.05 minimum
@@ -850,7 +856,7 @@ export class MutationGuard extends PerformanceMonitor {
     const urls: string[] = [];
 
     // Check various fields that might contain URLs in mutation.changes
-    const urlFields = ['finalUrls', 'finalUrl', 'landingPage', 'destinationUrl'];
+    const urlFields = ['finalUrls', 'finalUrl', 'landingPage', 'landingPageUrl', 'destinationUrl'];
 
     for (const field of urlFields) {
       const value = mutation.changes?.[field];

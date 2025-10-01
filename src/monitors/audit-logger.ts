@@ -1,4 +1,4 @@
-import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import pino from 'pino';
 import { z } from 'zod';
@@ -97,7 +97,7 @@ export class AuditLogger {
   }
 
   /**
-   * Log a mutation attempt
+   * Log a mutation attempt (object signature)
    */
   async logMutation(params: {
     mutation: any;
@@ -106,7 +106,35 @@ export class AuditLogger {
     timestamp: string;
     user: string;
     metadata?: any;
-  }): Promise<void> {
+  }): Promise<void>;
+
+  /**
+   * Log a mutation attempt (simple signature for tests)
+   */
+  async logMutation(mutation: any, user: string, result: string): Promise<void>;
+
+  /**
+   * Log a mutation attempt (implementation)
+   */
+  async logMutation(
+    paramsOrMutation: any,
+    userOrUndefined?: string,
+    resultOrUndefined?: string
+  ): Promise<void> {
+    // Adapt simple signature to object signature
+    let params: any;
+    if (typeof paramsOrMutation === 'object' && paramsOrMutation.mutation) {
+      // Object signature
+      params = paramsOrMutation;
+    } else {
+      // Simple signature: (mutation, user, result)
+      params = {
+        mutation: paramsOrMutation,
+        user: userOrUndefined!,
+        result: resultOrUndefined!.toLowerCase() as 'success' | 'failed' | 'skipped',
+        timestamp: new Date().toISOString()
+      };
+    }
     const entry: AuditLogEntry = {
       id: this.generateId(),
       timestamp: params.timestamp,
@@ -228,14 +256,42 @@ export class AuditLogger {
   }
 
   /**
-   * Log a configuration change
+   * Log a configuration change (object signature)
    */
   async logConfiguration(params: {
     configType: string;
     before: any;
     after: any;
     user: string;
-  }): Promise<void> {
+  }): Promise<void>;
+
+  /**
+   * Log a configuration change (simple signature for tests)
+   */
+  async logConfiguration(component: string, config: any, user: string): Promise<void>;
+
+  /**
+   * Log a configuration change (implementation)
+   */
+  async logConfiguration(
+    paramsOrComponent: any,
+    configOrUndefined?: any,
+    userOrUndefined?: string
+  ): Promise<void> {
+    // Adapt simple signature to object signature
+    let params: any;
+    if (typeof paramsOrComponent === 'object' && paramsOrComponent.configType) {
+      // Object signature
+      params = paramsOrComponent;
+    } else {
+      // Simple signature: (component, config, user)
+      params = {
+        configType: paramsOrComponent,
+        after: configOrUndefined,
+        before: {},
+        user: userOrUndefined!
+      };
+    }
     const entry: AuditLogEntry = {
       id: this.generateId(),
       timestamp: new Date().toISOString(),
@@ -251,6 +307,34 @@ export class AuditLogger {
         after: params.after,
         diff: this.generateDiff(params.before, params.after)
       }
+    };
+
+    await this.writeEntry(entry);
+  }
+
+  /**
+   * Log a security event
+   */
+  async logSecurityEvent(
+    type: string,
+    user: string,
+    description: string,
+    metadata?: any
+  ): Promise<void> {
+    const entry: AuditLogEntry = {
+      id: this.generateId(),
+      timestamp: new Date().toISOString(),
+      user,
+      action: type as any, // Use the type as the action
+      resource: 'security',
+      result: 'failed', // Security events are typically failures/violations
+      metadata: {
+        ...metadata,
+        description,
+        severity: 'HIGH', // Security events are high severity
+        sessionId: this.sessionId
+      },
+      changes: {}
     };
 
     await this.writeEntry(entry);
