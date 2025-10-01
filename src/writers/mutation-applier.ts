@@ -341,6 +341,7 @@ export class MutationApplier {
     mutations: typeof changes.mutations
   ): Promise<DryRunResult> {
     const result: DryRunResult = {
+      dryRun: true,
       canProceed: true,
       guardrailResults: [],
       preview: {
@@ -384,13 +385,25 @@ export class MutationApplier {
 
       if (!guardrailResult.passed) {
         result.canProceed = false;
-        const violations = guardrailResult.violations
-          .filter(v => v.severity === 'critical' || v.severity === 'error')
-          .map(v => v.message);
-        result.blockers.push(...violations);
+
+        // Handle both new format (violations array) and old format (top-level severity/message)
+        if (guardrailResult.violations && guardrailResult.violations.length > 0) {
+          const violations = guardrailResult.violations
+            .filter(v => v.severity === 'critical' || v.severity === 'error')
+            .map(v => v.message);
+          result.blockers.push(...violations);
+        } else if (guardrailResult.severity && guardrailResult.message) {
+          // Backward compatibility: handle old format with top-level severity/message
+          const severity = guardrailResult.severity.toLowerCase();
+          if (severity === 'critical' || severity === 'error') {
+            result.blockers.push(guardrailResult.message);
+          }
+        }
       }
 
-      result.warnings.push(...guardrailResult.warnings);
+      if (guardrailResult.warnings && guardrailResult.warnings.length > 0) {
+        result.warnings.push(...guardrailResult.warnings);
+      }
 
       // Count estimated changes
       switch (mutation.resource) {

@@ -138,7 +138,7 @@ export class AuditLogger {
       params = {
         mutation: paramsOrMutation,
         user: userOrUndefined!,
-        result: resultOrUndefined!.toLowerCase() as 'success' | 'failed' | 'skipped',
+        result: resultOrUndefined! as 'success' | 'failed' | 'skipped',
         timestamp: new Date().toISOString()
       };
     }
