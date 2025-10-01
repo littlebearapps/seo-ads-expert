@@ -1,0 +1,21 @@
+Campaign,Sitelink text,Final URL,Description 1,Description 2,Status
+"ConvertMyFile - WebP to PNG - AU","PNG to WebP",https://convertmyfile.com/png-to-webp,"Convert PNG back to WebP","Reverse conversion available",Enabled
+"ConvertMyFile - WebP to PNG - AU","Batch Convert",https://convertmyfile.com/batch,"Convert multiple files","Save time with bulk conversion",Enabled
+"ConvertMyFile - WebP to PNG - AU","Image Formats",https://convertmyfile.com/formats,"All supported formats","100+ image formats supported",Enabled
+"ConvertMyFile - WebP to PNG - AU","API Access",https://convertmyfile.com/api,"Developer API available","Integrate into your workflow",Enabled
+"ConvertMyFile - HEIC to JPG - AU","JPG to HEIC",https://convertmyfile.com/jpg-to-heic,"Reverse conversion","Convert JPG back to HEIC",Enabled
+"ConvertMyFile - HEIC to JPG - AU","Batch Photos",https://convertmyfile.com/batch,"Convert albums at once","Process multiple photos",Enabled
+"ConvertMyFile - HEIC to JPG - AU","Privacy First",https://convertmyfile.com/privacy,"Your photos stay private","No data stored on servers",Enabled
+"ConvertMyFile - HEIC to JPG - AU","Mobile Friendly",https://convertmyfile.com/mobile,"Works on all devices","Optimized for smartphones",Enabled
+"ConvertMyFile - PDF to JPG - AU","JPG to PDF",https://convertmyfile.com/jpg-to-pdf,"Create PDFs from images","Combine multiple JPGs",Enabled
+"ConvertMyFile - PDF to JPG - AU","Extract All Pages",https://convertmyfile.com/extract-pages,"Convert entire document","Get all pages as images",Enabled
+"ConvertMyFile - PDF to JPG - AU","High Resolution",https://convertmyfile.com/high-quality,"300 DPI output","Professional quality images",Enabled
+"ConvertMyFile - PDF to JPG - AU","OCR Support",https://convertmyfile.com/ocr,"Extract text from PDFs","Searchable text output",Enabled
+"ConvertMyFile - WebP to PNG - US","Free Forever",https://convertmyfile.com/free,"No hidden costs","100% free service",Enabled
+"ConvertMyFile - WebP to PNG - US","No Registration",https://convertmyfile.com/instant,"Start converting now","No signup required",Enabled
+"ConvertMyFile - WebP to PNG - US","Chrome Extension",https://convertmyfile.com/extension,"Browser extension","Convert without leaving page",Enabled
+"ConvertMyFile - WebP to PNG - US","Help Center",https://convertmyfile.com/help,"Get support","FAQs and guides",Enabled
+"ConvertMyFile - HEIC to JPG - US","iPhone Guide",https://convertmyfile.com/iphone-guide,"iPhone photo tips","HEIC format explained",Enabled
+"ConvertMyFile - HEIC to JPG - US","Android Support",https://convertmyfile.com/android,"Works on Android","Convert iPhone photos",Enabled
+"ConvertMyFile - HEIC to JPG - US","Cloud Storage",https://convertmyfile.com/cloud,"Google Drive support","Dropbox integration",Enabled
+"ConvertMyFile - HEIC to JPG - US","Pro Features",https://convertmyfile.com/pro,"Advanced options","Professional tools",Enabled

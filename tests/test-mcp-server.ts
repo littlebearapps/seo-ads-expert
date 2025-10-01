@@ -473,8 +473,8 @@ describe('MCP Server', () => {
 
       expect(result).toHaveProperty('report');
       expect(result).toHaveProperty('recommendations');
-      expect(result.recommendations).toContain('3 discrepancies found');
-      expect(result.recommendations).toContain('Update keyword bids');
+      expect(result.recommendations).toContain('📋 3 discrepancies found');
+      expect(result.recommendations).toContain('💡 Update keyword bids');
     });
   });
 

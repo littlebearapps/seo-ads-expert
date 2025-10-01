@@ -1,0 +1,50 @@
+Negative Keyword,Campaign,Ad Group,Match Type
+free,,,Broad match
+download,,,Broad match
+software,,,Broad match
+app,,,Broad match
+crack,,,Broad match
+torrent,,,Broad match
+pirate,,,Broad match
+illegal,,,Broad match
+virus,,,Broad match
+malware,,,Broad match
+scam,,,Broad match
+"adobe photoshop",,,Phrase match
+"gimp",,,Phrase match
+"paint.net",,,Phrase match
+tutorial,,,Broad match
+how to,,,Broad match
+learn,,,Broad match
+course,,,Broad match
+training,,,Broad match
+job,,,Broad match
+career,,,Broad match
+hire,,,Broad match
+salary,,,Broad match
+cheap,,,Broad match
+discount,,,Broad match
+coupon,,,Broad match
+deal,,,Broad match
+sale,,,Broad match
+offline,,,Broad match
+desktop,,,Broad match
+windows software,,,Phrase match
+mac software,,,Phrase match
+linux,,,Broad match
+android app,,,Phrase match
+ios app,,,Phrase match
+mobile app,,,Phrase match
+api,,,Broad match
+sdk,,,Broad match
+library,,,Broad match
+github,,,Broad match
+open source,,,Phrase match
+code,,,Broad match
+programming,,,Broad match
+developer,,,Broad match
+porn,,,Broad match
+adult,,,Broad match
+xxx,,,Broad match
+sex,,,Broad match
+nude,,,Broad match

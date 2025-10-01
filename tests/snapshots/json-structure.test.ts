@@ -395,18 +395,17 @@ describe('JSON File Writing', () => {
 });
 
 // ============================================================================
-// SNAPSHOT TESTS (Will be enabled after v1.1 implementation)
+// SNAPSHOT TESTS (v1.1 deterministic output system is fully implemented)
 // ============================================================================
 
-describe.skip('JSON Structure Snapshots', () => {
-  // These tests will be enabled after full v1.1 implementation
-  // They will validate that JSON structure remains consistent
-  
-  test.skip('ads.json structure matches snapshot', () => {
+describe('JSON Structure Snapshots', () => {
+  // v1.1 implementation is complete - these tests validate JSON structure consistency
+
+  test('ads.json structure matches snapshot', () => {
     expect(sampleAdsData).toMatchSnapshot();
   });
-  
-  test.skip('summary.json structure matches snapshot', () => {
+
+  test('summary.json structure matches snapshot', () => {
     expect(sampleSummaryData).toMatchSnapshot();
   });
 });
