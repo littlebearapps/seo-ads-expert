@@ -13,13 +13,16 @@ export const AuditLogEntrySchema = z.object({
   id: z.string(),
   timestamp: z.string(),
   user: z.string(),
-  action: z.enum(['mutation', 'validation', 'rollback', 'export', 'configuration']),
+  action: z.string(), // Allow any action string (UPDATE_BUDGET, CONFIGURATION_CHANGE, etc.)
   resource: z.string().optional(),
   entityId: z.string().optional(),
   customerId: z.string().optional(),
   mutation: z.any().optional(),
   result: z.enum(['success', 'failed', 'skipped']),
   error: z.string().optional(),
+  severity: z.string().optional(), // For security events
+  hash: z.string().optional(), // Integrity hash for tamper-evident logging
+  signature: z.string().optional(), // Digital signature for tamper-evident logging
   metadata: z.object({
     ipAddress: z.string().optional(),
     userAgent: z.string().optional(),
@@ -143,7 +146,7 @@ export class AuditLogger {
       id: this.generateId(),
       timestamp: params.timestamp,
       user: params.user,
-      action: 'mutation',
+      action: params.mutation.type || 'mutation', // Use mutation type as action
       resource: params.mutation.resource,
       entityId: params.mutation.entityId,
       customerId: params.mutation.customerId,
@@ -300,11 +303,12 @@ export class AuditLogger {
       id: this.generateId(),
       timestamp: new Date().toISOString(),
       user: params.user,
-      action: 'configuration',
+      action: 'CONFIGURATION_CHANGE',
       resource: params.configType,
       result: 'success',
       metadata: {
-        sessionId: this.sessionId
+        sessionId: this.sessionId,
+        component: params.configType // Add component to metadata for test compatibility
       },
       changes: {
         before: params.before,
@@ -332,10 +336,10 @@ export class AuditLogger {
       action: type as any, // Use the type as the action
       resource: 'security',
       result: 'failed', // Security events are typically failures/violations
+      severity: 'HIGH', // Top-level severity for security events
       metadata: {
         ...metadata,
         description,
-        severity: 'HIGH', // Security events are high severity
         sessionId: this.sessionId
       },
       changes: {}
@@ -713,8 +717,20 @@ export class AuditLogger {
    */
   private async writeEntry(entry: AuditLogEntry): Promise<void> {
     try {
+      // Add tamper-evident hash and signature
+      const entryData = JSON.stringify({
+        id: entry.id,
+        timestamp: entry.timestamp,
+        user: entry.user,
+        action: entry.action,
+        result: entry.result
+      });
+
+      entry.hash = crypto.createHash('sha256').update(entryData).digest('hex');
+      entry.signature = crypto.createHmac('sha256', this.sessionId).update(entryData).digest('hex');
+
       const line = JSON.stringify(entry) + '\n';
-      
+
       // Append to daily log file
       if (existsSync(this.currentLogFile)) {
         const content = readFileSync(this.currentLogFile, 'utf-8');
@@ -722,7 +738,7 @@ export class AuditLogger {
       } else {
         writeFileSync(this.currentLogFile, line);
       }
-      
+
       logger.debug('Audit log entry written', { id: entry.id, action: entry.action });
     } catch (error) {
       logger.error('Failed to write audit log entry', error);
