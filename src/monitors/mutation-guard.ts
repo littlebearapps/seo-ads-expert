@@ -571,7 +571,7 @@ export class MutationGuard extends PerformanceMonitor {
         result.violations.push({
           type: 'bid_range',
           severity: 'error',
-          message: `Bid too high: $${bid.toFixed(2)} exceeds maximum $${MAX_BID.toFixed(2)}`,
+          message: `bid too high: $${bid.toFixed(2)} exceeds maximum $${MAX_BID.toFixed(2)}`,
           field: 'bid'
         });
       }
@@ -615,7 +615,7 @@ export class MutationGuard extends PerformanceMonitor {
           result.violations.push({
             type: 'keyword_relevance',
             severity: 'error',
-            message: `Keyword "${keyword}" appears irrelevant to ad group theme "${adGroupTheme}"`,
+            message: `Keyword "${keyword}" has low relevance to ad group theme "${adGroupTheme}"`,
             field: 'keyword.text'
           });
         }
