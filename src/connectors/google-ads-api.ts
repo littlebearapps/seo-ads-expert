@@ -1265,9 +1265,10 @@ export class GoogleAdsApiClient {
   }
 }
 
-// Phase 3A.3: Mock Google Ads API Client for Testing
+// Phase 3B.2: Mock Google Ads API Client with Two-Step Linkage
 export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
   private mockResponses: Map<string, any> = new Map();
+  private createdResources: Map<string, any> = new Map();  // In-memory resource store
 
   constructor() {
     super();
@@ -1287,6 +1288,92 @@ export class MockGoogleAdsApiClient extends GoogleAdsApiClient {
   // Override authenticate to bypass real OAuth
   async authenticate(): Promise<void> {
     (this as any).isAuthenticated = true;
+  }
+
+  // Phase 3B.2: Override createBudget with state tracking
+  async createBudget(customerId: string, budget: BudgetInput): Promise<MutationResult> {
+    const id = Math.random().toString(36).substring(2, 15);
+    const resourceName = `customers/${customerId}/campaignBudgets/${id}`;
+
+    // Store in mock state
+    this.createdResources.set(resourceName, {
+      ...budget,
+      id,
+      customerId
+    });
+
+    return {
+      resourceName,
+      id,
+      success: true
+    };
+  }
+
+  // Phase 3B.2: Override createCampaign with budget validation
+  async createCampaign(customerId: string, campaign: CampaignInput): Promise<MutationResult> {
+    // IMPORTANT: Validate budget exists if budgetResourceName provided
+    if (campaign.budgetResourceName && !this.createdResources.has(campaign.budgetResourceName)) {
+      throw new Error(`Budget ${campaign.budgetResourceName} not found. Create budget first.`);
+    }
+
+    const id = Math.random().toString(36).substring(2, 15);
+    const resourceName = `customers/${customerId}/campaigns/${id}`;
+
+    // Store in mock state with budget linkage
+    this.createdResources.set(resourceName, {
+      ...campaign,
+      id,
+      customerId,
+      budgetResourceName: campaign.budgetResourceName
+    });
+
+    return {
+      resourceName,
+      id,
+      success: true
+    };
+  }
+
+  // Phase 3B.2: Override createAdGroup with campaign validation
+  async createAdGroup(customerId: string, adGroup: AdGroupInput): Promise<MutationResult> {
+    // IMPORTANT: Validate campaign exists
+    if (adGroup.campaignResourceName && !this.createdResources.has(adGroup.campaignResourceName)) {
+      throw new Error(`Campaign ${adGroup.campaignResourceName} not found. Create campaign first.`);
+    }
+
+    const id = Math.random().toString(36).substring(2, 15);
+    const resourceName = `customers/${customerId}/adGroups/${id}`;
+
+    // Store in mock state with campaign linkage
+    this.createdResources.set(resourceName, {
+      ...adGroup,
+      id,
+      customerId,
+      campaignResourceName: adGroup.campaignResourceName
+    });
+
+    return {
+      resourceName,
+      id,
+      success: true
+    };
+  }
+
+  // Helper methods for testing resource state
+  _hasResource(resourceName: string): boolean {
+    return this.createdResources.has(resourceName);
+  }
+
+  _getResource(resourceName: string): any {
+    return this.createdResources.get(resourceName);
+  }
+
+  _clearResources(): void {
+    this.createdResources.clear();
+  }
+
+  _getAllResources(): Map<string, any> {
+    return new Map(this.createdResources);
   }
 
   // Override executeQuery to bypass authentication and use mock data
