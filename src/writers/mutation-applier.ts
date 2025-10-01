@@ -327,7 +327,7 @@ export class MutationApplier {
     }
 
     if (!options.confirm) {
-      throw new Error('Confirmation required for applying mutations');
+      throw new Error('confirmation required for applying mutations');
     }
 
     return await this.performMutations(changes, sortedMutations, options);
@@ -479,11 +479,22 @@ export class MutationApplier {
         const guardrailResult = results[0];
 
         if (!guardrailResult.passed) {
+          const reason = guardrailResult.violations.map(v => v.message).join('; ');
           result.skipped.push({
             mutation: mutationData,
-            reason: guardrailResult.violations.map(v => v.message).join('; ')
+            reason
           });
           result.summary.skipped++;
+
+          // Log blocked mutation to audit trail
+          await this.auditLogger.logMutation({
+            mutation,
+            result: 'BLOCKED',
+            error: reason,
+            timestamp: new Date().toISOString(),
+            user: changes.metadata.plannedBy
+          });
+
           continue;
         }
       }
@@ -528,10 +539,12 @@ export class MutationApplier {
           user: changes.metadata.plannedBy
         });
 
-        // Auto-rollback if enabled and we had successful mutations
-        if (options.autoRollback && rollbackMutations.length > 0) {
-          logger.info('Initiating auto-rollback due to failure');
-          await this.rollback(rollbackMutations);
+        // Auto-rollback if enabled
+        if (options.autoRollback) {
+          if (rollbackMutations.length > 0) {
+            logger.info('Initiating auto-rollback due to failure');
+            await this.rollback(rollbackMutations);
+          }
           result.success = false;
           result.rolledBack = true;
           return result;
@@ -554,6 +567,12 @@ export class MutationApplier {
 
     result.success = result.summary.failed === 0;
 
+    // If all mutations were skipped due to guardrail violations, throw error
+    if (result.summary.succeeded === 0 && result.summary.skipped > 0) {
+      const reasons = result.skipped.map(s => s.reason).join('; ');
+      throw new Error(`All mutations blocked by guardrails: ${reasons}`);
+    }
+
     logger.info('Mutation application complete', result.summary);
     return result;
   }
@@ -563,19 +582,21 @@ export class MutationApplier {
    */
   private async applyMutation(mutation: Mutation): Promise<any> {
     // Use performance monitor for the operation
-    return await this.performanceMonitor.executeWithCircuitBreaker(async () => {
-      // In real implementation, this would call Google Ads API
-      logger.info('Applying mutation', { mutation });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Return simulated result
-      return {
-        resourceName: `customers/${mutation.customerId}/${mutation.resource}s/${Date.now()}`,
-        ...mutation.changes
-      };
-    });
+    return await this.performanceMonitor.executeWithCircuitBreaker(
+      'mutation_application',
+      async () => {
+        logger.info('Applying mutation', { mutation });
+
+        // Call Google Ads API client
+        const result = await this.googleAdsClient.applyMutations([mutation]);
+
+        // Return result (may be from real API or mock)
+        return result.results?.[0] || {
+          resourceName: `customers/${mutation.customerId}/${mutation.resource}s/${Date.now()}`,
+          ...mutation.changes
+        };
+      }
+    );
   }
 
   /**
@@ -621,14 +642,17 @@ export class MutationApplier {
    */
   async rollback(mutations: Mutation[] | string): Promise<MutationResult> {
     let rollbackMutations: Mutation[];
-    
+
     if (typeof mutations === 'string') {
-      // Rollback by ID
+      // Rollback by ID - check both rollbackStack and rollbackPlans
       const rollbackEntry = this.rollbackStack.find(r => r.id === mutations);
-      if (!rollbackEntry) {
+      if (rollbackEntry) {
+        rollbackMutations = rollbackEntry.mutations;
+      } else if (this.rollbackPlans.has(mutations)) {
+        rollbackMutations = this.rollbackPlans.get(mutations)!;
+      } else {
         throw new Error(`Rollback ID ${mutations} not found`);
       }
-      rollbackMutations = rollbackEntry.mutations;
     } else {
       rollbackMutations = mutations;
     }

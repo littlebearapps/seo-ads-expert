@@ -389,6 +389,14 @@ export class BudgetEnforcer {
       };
     }
 
+    // Check if it exceeds campaign budget limit
+    if (campaign.campaignLimit && amount > campaign.campaignLimit) {
+      return {
+        allowed: false,
+        reason: `New budget (${amount}) exceeds campaign budget limit (${campaign.campaignLimit})`
+      };
+    }
+
     // Check if it exceeds account budget
     if (amount > customer.accountLimit) {
       return {

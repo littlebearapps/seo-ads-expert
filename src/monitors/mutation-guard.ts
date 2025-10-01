@@ -351,10 +351,8 @@ export class MutationGuard extends PerformanceMonitor {
               message: ruleResult.message || `Custom rule violation: ${rule.name}`
             });
 
-            // Custom rule failures with error/critical severity fail the mutation
-            if (normalizedSeverity === 'error' || normalizedSeverity === 'critical') {
-              result.passed = false;
-            }
+            // Any custom rule failure should fail the mutation
+            result.passed = false;
           }
         }
 
@@ -1021,15 +1019,18 @@ export class MutationGuard extends PerformanceMonitor {
     const results: any[] = [];
     const conflictMap = new Map<string, any[]>();
 
+    // Normalize all mutations first to get consistent resource names
+    const normalized = mutations.map(m => this.normalizeMutation(m));
+
     // Detect conflicts (same resource/campaign modified multiple times)
-    for (const mutation of mutations) {
+    for (const mutation of normalized) {
       const key = `${mutation.customerId}:${mutation.resource}:${mutation.entityId || mutation.campaignId || ''}`;
       if (!conflictMap.has(key)) conflictMap.set(key, []);
       conflictMap.get(key)!.push(mutation);
     }
 
     // Validate each mutation
-    for (const mutation of mutations) {
+    for (const mutation of normalized) {
       const result = await this.validateMutation(mutation);
 
       // Check for conflicts
@@ -1039,9 +1040,12 @@ export class MutationGuard extends PerformanceMonitor {
         result.violations.push({
           type: 'conflict',
           severity: 'error',
-          message: `Conflicting mutations detected for ${mutation.resource} ${mutation.entityId || mutation.campaignId}`
+          message: `conflict detected: multiple mutations for ${mutation.resource} ${mutation.entityId || mutation.campaignId}`
         });
         result.passed = false;
+        // Update message for backward compatibility
+        (result as any).message = `conflict detected: multiple mutations for ${mutation.resource} ${mutation.entityId || mutation.campaignId}`;
+        (result as any).severity = 'ERROR';
       }
 
       // Apply custom rules
@@ -1059,6 +1063,12 @@ export class MutationGuard extends PerformanceMonitor {
 
           // Any custom rule failure should fail the mutation
           result.passed = false;
+
+          // Update message for backward compatibility if this is the first violation
+          if (!(result as any).message) {
+            (result as any).message = ruleResult.message || `Custom rule violation: ${rule.name}`;
+            (result as any).severity = normalizedSeverity.toUpperCase();
+          }
         }
       }
 

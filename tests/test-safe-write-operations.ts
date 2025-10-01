@@ -912,10 +912,7 @@ describe('Safe Write Operations & Guardrails (Task 2)', () => {
         const result = await applier.executeRollback(rollbackId);
 
         expect(result.success).toBe(true);
-        expect(mockGoogleClient.applyMutations).toHaveBeenCalledWith(
-          '123-456-7890',
-          rollbackPlan
-        );
+        expect(mockGoogleClient.applyMutations).toHaveBeenCalledWith(rollbackPlan);
       });
     });
   });
@@ -997,7 +994,14 @@ describe('Safe Write Operations & Guardrails (Task 2)', () => {
     let applier: MutationApplier;
 
     beforeEach(() => {
-      guard = new MutationGuard();
+      guard = new MutationGuard({
+        budgetLimits: {
+          dailyMax: 500,
+          campaignMax: 5000,
+          accountMax: 10000,
+          enforcementLevel: 'soft'
+        }
+      });
       enforcer = new BudgetEnforcer();
       logger = new AuditLogger();
 
