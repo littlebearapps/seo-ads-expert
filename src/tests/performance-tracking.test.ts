@@ -133,15 +133,29 @@ describe('MetricPoller', () => {
 
   describe('Metric Collection', () => {
     it('should emit metrics event on poll', async () => {
-      const metricsReceived: any[] = [];
+      // Create poller with immediate start for this test
+      const immediatePoller = new MetricPoller(
+        {
+          interval: '15m',
+          campaigns: ['camp_001'],
+          metrics: ['clicks', 'conversions'],
+          accountId: 'test_account',
+          startImmediately: true,  // FIX: Start immediately
+        },
+        null,
+        database,
+        mockLogger
+      );
 
-      poller.on('metrics', (data) => {
+      const metricsReceived: any[] = [];
+      immediatePoller.on('metrics', (data) => {
         metricsReceived.push(data);
       });
 
-      // Manually trigger a poll
-      await poller.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Start polling (will poll immediately)
+      await immediatePoller.start();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      immediatePoller.stop();
 
       expect(metricsReceived.length).toBeGreaterThan(0);
       expect(metricsReceived[0]).toHaveProperty('campaignId');
@@ -149,8 +163,23 @@ describe('MetricPoller', () => {
     });
 
     it('should store metrics in database', async () => {
-      await poller.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Create poller with immediate start for this test
+      const immediatePoller = new MetricPoller(
+        {
+          interval: '15m',
+          campaigns: ['camp_001'],
+          metrics: ['clicks', 'conversions'],
+          accountId: 'test_account',
+          startImmediately: true,  // FIX: Start immediately
+        },
+        null,
+        database,
+        mockLogger
+      );
+
+      await immediatePoller.start();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      immediatePoller.stop();
 
       const metrics = database.prepare(`
         SELECT COUNT(*) as count FROM performance_metrics
@@ -174,6 +203,13 @@ describe('MetricPoller', () => {
     });
 
     it('should detect budget depletion trigger', async () => {
+      // FIX: Mock system time to 8am to ensure trigger fires reliably
+      // (Trigger logic uses expectedDepletion = hoursIntoDay/24 * 1.5,
+      //  so at 8am: expected = 0.33 * 1.5 = 0.5, and 96% > 0.5 ✓)
+      const mockTime = new Date();
+      mockTime.setHours(8, 0, 0, 0); // 8:00 AM
+      vi.setSystemTime(mockTime);
+
       const triggers: OptimizationTrigger[] = [];
 
       poller.on('trigger', (trigger) => {
@@ -187,25 +223,26 @@ describe('MetricPoller', () => {
           campaigns: ['camp_001'],
           metrics: ['clicks', 'conversions'],
           accountId: 'test',
+          startImmediately: true,  // Start immediately
         },
         null,
         database,
         mockLogger
       );
 
-      // Mock high spend metrics
+      // Mock high spend metrics - 96% budget spent
       vi.spyOn(depletePoller as any, 'generateMockMetrics').mockReturnValue([
         {
           timestamp: new Date(),
           campaignId: 'camp_001',
           campaignName: 'Campaign 001',
-          costMicros: 45000000, // $45 spent
+          costMicros: 48000000, // $48 spent
           clicks: 150,
           conversions: 12,
           conversionValueMicros: 600000000,
           impressions: 3000,
           budgetAmount: 50, // $50 daily budget
-          budgetSpent: 45, // 90% spent
+          budgetSpent: 48, // 96% spent at 8am triggers (expected ~33%, actual 96%)
         },
       ]);
 
@@ -218,9 +255,12 @@ describe('MetricPoller', () => {
 
       const budgetTriggers = triggers.filter(t => t.type === 'budget_depletion');
       expect(budgetTriggers.length).toBeGreaterThan(0);
-      expect(budgetTriggers[0].severity).toBe('high');
+      expect(budgetTriggers[0].severity).toBe('critical'); // 96% > 0.95 = critical
 
       depletePoller.stop();
+
+      // Reset system time
+      vi.useRealTimers();
     });
 
     it('should detect performance anomaly', async () => {

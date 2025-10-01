@@ -25,14 +25,14 @@
         "mobile",
         "safari"
       ],
-      "performance_score": 7.89,
+      "performance_score": "7.89",
       "sitelinks": [
         "Download",
         "Features",
         "PDF Tools",
         "Privacy"
       ],
-      "volume_estimate": 890.12
+      "volume_estimate": "890.12"
     },
     {
       "descriptions": [
@@ -60,14 +60,14 @@
         "mobile",
         "safari"
       ],
-      "performance_score": 8.73,
+      "performance_score": "8.73",
       "sitelinks": [
         "Download",
         "Features",
         "Formats",
         "Privacy"
       ],
-      "volume_estimate": 1250.45
+      "volume_estimate": "1250.45"
     }
   ],
   "callouts": [
@@ -99,10 +99,10 @@
     ]
   },
   "summary": {
-    "avg_performance_score": 8.31,
-    "total_ad_groups": 2,
-    "total_keywords": 6,
-    "total_volume_estimate": 2140.57
+    "avg_performance_score": "8.31",
+    "total_ad_groups": "2.00",
+    "total_keywords": "6.00",
+    "total_volume_estimate": "2140.57"
   },
   "version": "1.1.0"
 }
