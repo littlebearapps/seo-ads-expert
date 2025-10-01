@@ -1,29 +1,36 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { 
-  GoogleAdsApiClient, 
+import {
+  GoogleAdsApiClient,
   GAQLBuilder,
   Campaign,
   AdGroup,
   Keyword,
   Ad,
   PerformanceStats,
-  ReconciliationReport
+  ReconciliationReport,
+  CampaignSchema,
+  AdGroupSchema,
+  KeywordSchema,
+  AdSchema,
+  PerformanceStatsSchema
 } from '../src/connectors/google-ads-api.js';
 import { CampaignReconciler, DriftReport } from '../src/analyzers/campaign-reconciler.js';
 
 describe('Google Ads API Integration', () => {
   describe('GAQLBuilder', () => {
     it('should build basic SELECT query', () => {
-      const query = new GAQLBuilder('campaign')
+      const query = new GAQLBuilder()
         .select('campaign.id', 'campaign.name', 'campaign.status')
+        .from('campaign')
         .build();
 
       expect(query).toBe('SELECT campaign.id, campaign.name, campaign.status FROM campaign');
     });
 
     it('should build query with WHERE clause', () => {
-      const query = new GAQLBuilder('campaign')
+      const query = new GAQLBuilder()
         .select('campaign.id', 'campaign.name')
+        .from('campaign')
         .where('campaign.status = "ENABLED"')
         .build();
 
@@ -31,8 +38,9 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should build query with multiple WHERE conditions', () => {
-      const query = new GAQLBuilder('ad_group')
+      const query = new GAQLBuilder()
         .select('ad_group.id', 'ad_group.name')
+        .from('ad_group')
         .where('ad_group.status = "ENABLED"')
         .where('campaign.id = 123456')
         .build();
@@ -43,8 +51,9 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should build query with ORDER BY', () => {
-      const query = new GAQLBuilder('keyword_view')
+      const query = new GAQLBuilder()
         .select('ad_group_criterion.keyword.text', 'metrics.clicks')
+        .from('keyword_view')
         .orderByDesc('metrics.clicks')
         .build();
 
@@ -54,8 +63,9 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should build query with LIMIT', () => {
-      const query = new GAQLBuilder('campaign')
+      const query = new GAQLBuilder()
         .select('campaign.name')
+        .from('campaign')
         .limit(10)
         .build();
 
@@ -63,13 +73,14 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should build complex query with all clauses', () => {
-      const query = new GAQLBuilder('ad_group_ad')
+      const query = new GAQLBuilder()
         .select(
           'ad_group_ad.ad.id',
           'ad_group_ad.status',
           'metrics.impressions',
           'metrics.clicks'
         )
+        .from('ad_group_ad')
         .where('ad_group.id = 789')
         .where('ad_group_ad.status != "REMOVED"')
         .where('metrics.impressions > 0')
@@ -411,8 +422,6 @@ describe('Google Ads API Integration', () => {
 
   describe('Schema Validation', () => {
     it('should validate Campaign schema', () => {
-      const { CampaignSchema } = require('../src/connectors/google-ads-api.js');
-      
       const validCampaign = {
         id: '123456',
         name: 'Test Campaign',
@@ -434,8 +443,6 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should validate AdGroup schema', () => {
-      const { AdGroupSchema } = require('../src/connectors/google-ads-api.js');
-      
       const validAdGroup = {
         id: '456789',
         name: 'Test Ad Group',
@@ -452,8 +459,6 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should validate Keyword schema', () => {
-      const { KeywordSchema } = require('../src/connectors/google-ads-api.js');
-      
       const validKeyword = {
         id: '789012',
         text: 'chrome extension',
@@ -469,8 +474,6 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should validate Ad schema', () => {
-      const { AdSchema } = require('../src/connectors/google-ads-api.js');
-      
       const validAd = {
         id: '345678',
         type: 'RESPONSIVE_SEARCH_AD',
@@ -494,8 +497,6 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should validate PerformanceStats schema', () => {
-      const { PerformanceStatsSchema } = require('../src/connectors/google-ads-api.js');
-      
       const validStats = {
         impressions: 10000,
         clicks: 500,
@@ -511,8 +512,6 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should reject invalid Campaign status', () => {
-      const { CampaignSchema } = require('../src/connectors/google-ads-api.js');
-      
       const invalidCampaign = {
         id: '123456',
         name: 'Test Campaign',
@@ -525,8 +524,6 @@ describe('Google Ads API Integration', () => {
     });
 
     it('should reject invalid Keyword match type', () => {
-      const { KeywordSchema } = require('../src/connectors/google-ads-api.js');
-      
       const invalidKeyword = {
         id: '789012',
         text: 'chrome extension',
