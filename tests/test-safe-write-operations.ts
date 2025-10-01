@@ -11,9 +11,20 @@ vi.mock('../src/connectors/google-ads-api.js');
 describe('Safe Write Operations & Guardrails (Task 2)', () => {
   describe('MutationGuard', () => {
     let guard: MutationGuard;
+    let mockLandingPageValidator: any;
 
     beforeEach(() => {
-      guard = new MutationGuard();
+      // Mock landing page validator to avoid real HTTP requests in tests
+      mockLandingPageValidator = {
+        checkHealth: vi.fn().mockResolvedValue([{
+          url: '',
+          status: 200,
+          isHealthy: true,
+          issues: [],
+          metrics: { isSSL: true, isMobileFriendly: true, loadTimeMs: 100 }
+        }])
+      };
+      guard = new MutationGuard(undefined, mockLandingPageValidator);
     });
 
     afterEach(() => {

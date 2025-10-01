@@ -184,7 +184,7 @@ export class MutationGuard extends PerformanceMonitor {
   private landingPageValidator: LandingPageValidator;
   private mutationHistory: Mutation[] = [];
 
-  constructor(config?: Partial<GuardrailConfig>) {
+  constructor(config?: Partial<GuardrailConfig>, landingPageValidator?: LandingPageValidator) {
     super({
       circuitBreakerConfig: {
         failureThreshold: 3,
@@ -194,7 +194,7 @@ export class MutationGuard extends PerformanceMonitor {
     });
     this.guardrailConfig = GuardrailConfigSchema.parse(config || {});
     this.budgetEnforcer = new BudgetEnforcer(this.guardrailConfig.budgetLimits);
-    this.landingPageValidator = new LandingPageValidator();
+    this.landingPageValidator = landingPageValidator || new LandingPageValidator();
   }
 
   /**
