@@ -260,14 +260,19 @@ export class MutationGuard extends PerformanceMonitor {
     if (mutation.targeting) {
       Object.assign(normalized.changes, mutation.targeting);
     }
-    if (mutation.bid) {
-      Object.assign(normalized.changes, mutation.bid);
+    // Copy bid (it's a number, not an object)
+    if (typeof mutation.bid === 'number') {
+      normalized.changes.bid = mutation.bid;
     }
     if (mutation.keyword) {
       Object.assign(normalized.changes, mutation.keyword);
     }
     if (mutation.campaign) {
       Object.assign(normalized.changes, mutation.campaign);
+    }
+    // Copy cpcBidMicros if present
+    if (mutation.cpcBidMicros != null) {
+      normalized.changes.cpcBidMicros = mutation.cpcBidMicros;
     }
 
     // Preserve other important fields
@@ -333,6 +338,26 @@ export class MutationGuard extends PerformanceMonitor {
         // 6. Risk assessment
         this.assessRisk(normalizedMutation, result);
 
+        // 7. Apply custom rules
+        for (const rule of this.customRules.values()) {
+          const ruleResult = rule.validate(normalizedMutation);
+          if (!ruleResult.passed) {
+            // Normalize severity to lowercase
+            const normalizedSeverity = (rule.severity || 'error').toLowerCase() as 'warning' | 'error' | 'critical';
+
+            result.violations.push({
+              type: rule.id,
+              severity: normalizedSeverity,
+              message: ruleResult.message || `Custom rule violation: ${rule.name}`
+            });
+
+            // Custom rule failures with error/critical severity fail the mutation
+            if (normalizedSeverity === 'error' || normalizedSeverity === 'critical') {
+              result.passed = false;
+            }
+          }
+        }
+
         // Determine if mutation should be blocked
         const criticalViolations = result.violations.filter(v => v.severity === 'critical');
         const errorViolations = result.violations.filter(v => v.severity === 'error');
@@ -343,9 +368,9 @@ export class MutationGuard extends PerformanceMonitor {
             violations: criticalViolations,
             mutation
           });
-        } else if (errorViolations.length > 0 && this.guardrailConfig.budgetLimits.enforcementLevel === 'hard') {
+        } else if (errorViolations.length > 0) {
           result.passed = false;
-          logger.warn('Guardrail violations detected in hard enforcement mode', {
+          logger.warn('Guardrail violations detected', {
             violations: errorViolations,
             mutation
           });
