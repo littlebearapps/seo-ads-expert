@@ -224,6 +224,41 @@ interface OAuth2Config {
   developerToken: string;
 }
 
+// Phase 3B.1: Mutation input types
+export interface BudgetInput {
+  name: string;
+  amountMicros: number | string;
+  deliveryMethod?: 'STANDARD' | 'ACCELERATED';
+}
+
+export interface CampaignInput {
+  name: string;
+  status?: 'ENABLED' | 'PAUSED';
+  budgetResourceName?: string;
+  advertisingChannelType?: string;
+  biddingStrategy?: string;
+}
+
+export interface AdGroupInput {
+  name: string;
+  campaignResourceName: string;
+  status?: 'ENABLED' | 'PAUSED';
+  cpcBidMicros?: number | string;
+}
+
+export interface MutationResult {
+  resourceName: string;
+  id?: string;
+  success: boolean;
+}
+
+export interface NormalizedError {
+  code: string;
+  message: string;
+  retryable: boolean;
+  originalError: any;
+}
+
 // API Request/Response types
 export interface ApiRequest {
   customerId: string;
@@ -626,45 +661,120 @@ export class GoogleAdsApiClient {
     }));
   }
 
-  // Phase 3A.4: Mutation Methods (updated for test compatibility)
-  async createCampaign(
-    customerId: string,
-    campaign: {
-      name: string;
-      status?: 'ENABLED' | 'PAUSED';
-      budgetId?: string;
-      biddingStrategy?: string;
-      budgetMicros?: number;
-      channelType?: string;
-    }
-  ): Promise<{ resourceName: string }> {
-    // Validate campaign name
-    if (!campaign.name || campaign.name.trim() === '') {
-      throw new Error('Campaign name cannot be empty');
-    }
-
-    // Validate status if provided
-    const validStatuses = ['ENABLED', 'PAUSED', 'INVALID_STATUS'];
-    if (campaign.status && !['ENABLED', 'PAUSED'].includes(campaign.status)) {
-      throw new Error(`Invalid status: ${campaign.status}`);
-    }
-
-    const response = await this.makeApiCall('mutate', {
-      customerId,
-      operation: 'campaign_operation',
-      campaign: {
-        name: campaign.name,
-        status: campaign.status || 'PAUSED',
-        budgetId: campaign.budgetId,
-        biddingStrategy: campaign.biddingStrategy
+  // Phase 3B.1: Create Budget (prerequisite for campaigns)
+  async createBudget(customerId: string, budget: BudgetInput): Promise<MutationResult> {
+    try {
+      // Validate budget
+      if (!budget.name || budget.name.trim() === '') {
+        throw new Error('Budget name cannot be empty');
       }
-    });
 
-    // Return resourceName from response, or generate one if mocked
-    return {
-      resourceName: response.results?.[0]?.resourceName ||
-                   `customers/${customerId}/campaigns/${Date.now()}`
-    };
+      const amountMicros = typeof budget.amountMicros === 'string'
+        ? budget.amountMicros
+        : budget.amountMicros.toString();
+
+      const response = await this.makeApiCall('mutate', {
+        customerId,
+        operation: 'campaign_budget_operation',
+        budget: {
+          name: budget.name,
+          amount_micros: amountMicros,
+          delivery_method: budget.deliveryMethod || 'STANDARD'
+        }
+      });
+
+      const id = response.results?.[0]?.id || Date.now().toString();
+      const resourceName = response.results?.[0]?.resourceName ||
+                          `customers/${customerId}/campaignBudgets/${id}`;
+
+      return {
+        resourceName,
+        id,
+        success: true
+      };
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
+  }
+
+  // Phase 3B.1: Create Campaign (links to budget)
+  async createCampaign(customerId: string, campaign: CampaignInput): Promise<MutationResult> {
+    try {
+      // Validate campaign name
+      if (!campaign.name || campaign.name.trim() === '') {
+        throw new Error('Campaign name cannot be empty');
+      }
+
+      // Validate status if provided
+      if (campaign.status && !['ENABLED', 'PAUSED'].includes(campaign.status)) {
+        throw new Error(`Invalid status: ${campaign.status}`);
+      }
+
+      const response = await this.makeApiCall('mutate', {
+        customerId,
+        operation: 'campaign_operation',
+        campaign: {
+          name: campaign.name,
+          status: campaign.status || 'PAUSED',
+          campaign_budget: campaign.budgetResourceName,  // Link to budget
+          advertising_channel_type: campaign.advertisingChannelType || 'SEARCH',
+          bidding_strategy: campaign.biddingStrategy
+        }
+      });
+
+      const id = response.results?.[0]?.id || Date.now().toString();
+      const resourceName = response.results?.[0]?.resourceName ||
+                          `customers/${customerId}/campaigns/${id}`;
+
+      return {
+        resourceName,
+        id,
+        success: true
+      };
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
+  }
+
+  // Phase 3B.1: Create Ad Group (links to campaign)
+  async createAdGroup(customerId: string, adGroup: AdGroupInput): Promise<MutationResult> {
+    try {
+      // Validate ad group
+      if (!adGroup.name || adGroup.name.trim() === '') {
+        throw new Error('Ad group name cannot be empty');
+      }
+
+      if (!adGroup.campaignResourceName) {
+        throw new Error('Campaign resource name is required');
+      }
+
+      const cpcBidMicros = adGroup.cpcBidMicros
+        ? (typeof adGroup.cpcBidMicros === 'string' ? adGroup.cpcBidMicros : adGroup.cpcBidMicros.toString())
+        : undefined;
+
+      const response = await this.makeApiCall('mutate', {
+        customerId,
+        operation: 'ad_group_operation',
+        adGroup: {
+          name: adGroup.name,
+          campaign: adGroup.campaignResourceName,  // Link to campaign
+          status: adGroup.status || 'ENABLED',
+          cpc_bid_micros: cpcBidMicros
+        }
+      });
+
+      const id = response.results?.[0]?.id || Date.now().toString();
+      const resourceName = response.results?.[0]?.resourceName ||
+                          `customers/${customerId}/adGroups/${id}`;
+
+      return {
+        resourceName,
+        id,
+        success: true
+      };
+    } catch (error) {
+      throw this.normalizeError(error);
+    }
   }
 
   async updateCampaign(
@@ -904,6 +1014,48 @@ export class GoogleAdsApiClient {
   // Get configured customer IDs
   getCustomerIds(): string[] {
     return this.customerIds;
+  }
+
+  // Phase 3B.1: Error normalization for mutation operations
+  private normalizeError(error: any): NormalizedError {
+    // Check if it's an Axios error (HTTP error)
+    if (error.response) {
+      const status = error.response.status;
+      return {
+        code: status.toString(),
+        message: error.response.data?.error?.message || error.message || `HTTP ${status} error`,
+        retryable: status >= 500,  // 5xx errors are retryable, 4xx are not
+        originalError: error
+      };
+    }
+
+    // Check if it's a network error
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+      return {
+        code: 'NETWORK_ERROR',
+        message: error.message || 'Network connection failed',
+        retryable: true,  // Network errors are retryable
+        originalError: error
+      };
+    }
+
+    // Check for Google Ads API specific errors
+    if (error.message && error.message.includes('INVALID_ARGUMENT')) {
+      return {
+        code: 'INVALID_ARGUMENT',
+        message: error.message,
+        retryable: false,  // Invalid arguments should not be retried
+        originalError: error
+      };
+    }
+
+    // Generic error
+    return {
+      code: 'UNKNOWN_ERROR',
+      message: error.message || 'An unknown error occurred',
+      retryable: false,  // Unknown errors default to non-retryable
+      originalError: error
+    };
   }
 
   /**
