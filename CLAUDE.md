@@ -233,12 +233,68 @@
 
 ---
 
-## 📁 Git Repository Configuration
+## 🚨 CRITICAL: LOCAL DEVELOPMENT ONLY
 
-**Git Directory**: `/Users/nathanschram/GitHub/seo-ads-expert.git`
-- Main repository moved from GitMeta to GitHub folder (2025-09-29)
-- Worktrees configured at `.worktrees/dev/` and `.worktrees/test/`
-- Remote: `https://github.com/littlebearapps/seo-ads-expert.git`
+**⚠️ ALL CLAUDE CODE WORK MUST BE DONE IN LOCAL `~/claude-code-tools/`**
+
+- ✅ **Use**: `/Users/nathanschram/claude-code-tools/lba/infrastructure/tools/seo-ads-expert/` (LOCAL)
+- ❌ **Do NOT use**: `/Users/nathanschram/Library/Mobile Documents/com~apple~CloudDocs/claude-code-tools/` (iCloud)
+- **iCloud directory is for reference only** - never work in it unless explicitly directed
+
+## 📁 Git Worktree Setup
+
+**Working Directory Structure**:
+```
+~/claude-code-tools/lba/infrastructure/tools/seo-ads-expert/
+├── .bare/              # Bare git repository (hidden)
+├── main/               # ← YOU ARE HERE (production branch)
+│   ├── .mcp.json      # MCP server configuration
+│   └── [project files]
+└── dev/                # Development worktree (dev branch)
+    ├── .mcp.json      # MCP server configuration
+    └── [project files]
+```
+
+**Current Worktree**: `/main/` (production branch - main)
+**Sibling Worktree**: `/dev/` (development branch - dev)
+**Shared Repository**: `/.bare/` (all git data stored here)
+
+**Important**:
+- Each worktree is completely independent
+- Commits in `/main/` stay on main branch
+- Commits in `/dev/` stay on dev branch
+- Both worktrees share the same `.bare/` repository
+- Remote: `github.com/littlebearapps/seo-ads-expert` (private)
+
+## 🤖 MCP Server Configuration
+
+**This working directory has `.mcp.json` configured with**:
+
+**Zen MCP** (Dedicated Instance):
+- **Instance**: Zen Proj B (instB)
+- **Port**: 7512
+- **Instance Path**: `~/claude-code-tools/mcp/zen/instances/instB/`
+- **Zen Server**: `~/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server`
+- **Model**: GPT-5 only (cost control)
+- **Budget**: $2.50/day, 60 calls/minute rate limit
+
+**Shared MCP Servers** (via npx):
+- **brave-search**: Web search functionality (API key in .mcp.json)
+- **context7**: Library documentation (API key in .mcp.json)
+- **mult-fetch**: Web content fetching (config in .mcp.json)
+
+**Testing MCP Connection**:
+```bash
+cd ~/claude-code-tools/lba/infrastructure/tools/seo-ads-expert/main/
+claude
+# In Claude Code session, run: /mcp
+```
+
+**Expected Output**:
+- ✅ brave-search connected
+- ✅ context7 connected
+- ✅ mult-fetch connected
+- ✅ zen connected (instance: zen-seo-ads-expert)
 
 ---
 

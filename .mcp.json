@@ -2,41 +2,26 @@
   "mcpServers": {
     "brave-search": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-brave-search"
-      ],
-      "env": {
-        "BRAVE_API_KEY": "BSAcf7QCl47R_RvwpkkKxiVP14jxup2"
-      }
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": { "BRAVE_API_KEY": "BSAcf7QCl47R_RvwpkkKxiVP14jxup2" }
     },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "ctx7sk-3e87730a-a532-4e17-a612-4b396decc717"
-      ]
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "ctx7sk-3e87730a-a532-4e17-a612-4b396decc717"]
     },
     "mult-fetch": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@lmcc-dev/mult-fetch-mcp-server"
-      ],
-      "env": {
-        "MCP_LANG": "en"
-      }
+      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
+      "env": { "MCP_LANG": "en" }
     },
     "zen": {
       "command": "bash",
-      "args": ["-c", "export PYTHON_DOTENV_DISABLED=1 && set -a && source /Users/nathanschram/Library/Mobile\\ Documents/com~apple~CloudDocs/claude-code-tools/mcp/zen/instances/instB/.env && set +a && exec /Users/nathanschram/Library/Mobile\\ Documents/com~apple~CloudDocs/claude-code-tools/mcp/zen-mcp-server/zen-mcp-server"],
-      "cwd": "/Users/nathanschram/Library/Mobile Documents/com~apple~CloudDocs/claude-code-tools/mcp/zen/instances/instB",
+      "args": ["-c", "export PYTHON_DOTENV_DISABLED=1 && set -a && source /Users/nathanschram/claude-code-tools/mcp/zen/instances/instG/.env && set +a && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"],
+      "cwd": "/Users/nathanschram/claude-code-tools/mcp/zen/instances/instG",
       "env": {
-        "ZEN_INSTANCE_NAME": "zen-seo-ads-expert",
+        "ZEN_INSTANCE_NAME": "zen-project-g",
+        "ZEN_PORT": "7517",
         "DEFAULT_MODEL": "gpt-5",
-        "ZEN_PORT": "7512",
         "ZEN_DISABLED": "0",
         "ZEN_MAX_OUTPUT_TOKENS": "1024",
         "ZEN_MAX_INPUT_TOKENS": "12000",
