@@ -1,26 +1,43 @@
 {
   "mcpServers": {
     "brave-search": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-      "env": { "BRAVE_API_KEY": "BSAcf7QCl47R_RvwpkkKxiVP14jxup2" }
+      "command": "bash",
+      "args": [
+        "-c",
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec npx -y @modelcontextprotocol/server-brave-search"
+      ]
     },
     "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp", "--api-key", "ctx7sk-3e87730a-a532-4e17-a612-4b396decc717"]
+      "command": "bash",
+      "args": [
+        "-c",
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec npx -y @upstash/context7-mcp --api-key \"$CONTEXT7_API_KEY\""
+      ]
     },
     "mult-fetch": {
-      "command": "npx",
-      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
-      "env": { "MCP_LANG": "en" }
+      "command": "bash",
+      "args": [
+        "-c",
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && MCP_LANG=en exec npx -y @lmcc-dev/mult-fetch-mcp-server"
+      ]
+    },
+    "linear-server": {
+      "command": "bash",
+      "args": [
+        "-c",
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec npx -y mcp-server-linear"
+      ]
     },
     "zen": {
       "command": "bash",
-      "args": ["-c", "export PYTHON_DOTENV_DISABLED=1 && set -a && source /Users/nathanschram/claude-code-tools/mcp/zen/instances/instG/.env && set +a && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"],
-      "cwd": "/Users/nathanschram/claude-code-tools/mcp/zen/instances/instG",
+      "args": [
+        "-c",
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"
+      ],
+      "cwd": "/Users/nathanschram/claude-code-tools/mcp/zen/instances/instB",
       "env": {
-        "ZEN_INSTANCE_NAME": "zen-project-g",
-        "ZEN_PORT": "7517",
+        "ZEN_INSTANCE_NAME": "zen-project-b",
+        "ZEN_PORT": "7512",
         "DEFAULT_MODEL": "gpt-5",
         "ZEN_DISABLED": "0",
         "ZEN_MAX_OUTPUT_TOKENS": "1024",

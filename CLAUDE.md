@@ -20,6 +20,21 @@
 
 ## 🎯 NEXT TASK (IMPORTANT - 2025-09-30)
 
+## 📖 Global Instructions
+
+**⚠️ IMPORTANT**: Before working in this project, review these critical files:
+
+1. **`/Users/nathanschram/claude-code-tools/.claude-instructions`** - Global development standards
+   - File management principles
+   - Documentation usage hierarchy
+   - Git worktree workflow
+   - MCP server configuration
+   - Environment variable handling
+   - Commit conventions
+
+2. **Add future global references here as needed**
+
+
 **🚀 START HERE**: `EXECUTION_START_HERE.md` ⭐
 
 **What**: Execute comprehensive test remediation plan (181 failing tests → 100% pass rate)
@@ -282,6 +297,10 @@
 - **brave-search**: Web search functionality (API key in .mcp.json)
 - **context7**: Library documentation (API key in .mcp.json)
 - **mult-fetch**: Web content fetching (config in .mcp.json)
+- **linear-server**: Task management with dual-board access (API key in .mcp.json)
+  - **Primary**: "SEO Ads Expert" board (project-specific tasks)
+  - **Secondary**: "LBA - Systems & Infrastructure" board (cross-project infrastructure)
+  - Specify board at tool invocation time
 
 **Testing MCP Connection**:
 ```bash
@@ -294,7 +313,48 @@ claude
 - ✅ brave-search connected
 - ✅ context7 connected
 - ✅ mult-fetch connected
+- ✅ linear-server connected
 - ✅ zen connected (instance: zen-seo-ads-expert)
+
+**MCP Documentation**:
+- **Health Check**: Run `/mcp` in Claude Code to verify server status
+- **Troubleshooting**: `~/claude-code-tools/mcp/MCP_TROUBLESHOOTING.md`
+- **Configuration Guide**: `~/claude-code-tools/mcp/CLAUDE.md`
+
+## 🔐 Keychain Secrets Management
+
+**⚠️ IMPORTANT**: All secrets now stored in macOS Keychain (NO .env files!)
+
+**Status**: ✅ Production Ready (25/25 secrets migrated - 2025-10-06)
+
+**How It Works**:
+- Secrets automatically load via `direnv` when you `cd` into this directory
+- Project-specific secrets (SEO Ads Expert + shared MCP credentials) loaded from Keychain
+- All secrets encrypted in macOS Keychain (T2/SEP chip hardware protection)
+- Zero plaintext .env files in codebase
+
+**This Project Uses**:
+- **Shared MCP Secrets**: BRAVE_API_KEY, CONTEXT7_API_KEY, LINEAR_ACCESS_TOKEN, MULT_FETCH_CONFIG
+- **Zen Instance B**: OPENAI_API_KEY (instB, port 7512), ZEN_INSTANCE=instB, ZEN_PORT=7512
+
+**Documentation**:
+- Quick Reference: `~/claude-code-tools/keychain/KEYCHAIN-QUICK-REFERENCE.md`
+- Complete Inventory: `~/claude-code-tools/keychain/secrets-inventory.md`
+- Test Suite: `~/claude-code-tools/keychain/test-keychain.sh`
+
+**Common Commands**:
+```bash
+source ~/bin/kc.sh
+kc_list              # View all secrets
+kc_get <secret-name> # Get secret value
+kc_set <secret-name> # Add/update secret
+kc_doctor <secrets>  # Health check
+```
+
+**Testing**: Run comprehensive test suite anytime:
+```bash
+cd ~/claude-code-tools/keychain && ./test-keychain.sh
+```
 
 ---
 
@@ -302,3 +362,30 @@ claude
 **Last Updated**: 2025-10-01
 **Version**: 2.0 - INTELLIGENT BUDGET OPTIMIZER TESTS COMPLETE ✅
 **Optimization**: Reduced from 359 to 246 lines (31% reduction) by removing redundancies
+## 🔄 Git Workflow (Phase 1 Active)
+
+**Primary Development**: `dev/` worktree
+- Work here for all changes
+- Push to dev branch freely
+- No restrictions on dev branch
+
+**Production Sync**: `main/` worktree (Read-mostly)
+- Protected branch (requires PRs)
+- Direct pushes blocked by GitHub
+- Pull latest production state here
+
+**PR Workflow**:
+```bash
+cd ~/claude-code-tools/[project]/dev/
+# Make changes, commit, push
+git push origin dev
+
+# Create PR when ready
+bash ~/claude-code-tools/scripts/phase-1/create-pr.sh
+# Or: gh pr create --base main --head dev --fill
+
+# Merge PR (self-merge allowed, 0 approvals required)
+gh pr merge --squash
+```
+
+**Emergency Override**: Admins can bypass protection if needed (enforce_admins: false)

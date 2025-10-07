@@ -1,5 +1,27 @@
 # Claude Code Session Context
 
+## 📖 Global Instructions
+
+**Before starting work, review**: `/Users/nathanschram/claude-code-tools/.claude-instructions`
+- Contains critical development standards, git workflow, MCP configuration, and commit conventions
+- **Add future global documentation references here**
+
+---
+
+## 🤖 MCP Configuration Update (2025-10-05)
+
+**Linear MCP Added**: Dual-board task management
+- **Primary Board**: "SEO Ads Expert" (project-specific tasks)
+- **Secondary Board**: "LBA - Systems & Infrastructure" (cross-project infrastructure)
+- Same LINEAR_ACCESS_TOKEN provides access to both boards
+- Specify board at tool invocation time
+
+**MCP Servers Active**:
+- brave-search, context7, mult-fetch, **linear-server**, zen (instB, port 7512)
+
+---
+
+
 ## 📁 Git Repository Location
 **Git Directory**: `/Users/nathanschram/GitHub/seo-ads-expert.git`
 - Migrated from GitMeta to GitHub folder (2025-09-29)
@@ -185,3 +207,8 @@
 **Last Updated**: 2025-10-01
 **Status**: 🔄 Test Remediation In Progress (920/1,005 passing, Phase 6 complete)
 **Optimization**: Reduced from 488 to ~170 lines (65% reduction) by removing redundancies with CLAUDE.md
+## Git Workflow (Phase 1)
+- Main branch protected (requires PRs)
+- All development in dev/ worktree
+- Use PR workflow for dev → main merges
+- Direct commits to main blocked by GitHub
