@@ -28,34 +28,36 @@
 
 ## 📋 Product Compliance Checklist
 
+**Note**: These requirements can be demonstrated via CLI + screencast (web UI not required for Basic Access)
+
 ### Human-in-the-Loop Workflow
-- [ ] **Preview UI** shows before → after diffs
-- [ ] **Approval workflow** requires explicit user confirmation
-- [ ] **CSV export** of proposed changes available
-- [ ] **Batch approval** with summary counts
-- [ ] **Confirmation dialog** before applying changes
+- [ ] **Preview/diff display** shows before → after values (CLI: CSV files + terminal output)
+- [ ] **Approval workflow** requires explicit user confirmation (CLI: prompts or --confirm flag)
+- [ ] **CSV export** of proposed changes available (CLI: generates CSV files)
+- [ ] **Batch approval** with summary counts (CLI: shows counts in terminal)
+- [ ] **Confirmation before applying** (CLI: --confirm flag or interactive prompt)
 
 ### Auto-Apply Controls (if implemented)
-- [ ] **Per-feature toggles** for enabling automation
-- [ ] **Daily operation caps** configurable by user
-- [ ] **Entity scoping** (campaign/ad group level selection)
-- [ ] **Kill switch** prominently displayed
-- [ ] **Email summaries** of auto-applied changes
-- [ ] **Default: OFF** (opt-in required)
+- [ ] **Per-feature toggles** (CLI: config file settings)
+- [ ] **Daily operation caps** (CLI: max_operations config parameter)
+- [ ] **Entity scoping** (CLI: target_campaigns config or --campaigns flag)
+- [ ] **Kill switch** (CLI: disable_all config or --dry-run flag)
+- [ ] **Email summaries** (CLI: email notifications config)
+- [ ] **Default: OFF** (CLI: opt-in via config file)
 
 ### Auditability
-- [ ] **Audit log** visible to users
-- [ ] **Who/What/When** tracked for all changes
-- [ ] **Before/After values** shown in log
-- [ ] **Rollback capability** for recent changes
-- [ ] **CSV/JSON export** of audit logs
+- [ ] **Audit log accessible** (CLI: SQLite database queries)
+- [ ] **Who/What/When tracked** (CLI: all changes logged to DB)
+- [ ] **Before/After values** (CLI: stored in audit_log table)
+- [ ] **Rollback capability** (CLI: rollback command with change ID)
+- [ ] **CSV/JSON export** (CLI: export-audit command)
 
 ### ML Transparency
-- [ ] **Confidence intervals** displayed for TS recommendations
-- [ ] **Expected impact** estimates shown
-- [ ] **"ML-Suggested"** labeling on AI recommendations
-- [ ] **Explanations** provided for each suggestion
-- [ ] **User approval required** before applying ML suggestions
+- [ ] **Confidence intervals displayed** (CLI: shown in CSV output)
+- [ ] **Expected impact estimates** (CLI: included in recommendations CSV)
+- [ ] **"ML-Suggested" labeling** (CLI: marked in output files)
+- [ ] **Explanations provided** (CLI: reason column in CSV)
+- [ ] **User approval required** (CLI: --confirm flag before applying)
 
 ### Security
 - [ ] **Token encryption** at rest (AES-256)
@@ -74,15 +76,15 @@
 - [ ] **Audio clear** and explanatory
 - [ ] **No sensitive data** shown (use test accounts only)
 
-### Screenshots (minimum 8)
-- [ ] 1. OAuth consent screen during account linking
-- [ ] 2. Recommendations dashboard with ML rankings
-- [ ] 3. Diff preview showing before → after
-- [ ] 4. Approval confirmation dialog
-- [ ] 5. Audit log with change history
-- [ ] 6. Rollback interface
-- [ ] 7. Auto-apply settings with kill switch
-- [ ] 8. Security/token encryption documentation
+### Screenshots (minimum 8) - CLI Demonstration
+- [ ] 1. OAuth consent screen in browser (during CLI auth flow)
+- [ ] 2. Terminal showing recommendations output with ML confidence scores
+- [ ] 3. Generated CSV file with before → after diffs
+- [ ] 4. Terminal showing approval prompt and user confirmation
+- [ ] 5. SQLite query showing audit log entries
+- [ ] 6. Terminal showing rollback command execution
+- [ ] 7. Config file showing auto-apply settings (disabled by default)
+- [ ] 8. Documentation page showing security measures (littlebearapps.com/privacy)
 
 ### Demo Account
 - [ ] **Test Google Ads account** created
@@ -110,11 +112,11 @@
 - [ ] **Clear about** SaaS future plans
 
 ### Technical Details
-- [ ] Platform: **Node.js CLI** (web UI planned)
+- [ ] Platform: **Node.js CLI** (sufficient for Basic Access; web UI for future SaaS)
 - [ ] Auth: **OAuth 2.0** with user consent
 - [ ] Storage: **SQLite, 7-day cache**
-- [ ] Operations: **Read + Write** (approved)
-- [ ] Daily ops: **1,000-2,000** (testing)
+- [ ] Operations: **Read + Write** (with human approval)
+- [ ] Daily ops: **1,000-2,000** (testing phase)
 - [ ] Compliance: **GDPR/CCPA, encryption, audit logs**
 
 ### Access Level

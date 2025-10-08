@@ -176,12 +176,12 @@ streamlined change workflows, while maintaining the same review-and-approve mode
 
 ### 3.3 Technical Implementation
 ```
-Platform: Node.js CLI tool (future web UI planned)
+Platform: Node.js CLI tool (CLI sufficient for Basic Access; web UI for future SaaS)
 Authentication: OAuth 2.0 with user consent
 Data Storage: SQLite with 7-day cache retention
-Operations: Read (performance data) + Write (approved optimizations)
+Operations: Read (performance data) + Write (approved optimizations with human approval)
 Estimated Daily Operations: 1,000-2,000 ops/day
-Compliance: GDPR/CCPA data deletion, audit logging, encryption
+Compliance: GDPR/CCPA data deletion, audit logging, encryption, validateOnly demos
 ```
 
 ---
