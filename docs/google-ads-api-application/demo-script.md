@@ -1,43 +1,137 @@
-# Google Ads API Demo Script
+# Google Ads API Demo Script (Quick Reference)
 
-## If Google requests a demo, use this script:
+**Purpose**: Quick CLI demo for Google reviewers (if requested)
+**Version**: 2.0 - Human-in-the-Loop Platform
+**Updated**: 2025-10-08
 
-### 1. Show Authentication Flow
+---
+
+## ⚠️ Important Note
+
+**For v2.0 Application**: Use `screencast-script.md` for the comprehensive 5-minute video demo showing the full web UI workflow.
+
+**This document**: Quick CLI commands if Google requests a live command-line demonstration (less likely with v2.0's emphasis on UI).
+
+---
+
+## 🎬 CLI Demo Commands (If Web UI Not Available)
+
+### 1. Show Authentication (OAuth)
 ```bash
-# Show OAuth authentication
-npx tsx scripts/test-unified-auth.js
+# Generate OAuth URL
+npx tsx scripts/generate-auth-url.js
+
+# After user authorizes, exchange code for token
+npx tsx scripts/exchange-code.js [AUTH_CODE]
+
+# Test authenticated connection
+npx tsx scripts/test-google-ads-auth.js
 ```
-Expected output: "✅ All authentication tests passed"
 
-### 2. Generate Performance Report
+**Expected Output**: "✅ Authentication successful"
+
+---
+
+### 2. Generate Performance Analysis
 ```bash
-# Generate marketing plan for our product
+# Generate marketing plan for product
 npx tsx src/cli.ts plan --product convertmyfile
+
+# Alternative: Direct analysis
+npx tsx src/cli.ts analyze --customer-id 9495806872
 ```
-This creates reports in `plans/convertmyfile/[date]/`
+
+**Expected Output**: Creates `plans/convertmyfile/[date]/` with 8 files
+
+---
 
 ### 3. Show Generated Reports
 ```bash
 # List generated files
-ls -la plans/convertmyfile/2025-09-27/
-```
-Shows 8 professional marketing files (CSV, JSON, MD formats)
+ls -la plans/convertmyfile/2025-10-08/
 
-### 4. Display Sample Report
+# Display sample markdown report
+cat plans/convertmyfile/2025-10-08/convertmyfile_marketing_plan.md | head -50
+
+# Show CSV with recommendations
+cat plans/convertmyfile/2025-10-08/recommendations.csv
+```
+
+**Expected Output**: Professional marketing files with recommendations
+
+---
+
+### 4. Show Thompson Sampling Optimizer
 ```bash
-# Show markdown report
-cat plans/convertmyfile/2025-09-27/convertmyfile_marketing_plan.md | head -50
+# Run budget optimization algorithm
+npx tsx src/cli.ts optimize-budget --product convertmyfile --dry-run
+
+# Show optimization recommendations
+cat plans/convertmyfile/2025-10-08/budget_optimization.json
 ```
 
-### 5. Show Budget Optimization
+**Expected Output**: ML-driven budget reallocation suggestions with confidence scores
+
+---
+
+### 5. Show Audit Trail (if available via CLI)
 ```bash
-# Run Thompson Sampling optimizer
-npx tsx src/cli.ts optimize-budget --product convertmyfile
+# View recent changes
+npx tsx src/cli.ts audit --recent
+
+# Export audit log
+npx tsx src/cli.ts audit --export --output audit.csv
 ```
 
-## Key Points to Emphasize:
-- ✅ Internal use only for our accounts
-- ✅ Read-only operations for analysis
-- ✅ All changes reviewed manually
-- ✅ Complements Google Ads UI
-- ✅ Custom reports for our specific KPIs
+**Expected Output**: Change history with before/after values
+
+---
+
+## 🎯 Key Points to Emphasize (During Demo)
+
+### Human-in-the-Loop:
+> "Notice that all commands generate recommendations and reports. No changes are applied automatically. In the web UI (see screencast), users review diffs and explicitly approve each change."
+
+### ML Transparency:
+> "Thompson Sampling calculations include confidence intervals and expected impact estimates. Users see why the algorithm suggests each change, not just what to change."
+
+### Safety Controls:
+> "The `--dry-run` flag shows what would happen without applying changes. In production, users configure daily caps, entity scoping, and have a kill switch."
+
+### Auditability:
+> "Every API operation is logged with who/what/when details. Users can export audit logs and rollback recent changes."
+
+### Compliance:
+> "OAuth tokens are encrypted at rest. Performance data cached for 7 days, then auto-deleted. GDPR/CCPA compliant data deletion available."
+
+---
+
+## 📺 Preferred Demo Method
+
+**Instead of CLI**: Show the 5-minute screencast (see `screencast-script.md`)
+
+**Why**:
+- Visual demonstration of human-in-the-loop workflow
+- Shows OAuth consent screen
+- Demonstrates diff preview and approval confirmation
+- Highlights safety controls (kill switch, rollback)
+- More professional and polished
+
+**CLI Demo Only If**:
+- Google specifically requests live/interactive demo
+- Web UI not built yet
+- Need to show backend capabilities
+
+---
+
+## 🔗 Additional Resources
+
+- **Full Screencast Script**: `screencast-script.md`
+- **Application Answers**: `application-form-answers.md`
+- **Reviewer Checklist**: `reviewer-checklist.md`
+
+---
+
+**Document Version**: 2.0
+**Last Updated**: 2025-10-08
+**Status**: Supplementary (use screencast as primary demo)
