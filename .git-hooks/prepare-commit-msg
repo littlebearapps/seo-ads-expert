@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ERR trap
+trap 'echo "❌ Prepare-commit-msg hook failed at line $LINENO" >&2; exit 1' ERR
+
+# Skip in CI
+if [ "${CI:-}" = "true" ]; then
+  exit 0
+fi
+
+commit_msg_file="$1"
+commit_source="${2:-}"
+
+# Skip for merge/squash commits
+if [[ "$commit_source" == "merge" ]] || [[ "$commit_source" == "squash" ]]; then
+  exit 0
+fi
+
+# Get INST_ID (with fallback to .inst_id file)
+inst_id="${INST_ID:-}"
+if [ -z "$inst_id" ] && [ -f ".inst_id" ]; then
+  inst_id=$(cat .inst_id)
+fi
+
+if [ -z "$inst_id" ]; then
+  # No instance ID available - not a multi-instance setup
+  exit 0
+fi
+
+# Check if trailer already exists
+if grep -q "Instance-ID:" "$commit_msg_file"; then
+  # Already has trailer (e.g., from --amend)
+  exit 0
+fi
+
+# Add Instance-ID trailer
+echo "" >> "$commit_msg_file"
+echo "Instance-ID: $inst_id" >> "$commit_msg_file"
+
+exit 0

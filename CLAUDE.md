@@ -389,3 +389,44 @@ gh pr merge --squash
 ```
 
 **Emergency Override**: Admins can bypass protection if needed (enforce_admins: false)
+
+## 🪝 Git Hooks (Phase 2 Active)
+
+**Pre-commit Hook** (<2s):
+- Blocks commits to main branch
+- Runs quick lint check (if available)
+- Fast checks only (no build/test)
+- Bypass with: `git commit --no-verify`
+
+**Pre-push Hook** (<2s):
+- Blocks pushes to main branch
+- Reminds to run verify.sh if not recent
+- Fast validation only
+
+**Prepare-commit-msg Hook**:
+- Adds Instance-ID trailer to all commits
+- Tracks which instance made each commit
+- Auto-skips for merge/squash commits
+
+**Manual Verify Script**:
+```bash
+# Run before creating PR
+bash scripts/phase-2/verify.sh
+
+# Comprehensive checks (30-120s):
+# - Lint, typecheck, tests, build
+# - All must pass before PR
+```
+
+**Multi-Instance Coordination**:
+- Hooks coordinate via lock files in `.bare/lba/locks/`
+- 10-minute stale lock auto-cleanup
+- Instance-ID trailers track which instance made changes
+- Verify script uses locking to prevent simultaneous runs
+
+**Bypass (Emergency Only)**:
+```bash
+git commit --no-verify -m "emergency fix"
+git push --no-verify
+```
+
