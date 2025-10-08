@@ -10,6 +10,9 @@ repo_git_dir="$(git rev-parse --git-dir)"
 common_dir="$(git rev-parse --git-common-dir)"
 work_tree="$(git rev-parse --show-toplevel)"
 
+# Add node_modules/.bin to PATH for proper binary resolution
+export PATH="$work_tree/node_modules/.bin:$PATH"
+
 # Acquire lock (prevent simultaneous verifies)
 lock_acquired=0
 if lock_dir=$(bash scripts/phase-2/lock.sh "verify" 300 2>/dev/null); then
@@ -61,7 +64,8 @@ fi
 echo ""
 echo "3. Running tests..."
 if [ -f "package.json" ] && node -e "const p=require('./package.json');process.exit(p?.scripts?.test?0:1)" 2>/dev/null; then
-  if ! npm test; then
+  # Use npm run test (instead of npm test) for better binary resolution
+  if ! npm run test; then
     echo "❌ Tests failed"
     exit 1
   fi
