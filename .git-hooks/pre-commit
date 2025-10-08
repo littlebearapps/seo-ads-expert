@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ERR trap
+trap 'echo "❌ Pre-commit hook failed at line $LINENO" >&2; exit 1' ERR
+
+# Skip in CI
+if [ "${CI:-}" = "true" ]; then
+  exit 0
+fi
+
+# Worktree-safe paths
+repo_git_dir="$(git rev-parse --git-dir)"
+work_tree="$(git rev-parse --show-toplevel)"
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Check 1: Block commits on main worktree
+if [[ "$branch" == "main" ]] || [[ "$branch" == "master" ]]; then
+  echo "❌ Direct commits to $branch branch are not allowed"
+  echo "   Use dev worktree for development"
+  echo "   Merge to $branch via pull request"
+  exit 1
+fi
+
+# Check 2: Load environment (safely)
+if [ -f "$work_tree/.env" ]; then
+  set -a
+  if ! . "$work_tree/.env" 2>/dev/null; then
+    echo "⚠️  Warning: failed to source .env; continuing without it" >&2
+  fi
+  set +a
+fi
+
+# Check 3: Quick lint check (if available)
+if [ -f "$work_tree/package.json" ]; then
+  if node -e "const p=require('./package.json');process.exit(p?.scripts?.lint?0:1)" 2>/dev/null; then
+    echo "Running quick lint check..."
+    if ! npm run lint --silent 2>/dev/null; then
+      echo "⚠️  Lint issues detected"
+      echo "   Run 'npm run lint' to see details"
+      echo "   Fix before committing, or bypass with: git commit --no-verify"
+      exit 1
+    fi
+  fi
+fi
+
+echo "✅ Pre-commit checks passed"
+exit 0
