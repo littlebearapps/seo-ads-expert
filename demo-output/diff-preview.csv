@@ -1,0 +1,4 @@
+Campaign ID,Campaign Name,Before ($/day),After ($/day),Change ($/day)
+1234567890,Campaign A - Brand Keywords,100,100,0
+1234567891,Campaign B - Product Keywords,50,75,+25
+1234567892,Campaign C - Competitor Keywords,75,50,-25

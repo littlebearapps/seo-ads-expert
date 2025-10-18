@@ -1,0 +1,110 @@
+# Test Configuration for multi-project-tester
+# Project: SEO & Google Ads Expert Tool
+# Version: 2.0.0
+
+project:
+  name: "seo-ads-expert"
+  type: "cli-tool"
+  description: "SEO & Google Ads Expert Tool - Intelligent marketing automation"
+
+# Language/Framework Detection
+languages:
+  - "typescript"
+  - "javascript"
+
+package_manager: "npm"
+
+# Build Configuration
+build:
+  required: false  # Uses tsx directly, no build step needed
+  timeout: 60
+
+# Test Commands
+test:
+  # Unit Tests
+  unit:
+    enabled: true
+    command: "npm run test:unit"
+    timeout: 120  # 2 minutes
+    coverage_required: false
+    coverage_threshold: 0
+
+  # Integration Tests
+  integration:
+    enabled: true
+    command: "npm run test:integration"
+    timeout: 180  # 3 minutes
+
+  # E2E Tests
+  e2e:
+    enabled: true
+    command: "npm run test:e2e"
+    timeout: 300  # 5 minutes
+    requires_build: false
+
+  # CI-Specific Command (uses database isolation)
+  ci_command: "npm run test:ci"
+
+# Environment Requirements
+environment:
+  node_version: ">=20.0.0"
+  env_vars:
+    required: []  # Secrets loaded via keychain
+    optional: []
+
+# Services/Dependencies
+services: []  # No external services needed for tests
+
+# Pre-Test Setup
+pre_test:
+  - "npm run test:clean"  # Clean test databases
+
+# Post-Test Cleanup
+post_test:
+  - "rm -rf coverage/"
+  - "rm -rf data/test-*.db"
+  - "rm -rf test-experiments-*"
+
+# Artifacts to Collect
+artifacts:
+  - "coverage/"
+  - "data/test-*.db"
+
+# Performance Targets
+performance:
+  max_test_duration: 300  # 5 minutes total
+  max_memory_usage: 2048  # 2GB
+
+# Skip Conditions (when to skip tests)
+skip_if:
+  - condition: "no_package_json"
+    message: "No package.json found"
+  - condition: "no_test_script"
+    message: "No test script in package.json"
+
+# Retry Configuration
+retry:
+  enabled: true
+  max_attempts: 2
+  retry_on:
+    - "flaky_test"
+    - "timeout"
+
+# Flaky Test Handling
+flaky_tests:
+  quarantine: false
+  report: true
+
+# Notifications (optional)
+notifications:
+  on_failure: false
+  on_success: false
+
+---
+
+# Notes:
+# - This file is read by multi-project-tester subagent
+# - Overrides auto-detection heuristics
+# - test:ci uses vitest run with database isolation (--pool=forks --poolOptions.forks.singleFork=true)
+# - pretest hook automatically cleans test databases
+# - No build step required (uses tsx directly)

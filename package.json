@@ -60,6 +60,7 @@
     "googleapis": "^129.0.0",
     "js-yaml": "^4.1.0",
     "node-fetch": "^2.7.0",
+    "open": "^10.2.0",
     "p-queue": "^8.1.1",
     "pino": "^8.17.2",
     "robots-parser": "^3.0.1",

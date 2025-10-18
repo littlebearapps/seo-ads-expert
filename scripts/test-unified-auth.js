@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 
 /**
  * Test Unified OAuth Authentication
@@ -6,9 +6,9 @@
  */
 
 import { unifiedAuth } from '../src/utils/unified-auth.js';
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 
-config();
+dotenv.config();
 
 async function testUnifiedAuth() {
   console.log('🔍 Testing Unified OAuth Authentication\n');

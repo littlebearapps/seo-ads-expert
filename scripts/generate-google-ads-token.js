@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * Unified Google APIs Token Generator
+ * Unified Google APIs Token Generator (Loopback Server)
  * Run this once to generate your refresh token for all Google APIs:
  * - Google Ads API
- * - Google Analytics API  
+ * - Google Analytics API
  * - Google Search Console API
- * 
+ *
  * Usage:
- * 1. node scripts/generate-google-ads-token.js
- * 2. Follow the URL and get authorization code
- * 3. node scripts/generate-google-ads-token.js YOUR_AUTH_CODE
+ * 1. Create Desktop app OAuth client in Google Cloud Console
+ * 2. Download credentials JSON → save as credentials/google-ads-credentials.json
+ * 3. Run: node scripts/generate-google-ads-token.js
+ * 4. Browser opens automatically → approve OAuth consent
+ * 5. Copy printed env vars to .env file
  */
 
-import { google } from 'googleapis';
+import http from 'http';
+import open from 'open';
+import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -32,112 +36,186 @@ const SCOPES = [
 ];
 
 async function main() {
-  console.log('🔑 Unified Google APIs Token Generator\n');
+  console.log('🔐 Unified Google APIs Token Generator\n');
 
-  // Check if credentials file exists
-  if (!fs.existsSync(CREDENTIALS_FILE)) {
-    console.error('❌ Error: Credentials file not found!');
-    console.error(`Expected location: ${CREDENTIALS_FILE}`);
-    console.error('\nPlease:');
-    console.error('1. Download your OAuth2 credentials JSON from Google Cloud Console');
-    console.error('2. Save it as google-ads-credentials.json in the credentials/ folder');
-    console.error('3. Or set GOOGLE_OAUTH_CREDENTIALS environment variable');
-    process.exit(1);
+  let client_id, client_secret;
+
+  // Try to load from file first, fall back to environment variables
+  if (fs.existsSync(CREDENTIALS_FILE)) {
+    try {
+      const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_FILE));
+      const creds = credentials.installed || credentials.web;
+      client_id = creds.client_id;
+      client_secret = creds.client_secret;
+      console.log('✅ Loaded credentials from file');
+    } catch (error) {
+      console.error('⚠️  Could not parse credentials file, trying environment variables...');
+    }
   }
 
-  try {
-    // Load credentials
-    const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_FILE));
-    const { client_id, client_secret } = credentials.installed || credentials.web;
+  // Fall back to environment variables if file not found or invalid
+  if (!client_id || !client_secret) {
+    client_id = process.env.GOOGLE_CLIENT_ID;
+    client_secret = process.env.GOOGLE_CLIENT_SECRET;
 
     if (!client_id || !client_secret) {
-      console.error('❌ Error: Invalid credentials file format');
-      console.error('Expected "installed" or "web" OAuth2 credentials');
+      console.error('❌ Error: OAuth credentials not found!\n');
+      console.error('📋 Option 1: Use environment variables (recommended):');
+      console.error('   GOOGLE_CLIENT_ID="your-client-id" \\');
+      console.error('   GOOGLE_CLIENT_SECRET="your-client-secret" \\');
+      console.error('   node scripts/generate-google-ads-token.js\n');
+      console.error('📋 Option 2: Create credentials file:');
+      console.error('   1. Go to Google Cloud Console → APIs & Services → Credentials');
+      console.error('   2. Create OAuth 2.0 Client ID (Desktop app)');
+      console.error('   3. Create file: credentials/google-ads-credentials.json');
+      console.error('   4. Add this content:');
+      console.error('   {');
+      console.error('     "installed": {');
+      console.error('       "client_id": "your-client-id",');
+      console.error('       "client_secret": "your-client-secret"');
+      console.error('     }');
+      console.error('   }\n');
       process.exit(1);
     }
+    console.log('✅ Using credentials from environment variables');
+  }
 
-    // Create OAuth2 client
-    const oauth2Client = new google.auth.OAuth2(
-      client_id,
-      client_secret,
-      'urn:ietf:wg:oauth:2.0:oob'
-    );
+  console.log('✅ Loaded OAuth credentials');
+  console.log(`   Client ID: ${client_id.substring(0, 20)}...`);
+  console.log('');
 
-    const authCode = process.argv[2];
+  try {
+    // Setup loopback server
+    const port = 51762;
+    const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
+    const oAuth2Client = new OAuth2Client({
+      clientId: client_id,
+      clientSecret: client_secret,
+      redirectUri
+    });
 
-    if (!authCode) {
-      // Step 1: Generate authorization URL
-      console.log('📋 Step 1: Get Authorization Code\n');
-      
-      const authUrl = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: SCOPES,
-        prompt: 'consent' // Force refresh token generation
-      });
+    console.log('📋 Requesting access to:');
+    console.log('   • Google Ads API (read/write)');
+    console.log('   • Google Analytics (read-only)');
+    console.log('   • Google Search Console (read-only)\n');
 
-      console.log('🌐 Go to this URL in your browser:');
-      console.log('─'.repeat(60));
-      console.log(authUrl);
-      console.log('─'.repeat(60));
-      console.log('\n📝 Steps:');
-      console.log('1. Click the URL above');
-      console.log('2. Sign in with your Google account that has Google Ads access');
-      console.log('3. Grant permissions to the app');
-      console.log('4. Copy the authorization code from the page');
-      console.log('\n🔄 Then run:');
-      console.log(`node ${__filename} YOUR_AUTHORIZATION_CODE`);
-      
-    } else {
-      // Step 2: Exchange code for tokens
-      console.log('🔄 Step 2: Exchanging authorization code for tokens...\n');
-      
+    // Generate authorization URL
+    const authorizeUrl = oAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent',
+      scope: SCOPES,
+      include_granted_scopes: true
+    });
+
+    // Start local server
+    const server = http.createServer(async (req, res) => {
+      if (!req.url) return;
+
+      const url = new URL(req.url, `http://127.0.0.1:${port}`);
+
+      if (url.pathname !== '/oauth2callback') {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+
+      const code = url.searchParams.get('code');
+      if (!code) {
+        res.writeHead(400);
+        res.end('Missing authorization code');
+        return;
+      }
+
       try {
-        const { tokens } = await oauth2Client.getToken(authCode);
-        
-        if (!tokens.refresh_token) {
-          console.error('❌ Error: No refresh token received');
-          console.error('This usually means you need to revoke existing permissions and try again.');
-          console.error('\nGo to: https://myaccount.google.com/permissions');
-          console.error('Remove "SEO Ads Expert" app and re-run this script.');
+        // Exchange code for tokens
+        const r = await oAuth2Client.getToken(code);
+        oAuth2Client.setCredentials(r.tokens);
+
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`
+          <html>
+            <head><title>OAuth Success</title></head>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+              <h1>✅ Success!</h1>
+              <p>You can close this tab and return to the terminal.</p>
+            </body>
+          </html>
+        `);
+
+        server.close();
+
+        const refreshToken = r.tokens.refresh_token;
+        if (!refreshToken) {
+          console.error('\n❌ Error: No refresh_token returned');
+          console.error('   This happens if you previously granted access.\n');
+          console.error('📋 Fix: Revoke prior access and try again:');
+          console.error('   1. Go to: https://myaccount.google.com/permissions');
+          console.error('   2. Find and remove this app');
+          console.error('   3. Run this script again\n');
           process.exit(1);
         }
 
-        console.log('✅ Success! Here are your tokens:\n');
-        console.log('📋 Add these to your .env file:');
-        console.log('─'.repeat(50));
-        console.log(`GOOGLE_ADS_CLIENT_ID="${client_id}"`);
-        console.log(`GOOGLE_ADS_CLIENT_SECRET="${client_secret}"`);
-        console.log(`GOOGLE_ADS_REFRESH_TOKEN="${tokens.refresh_token}"`);
-        console.log('─'.repeat(50));
-        
-        console.log('\n🔒 Security Notes:');
-        console.log('• Keep these tokens SECRET and secure');
-        console.log('• Add .env to your .gitignore file');
-        console.log('• The refresh token does not expire (unless revoked)');
-        console.log('• You can regenerate tokens anytime by re-running this script');
-
-        console.log('\n📋 Still needed:');
-        console.log('• GOOGLE_ADS_DEVELOPER_TOKEN (from Google Ads API Center)');
-        console.log('• GOOGLE_ADS_CUSTOMER_IDS (your Google Ads account ID)');
+        // Success! Print env vars
+        console.log('\n🎉 OAuth complete! Copy these to your .env file:\n');
+        console.log('─'.repeat(80));
+        console.log(`GOOGLE_CLIENT_ID=${client_id}`);
+        console.log(`GOOGLE_CLIENT_SECRET=${client_secret}`);
+        console.log(`GOOGLE_REFRESH_TOKEN=${refreshToken}`);
+        console.log('─'.repeat(80));
+        console.log('');
+        console.log('📋 Next steps:');
+        console.log('   1. Add the above variables to your .env file');
+        console.log('   2. Ensure you have: GOOGLE_ADS_DEVELOPER_TOKEN');
+        console.log('   3. Ensure you have: GOOGLE_ADS_CUSTOMER_ID (your test account)');
+        console.log('   4. Run: node scripts/test-unified-auth.js');
+        console.log('');
+        console.log('⚠️  Token expiration: 7 days (Testing mode)');
+        console.log('   Generate new tokens before recording screencast!');
+        console.log('');
 
         // Save tokens to a secure file for reference
         const tokenFile = path.join(__dirname, '..', 'credentials', 'tokens.json');
         fs.writeFileSync(tokenFile, JSON.stringify({
           client_id,
           client_secret,
-          refresh_token: tokens.refresh_token,
+          refresh_token: refreshToken,
           generated_at: new Date().toISOString()
         }, null, 2));
-        
-        console.log(`\n💾 Tokens also saved to: ${tokenFile}`);
-        console.log('(You can delete this file after updating your .env)');
-        
-      } catch (error) {
-        console.error('❌ Error exchanging code for tokens:', error.message);
+
+        console.log(`💾 Tokens also saved to: ${tokenFile}`);
+        console.log('   (You can delete this file after updating your .env)\n');
+
+      } catch (err) {
+        console.error('\n❌ Token exchange failed:', err?.message || err);
+        res.writeHead(500);
+        res.end('Token exchange failed');
+        server.close();
         process.exit(1);
       }
-    }
-    
+    });
+
+    server.listen(port, async () => {
+      console.log('🌐 Starting local OAuth server on port', port);
+      console.log('🚀 Opening browser for OAuth consent...\n');
+
+      try {
+        await open(authorizeUrl, { wait: false });
+      } catch (error) {
+        console.error('⚠️  Could not open browser automatically');
+        console.error('   Please open this URL manually:\n');
+        console.error(authorizeUrl);
+        console.error('');
+      }
+    });
+
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      console.error('\n⏱️  Timeout: OAuth flow took too long');
+      console.error('   Please try again\n');
+      server.close();
+      process.exit(1);
+    }, 5 * 60 * 1000);
+
   } catch (error) {
     console.error('❌ Error:', error.message);
     process.exit(1);

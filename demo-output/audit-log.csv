@@ -1,0 +1,4 @@
+Log ID,Timestamp,User,Action,Entity Type,Entity ID,Entity Name,Before,After,Status,Can Rollback
+log-001,2025-10-13T07:53:33.340Z,nathan@littlebearapps.com,budget_change,campaign,1234567891,Campaign B - Product Keywords,$50,$75,applied,true
+log-002,2025-10-13T07:53:33.340Z,nathan@littlebearapps.com,budget_change,campaign,1234567892,Campaign C - Competitor Keywords,$75,$50,applied,true
+log-003,2025-10-11T08:53:33.340Z,nathan@littlebearapps.com,bid_change,keyword,kwd-123,chrome extension tools,$1.25,$1.5,applied,true

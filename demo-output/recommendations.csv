@@ -1,0 +1,4 @@
+ID,Type,Priority,Confidence,Expected Lift,Description,Campaigns Affected,Keywords Affected
+rec-001,budget,high,82%,+12.5%,Reallocate budget from Campaign C (low CVR) to Campaign B (high CVR),2,0
+rec-002,bid,medium,75%,+8.3%,Increase bids on high-performing keywords in Campaign B,1,3
+rec-003,keyword,medium,68%,+5.2%,Add 5 high-volume keywords to Campaign A based on search query data,1,5
