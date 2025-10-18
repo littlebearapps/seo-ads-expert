@@ -1,58 +1,45 @@
 #!/usr/bin/env bash
+# Pre-push hook for feature-branch workflow
+# Blocks direct pushes to main branch (use feature branches + PRs)
+
 set -euo pipefail
 
-# ERR trap
-trap 'echo "❌ Pre-push hook failed at line $LINENO" >&2; exit 1' ERR
+# Get current branch
+current_branch=$(git rev-parse --abbrev-ref HEAD)
 
-# Skip in CI
-if [ "${CI:-}" = "true" ]; then
-  exit 0
-fi
-
-# Worktree-safe paths
-repo_git_dir="$(git rev-parse --git-dir)"
-common_dir="$(git rev-parse --git-common-dir)"
-branch="$(git rev-parse --abbrev-ref HEAD)"
-
-# Check 1: Block pushes from main worktree
-if [[ "$branch" == "main" ]] || [[ "$branch" == "master" ]]; then
-  echo "❌ Direct pushes to $branch branch are not allowed"
-  echo "   Use dev worktree for development"
-  echo "   Merge to $branch via pull request"
+# Block pushes to main branch
+if [ "$current_branch" = "main" ]; then
+  echo ""
+  echo "❌ Direct pushes to main branch are not allowed"
+  echo "   Use feature branches for development:"
+  echo ""
+  echo "   git checkout -b feature/your-feature-name"
+  echo "   # ... make changes ..."
+  echo "   git push origin feature/your-feature-name"
+  echo "   # ... create PR on GitHub ..."
+  echo ""
   exit 1
 fi
 
-# Check 2: Verify script reminder (if available)
-verify_ts_path="$common_dir/lba/last_verify_ts"
-
-if [ -f "$verify_ts_path" ]; then
-  last_verify=$(cat "$verify_ts_path")
-  now=$(date +%s)
-  age=$((now - last_verify))
-
-  # If last verify was > 1 hour ago, remind
-  if (( age > 3600 )); then
-    echo ""
-    echo "⚠️  Warning: verify.sh last run $(($age / 60)) minutes ago"
-    echo "   Consider running: bash scripts/phase-2/verify.sh"
-    echo ""
-    read -p "Continue push anyway? (y/n): " response
-    if [[ "$response" != "y" ]]; then
-      echo "Push cancelled"
-      exit 1
-    fi
+# Allow feature/fix/chore branches
+if [[ "$current_branch" =~ ^(feature|fix|chore)/ ]]; then
+  # Run verify.sh if it exists (Phase 2 projects)
+  if [ -f "scripts/phase-2/verify.sh" ]; then
+    echo "🔍 Running Phase 2 verification..."
+    bash scripts/phase-2/verify.sh || exit 1
   fi
-else
-  echo ""
-  echo "⚠️  No verify.sh run detected"
-  echo "   Consider running: bash scripts/phase-2/verify.sh"
-  echo ""
-  read -p "Continue push anyway? (y/n): " response
-  if [[ "$response" != "y" ]]; then
-    echo "Push cancelled"
-    exit 1
-  fi
+
+  echo "✅ Pushing $current_branch..."
+  exit 0
 fi
 
-echo "✅ Pre-push checks passed"
-exit 0
+# Block all other branch names
+echo ""
+echo "❌ Invalid branch name: $current_branch"
+echo "   Only feature/fix/chore branches are allowed:"
+echo ""
+echo "   feature/  - New features"
+echo "   fix/      - Bug fixes"
+echo "   chore/    - Maintenance tasks"
+echo ""
+exit 1
