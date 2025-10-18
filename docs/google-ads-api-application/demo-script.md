@@ -16,6 +16,42 @@
 
 ## 🎬 CLI Demo Commands (If Web UI Not Available)
 
+### 0. Run Complete Demo Mode (NEW - Recommended) ✅
+```bash
+# Run complete interactive demo (no API credentials required)
+bash run-demo.sh
+
+# Or with custom output directory
+bash run-demo.sh -o my-demo-output
+```
+
+**What it shows**:
+- 7 scenes matching the screencast script
+- Campaign performance overview with realistic data
+- ML-ranked recommendations with Thompson Sampling
+- Before/after diff preview
+- Human approval workflow
+- Audit trail with rollback capability
+- Automation settings & kill switch
+- Security & privacy measures
+
+**Output**:
+- Professional terminal visualization with box-drawing tables
+- 4 CSV files for offline review:
+  - `campaign-performance.csv` - Current campaign data
+  - `recommendations.csv` - ML-ranked suggestions with confidence scores
+  - `diff-preview.csv` - Before/after comparison
+  - `audit-log.csv` - Change history with rollback info
+
+**Advantages**:
+- ✅ No API credentials required (uses synthetic data)
+- ✅ Matches screencast script exactly (7 scenes)
+- ✅ Shows complete human-in-the-loop workflow
+- ✅ Demonstrates all safety controls
+- ✅ Fast (completes in ~1 second)
+
+---
+
 ### 1. Show Authentication (OAuth)
 ```bash
 # Generate OAuth URL

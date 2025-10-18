@@ -2428,4 +2428,27 @@ program
     }
   });
 
+// Add demo command for Google Ads API application screencast
+program
+  .command('demo')
+  .description('Generate demo walkthrough for Google Ads API screencast')
+  .option('-o, --output <dir>', 'Output directory for demo files', 'demo-output')
+  .action(async (options) => {
+    console.log('🎬 Generating demo walkthrough...\n');
+
+    try {
+      const { DemoReportGenerator } = await import('./demo/demo-report-generator.js');
+      const generator = new DemoReportGenerator();
+
+      await generator.generateFullDemo(options.output);
+
+      console.log('\n✅ Demo generation complete!');
+      console.log(`📁 Output files saved to: ${options.output}/`);
+
+    } catch (error) {
+      console.error('❌ Demo generation failed:', error);
+      process.exit(1);
+    }
+  });
+
 program.parse();
