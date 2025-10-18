@@ -362,34 +362,73 @@ cd ~/claude-code-tools/keychain && ./test-keychain.sh
 **Last Updated**: 2025-10-01
 **Version**: 2.0 - INTELLIGENT BUDGET OPTIMIZER TESTS COMPLETE ✅
 **Optimization**: Reduced from 359 to 246 lines (31% reduction) by removing redundancies
-## 🔄 Git Workflow (Phase 1 Active)
+## 🤖 Claude Code Subagents
 
-**Primary Development**: `dev/` worktree
-- Work here for all changes
-- Push to dev branch freely
-- No restrictions on dev branch
+**Available Subagents** (invoke via Task tool - no installation needed):
 
-**Production Sync**: `main/` worktree (Read-mostly)
-- Protected branch (requires PRs)
-- Direct pushes blocked by GitHub
-- Pull latest production state here
+### 1. git-workflow-manager (v0.2.0)
+**Use when**: Ready to ship a feature to main branch
 
-**PR Workflow**:
-```bash
-cd ~/claude-code-tools/[project]/dev/
-# Make changes, commit, push
-git push origin dev
-
-# Create PR when ready
-bash ~/claude-code-tools/scripts/phase-1/create-pr.sh
-# Or: gh pr create --base main --head dev --fill
-
-# Merge PR (self-merge allowed, 0 approvals required)
-gh pr merge --squash
+```
+User: "Use git-workflow-manager to ship this feature"
 ```
 
-**Emergency Override**: Admins can bypass protection if needed (enforce_admins: false)
+**What it does**: Complete PR workflow (verify → push → PR → CI wait → merge → cleanup)
+**Time savings**: 10-15 min → <2 min (>60% automation)
 
+### 2. multi-project-tester
+**Use when**: Need to test all 15 working directories at once
+
+```
+User: "Use multi-project-tester to run tests across all projects"
+```
+
+**What it does**: Runs tests across all projects, aggregates results, reports failures
+**Time savings**: 20-30 min → 2-5 min
+
+### 3. microtool-creator
+**Use when**: Creating a new Chrome extension, marketing site, or infrastructure tool
+
+```
+User: "Use microtool-creator to create a new Chrome extension called 'quick-notes' with MINIMAL pattern"
+```
+
+**What it does**: Scaffolds complete project structure (minimal or production-ready)
+**Time savings**: 1-2 hours → <10 min
+
+**Documentation**: `~/claude-code-tools/subagents/README.md` (full guide)
+**Quick Reference**: `~/claude-code-tools/subagents/git-workflow-manager/QUICK-REFERENCE.md`
+
+
+## 🔄 Git Workflow (Feature-Branch Flow)
+
+**Current Workflow**: Feature branches from main (GitHub Flow)
+- Create feature/fix/chore branches as needed
+- Work in main worktree, switch branches with git checkout
+- Use git-workflow-manager subagent for automated PR workflow
+
+**Branch Types**:
+- `feature/*` - New features
+- `fix/*` - Bug fixes
+- `chore/*` - Maintenance tasks
+
+**Workflow**:
+```bash
+cd ~/claude-code-tools/[project]/main/
+git checkout -b feature/my-feature
+# Make changes, commit
+
+# Ship feature (automated PR workflow)
+User: "Use git-workflow-manager to ship this feature"
+# Runs verify.sh, creates PR, waits for CI, merges, cleans up
+```
+
+**Manual PR Workflow**:
+```bash
+git push origin feature/my-feature
+gh pr create --base main --head feature/my-feature --fill
+gh pr merge --squash
+```
 ## 🪝 Git Hooks (Phase 2 Active)
 
 **Pre-commit Hook** (<2s):
