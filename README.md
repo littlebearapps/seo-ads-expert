@@ -17,6 +17,11 @@ cp .env.example .env
 # Test unified OAuth authentication
 npx tsx scripts/test-unified-auth.js
 
+# 🎬 Run demo mode (for Google Ads API application screencast)
+bash run-demo.sh
+# Or with custom output directory:
+bash run-demo.sh -o my-demo-output
+
 # Generate complete marketing plan (11 seconds)
 npx tsx src/cli.ts plan --product palettekit
 

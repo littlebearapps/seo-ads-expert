@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ERR trap
+trap 'echo "❌ Pre-push hook failed at line $LINENO" >&2; exit 1' ERR
+
+# Skip in CI
+if [ "${CI:-}" = "true" ]; then
+  exit 0
+fi
+
+# Worktree-safe paths
+repo_git_dir="$(git rev-parse --git-dir)"
+common_dir="$(git rev-parse --git-common-dir)"
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Check 1: Block pushes from main worktree
+if [[ "$branch" == "main" ]] || [[ "$branch" == "master" ]]; then
+  echo "❌ Direct pushes to $branch branch are not allowed"
+  echo "   Use dev worktree for development"
+  echo "   Merge to $branch via pull request"
+  exit 1
+fi
+
+# Check 2: Verify script reminder (if available)
+verify_ts_path="$common_dir/lba/last_verify_ts"
+
+if [ -f "$verify_ts_path" ]; then
+  last_verify=$(cat "$verify_ts_path")
+  now=$(date +%s)
+  age=$((now - last_verify))
+
+  # If last verify was > 1 hour ago, remind
+  if (( age > 3600 )); then
+    echo ""
+    echo "⚠️  Warning: verify.sh last run $(($age / 60)) minutes ago"
+    echo "   Consider running: bash scripts/phase-2/verify.sh"
+    echo ""
+    read -p "Continue push anyway? (y/n): " response
+    if [[ "$response" != "y" ]]; then
+      echo "Push cancelled"
+      exit 1
+    fi
+  fi
+else
+  echo ""
+  echo "⚠️  No verify.sh run detected"
+  echo "   Consider running: bash scripts/phase-2/verify.sh"
+  echo ""
+  read -p "Continue push anyway? (y/n): " response
+  if [[ "$response" != "y" ]]; then
+    echo "Push cancelled"
+    exit 1
+  fi
+fi
+
+echo "✅ Pre-push checks passed"
+exit 0
