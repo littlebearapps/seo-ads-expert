@@ -4,21 +4,21 @@
       "command": "bash",
       "args": [
         "-c",
-        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec npx -y @modelcontextprotocol/server-brave-search"
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert dev && exec npx -y @modelcontextprotocol/server-brave-search"
       ]
     },
     "context7": {
       "command": "bash",
       "args": [
         "-c",
-        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec npx -y @upstash/context7-mcp --api-key \"$CONTEXT7_API_KEY\""
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert dev && exec npx -y @upstash/context7-mcp --api-key \"$CONTEXT7_API_KEY\""
       ]
     },
     "mult-fetch": {
       "command": "bash",
       "args": [
         "-c",
-        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && MCP_LANG=en exec npx -y @lmcc-dev/mult-fetch-mcp-server"
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert dev && MCP_LANG=en exec npx -y @lmcc-dev/mult-fetch-mcp-server"
       ]
     },
     "linear-server": {
@@ -29,7 +29,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert dev && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"
       ],
       "cwd": "/Users/nathanschram/claude-code-tools/mcp/zen/instances/instB",
       "env": {

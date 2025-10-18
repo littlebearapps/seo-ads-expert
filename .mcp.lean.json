@@ -4,7 +4,7 @@
       "command": "bash",
       "args": [
         "-c",
-        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert main && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"
+        "source ~/bin/kc.sh && source ~/.config/kc/profiles.sh && load_mcp_secrets seo-ads-expert dev && exec /Users/nathanschram/claude-code-tools/mcp/zen/zen-mcp-server/zen-mcp-server"
       ],
       "cwd": "/Users/nathanschram/claude-code-tools/mcp/zen/instances/instB",
       "env": {
