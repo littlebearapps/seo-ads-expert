@@ -1,48 +1,224 @@
-# Node.js
+# Base .gitignore Fragment
+# Layer 1: OS and Editor Files (Universal)
+# Source: Extracted from gitignore-research.md
+# Version: 1.0.0 (2025-10-18)
+
+# === macOS ===
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# === Windows ===
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# === Linux ===
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# === VS Code ===
+.vscode/
+.vscode-test/
+*.code-workspace
+
+# === JetBrains IDEs ===
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# === Vim ===
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+
+# === Emacs ===
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+
+# === General ===
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+# Node.js .gitignore Fragment
+# Layer 2: Language-Specific (Node.js / JavaScript / TypeScript)
+# Source: Extracted from gitignore-research.md
+# Version: 1.0.0 (2025-10-18)
+
+# === Dependencies ===
 node_modules/
+node_modules.nosync/          # iCloud workaround for MCP servers
+jspm_packages/
+bower_components/
+
+# === Build Artifacts ===
+dist/
+build/
+out/
+*.tsbuildinfo
+.npm
+.eslintcache
+
+# === Environment Variables ===
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example                 # Keep example files
+
+# === Logs ===
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Environment variables
+# === Testing ===
+coverage/
+.nyc_output/
+*.lcov
+
+# === Package Manager ===
+yarn.lock                     # For npm projects using package-lock.json
+package-lock.json             # For yarn projects using yarn.lock
+.pnpm-debug.log
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# === TypeScript ===
+*.tsbuildinfo
+.ts-node/
+
+# === Runtime ===
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+# Tooling .gitignore Fragment
+# Layer 3: Tooling Add-ons (MCP, Claude Code, Coverage, Caches)
+# Source: Extracted from gitignore-research.md
+# Version: 1.0.0 (2025-10-18)
+
+# === MCP (Model Context Protocol) ===
+.mcp.json.backup             # MCP backup (temporary, recovery only)
+.mcp.*.json.bak             # MCP profile backups (temporary)
+node_modules.nosync/        # iCloud workaround for MCP servers
+
+# === Claude Code ===
+# TRACKED (do NOT ignore):
+# - CLAUDE.md
+# - .claude-context
+# - .claude-instructions
+# - AGENTS.md
+# - OPERATIONS.md
+# - TESTS.md
+
+# IGNORED (temporary/local):
+CLAUDE.local.md             # Local notes, not tracked
+
+# === Git Hooks ===
+.git-hooks/*.bak            # Git hook backups (temporary)
+.github/workflows/*.bak     # Workflow backups (temporary)
+
+# === Testing Coverage ===
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+.nyc_output/
+*.lcov
+lcov.info
+
+# === Caches ===
+.cache/
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.pytest_cache/
+.ruff_cache/
+
+# === Build Tools ===
+.turbo/
+.next/
+.nuxt/
+.vuepress/dist
+
+# === Package Managers ===
+.pnpm-debug.log
+.yarn/cache
+.yarn/unplugged
+
+# === Databases (if transient) ===
+# Uncomment if database files are generated, not source:
+# *.sqlite
+# *.sqlite3
+# *.db
+
+# === Secrets & Credentials ===
 .env
+.env.*
 .env.local
 .env.*.local
+!.env.example               # Keep example files
+credentials.json
+secrets.yaml
+*.key
+*.pem                       # Except for Chrome extensions (see chrome-extension.gitignore)
 
-# Logs
-logs
+# === Logs ===
 *.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
-# Cache directories
-.cache/
-cache/
-
-# Build outputs
-dist/
-build/
-
-# Temporary files
+# === Temporary Files ===
 *.tmp
-.tmp/
-
-# MacOS
-.DS_Store
-
-# Windows
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
+*.temp
 *.swp
 *.swo
 *~
 
-# Project specific - ignore generated content but keep structure
+# ====================================
+# Project-specific Patterns
+# ====================================
+
+# CSV Data (ignore generated CSVs but keep structure)
 inputs/kwp_csv/*/*.csv
-plans/*/*/
 !inputs/kwp_csv/*/.gitkeep
+
+# Generated Plans (ignore generated plans but keep structure)
+plans/*/*/
 !plans/*/.gitkeep
 
 # Git worktrees (prevent tools from recursing into them)
@@ -61,10 +237,6 @@ audit/*.jsonl
 # Test output and results
 test-output/
 test-results.json
-coverage/
-
-# Vitest cache
-.vitest/
 
 # Temporary test files (one-off debugging scripts in root)
 test-*.js
@@ -81,5 +253,10 @@ simple-test*.ts
 # Session-specific Claude context (but keep .claude-context.md)
 .claude-context
 
-# TypeScript build info
-*.tsbuildinfo
+# Temporary directory
+.tmp/
+
+# Additional patterns from old .gitignore
+.vitest/                 # Vitest cache directory
+cache/                   # Cache directory (in addition to .cache/)
+logs                     # Logs directory (in addition to logs/ and *.log)
