@@ -101,6 +101,12 @@
 
 ## 6. Claude-Code-Tools Index (reference pointers)
 
+⭐ START HERE: ~/claude-code-tools/docs/QUICK-REFERENCE.md
+- Comprehensive quick reference for ALL Claude Code workflows and enhancements
+- Common workflows (features, shipping, testing), key file locations, MCP profiles
+- Git workflow, commit formats, secrets management, backups, cache monitoring
+- Zen MCP system, enhancement initiatives, safety rules
+
 **Global Infrastructure** (all paths relative to `~/claude-code-tools/`):
 - **MCP servers:** `mcp/` (zen instances, profiles, troubleshooting)
   - **Configuration**: `.mcp.json` (profile-based: lean/research/full)
