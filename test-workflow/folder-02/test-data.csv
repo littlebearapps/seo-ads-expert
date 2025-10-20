@@ -1,0 +1,11 @@
+id,name,value,category,timestamp
+1,alpha,100,category-a,2025-10-20T10:00:00Z
+2,beta,250,category-b,2025-10-20T10:15:00Z
+3,gamma,350,category-a,2025-10-20T10:30:00Z
+4,delta,175,category-c,2025-10-20T10:45:00Z
+5,epsilon,425,category-b,2025-10-20T11:00:00Z
+6,zeta,300,category-a,2025-10-20T11:15:00Z
+7,eta,150,category-c,2025-10-20T11:30:00Z
+8,theta,500,category-b,2025-10-20T11:45:00Z
+9,iota,275,category-a,2025-10-20T12:00:00Z
+10,kappa,400,category-c,2025-10-20T12:15:00Z
