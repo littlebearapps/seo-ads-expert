@@ -1,0 +1,14 @@
+{
+  "name": "test-workflow-config",
+  "version": "1.0.0",
+  "settings": {
+    "enabled": true,
+    "maxRetries": 3,
+    "timeout": 5000
+  },
+  "features": [
+    "feature-a",
+    "feature-b",
+    "feature-c"
+  ]
+}

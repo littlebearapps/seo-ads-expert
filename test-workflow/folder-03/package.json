@@ -1,0 +1,26 @@
+{
+  "name": "test-workflow-package",
+  "version": "0.1.0",
+  "description": "Test package for git workflow enhancements",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Test workflow running\"",
+    "build": "echo \"Building workflow test\"",
+    "lint": "echo \"Linting workflow files\""
+  },
+  "keywords": [
+    "test",
+    "workflow",
+    "git"
+  ],
+  "author": "Little Bear Apps",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.0.0",
+    "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

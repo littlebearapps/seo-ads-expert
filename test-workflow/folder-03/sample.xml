@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testWorkflow>
+  <metadata>
+    <name>Git Workflow Test</name>
+    <version>1.0</version>
+    <created>2025-10-20</created>
+  </metadata>
+  <testFiles>
+    <file id="1" type="text">
+      <name>small-text.txt</name>
+      <size>small</size>
+      <format>plain</format>
+    </file>
+    <file id="2" type="config">
+      <name>config.json</name>
+      <size>small</size>
+      <format>json</format>
+    </file>
+    <file id="3" type="documentation">
+      <name>medium-markdown.md</name>
+      <size>medium</size>
+      <format>markdown</format>
+    </file>
+  </testFiles>
+  <results>
+    <status>pending</status>
+    <timestamp>2025-10-20T12:00:00Z</timestamp>
+  </results>
+</testWorkflow>
